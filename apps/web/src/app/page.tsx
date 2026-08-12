@@ -1,4 +1,7 @@
-﻿export default function Home() {
+﻿import { BrandSignature } from "@/components/brand/BrandSignature";
+import { AppButton } from "@/components/ui/AppButton";
+
+export default function Home() {
   return (
     <main className="page">
       <section className="hero">
@@ -10,28 +13,24 @@
           <div>
             <div className="badge">
               <span className="badgeDot" />
-              Central familiar
+              Central familiar privada
             </div>
 
-            <div className="brandFull">
-              <img
-                src="/brand/logo-nucleo-horizontal.png"
-                alt="NÚCLEO | Central da Família"
-                className="brandFullImage"
-              />
-            </div>
+            <BrandSignature size="lg" />
 
             <h1 className="title">A casa inteira organizada em um só lugar.</h1>
 
             <p className="description">
               Finanças, compras, agenda, tarefas, rotinas e decisões da família
               em uma experiência moderna, segura e feita exclusivamente para o
-              dia a dia.
+              nosso dia a dia.
             </p>
 
             <div className="actions">
-              <button className="primaryButton">Entrar no NÚCLEO</button>
-              <button className="secondaryButton">Ver módulos</button>
+              <AppButton href="/login">Entrar no NÚCLEO</AppButton>
+              <AppButton href="/cadastro" variant="secondary">
+                Criar acesso
+              </AppButton>
             </div>
           </div>
 
