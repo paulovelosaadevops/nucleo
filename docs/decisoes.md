@@ -19,3 +19,11 @@ Backend: Java 17 + Spring Boot
 Banco de dados: PostgreSQL  
 Infraestrutura local: Docker  
 Estilo visual: dark navy, liquid glass, cards flutuantes, aparência premium
+
+## Decisão 004 - Portas locais
+
+Como outras aplicações podem usar portas comuns, o NÚCLEO usará:
+
+Frontend: 3000  
+Backend: 8095  
+PostgreSQL: 5433

@@ -28,3 +28,15 @@ apps/web  - Frontend em Next.js
 apps/api  - Backend em Spring Boot
 infra     - Docker, banco de dados e infraestrutura local
 docs      - Decisões, planejamento e roadmap
+
+## Ambiente local
+
+Portas usadas em desenvolvimento:
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8095
+- PostgreSQL: localhost:5433
+
+Health check da API:
+
+http://localhost:8095/api/health

@@ -1,0 +1,2 @@
+﻿-- Migration inicial do NÚCLEO.
+-- As tabelas reais serão criadas junto com os módulos de domínio.

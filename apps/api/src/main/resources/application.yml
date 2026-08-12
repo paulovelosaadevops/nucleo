@@ -1,0 +1,20 @@
+﻿server:
+  port: 8080
+
+spring:
+  application:
+    name: nucleo-api
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/nucleo}
+    username: ${DATABASE_USERNAME:nucleo}
+    password: ${DATABASE_PASSWORD:nucleo}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration

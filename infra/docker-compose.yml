@@ -1,0 +1,15 @@
+﻿services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nucleo-postgres
+    environment:
+      POSTGRES_DB: nucleo
+      POSTGRES_USER: nucleo
+      POSTGRES_PASSWORD: nucleo
+    ports:
+      - "5433:5432"
+    volumes:
+      - nucleo_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  nucleo_postgres_data:
