@@ -1,9 +1,39 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Link from "next/link";
+import { useState } from "react";
 import { BrandSignature } from "@/components/brand/BrandSignature";
 import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { authService } from "@/services/authService";
 
 export default function CadastroPage() {
+  const [name, setName] = useState("");
+  const [familyName, setFamilyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsLoading(true);
+    setFeedback("");
+
+    try {
+      await authService.register({ name, familyName, email, password });
+      setFeedback("Cadastro criado. Em breve vamos redirecionar para o dashboard.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar o NÚCLEO."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <main className="authPage">
       <div className="glowLeft" />
@@ -35,28 +65,56 @@ export default function CadastroPage() {
             <p>Crie a base inicial da sua central familiar.</p>
           </div>
 
-          <form className="form">
+          <form className="form" onSubmit={handleSubmit}>
             <label>
               Seu nome
-              <input type="text" placeholder="Paulo" />
+              <input
+                type="text"
+                placeholder="Paulo"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
             </label>
 
             <label>
               Nome da família
-              <input type="text" placeholder="Família Bertão" />
+              <input
+                type="text"
+                placeholder="Família Bertão"
+                value={familyName}
+                onChange={(event) => setFamilyName(event.target.value)}
+                required
+              />
             </label>
 
             <label>
               E-mail
-              <input type="email" placeholder="seuemail@familia.com" />
+              <input
+                type="email"
+                placeholder="seuemail@familia.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
             </label>
 
             <label>
               Senha
-              <input type="password" placeholder="Crie uma senha segura" />
+              <input
+                type="password"
+                placeholder="Crie uma senha segura"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
             </label>
 
-            <AppButton type="submit">Criar NÚCLEO</AppButton>
+            {feedback && <p className="formFeedback">{feedback}</p>}
+
+            <AppButton type="submit">
+              {isLoading ? "Criando..." : "Criar NÚCLEO"}
+            </AppButton>
           </form>
 
           <p className="authFooterText">
