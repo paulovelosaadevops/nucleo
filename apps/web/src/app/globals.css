@@ -667,3 +667,26 @@ button {
 .userPill span {
   color: #cffafe;
 }
+
+.formInlineAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.formInlineAction a {
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 700;
+}
+.formInlineAction {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.formInlineAction a {
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 700;
+}

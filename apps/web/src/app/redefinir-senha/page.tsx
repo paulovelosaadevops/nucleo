@@ -3,7 +3,7 @@ import { BrandSignature } from "@/components/brand/BrandSignature";
 import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 
-export default function LoginPage() {
+export default function RedefinirSenhaPage() {
   return (
     <main className="authPage">
       <div className="glowLeft" />
@@ -14,25 +14,25 @@ export default function LoginPage() {
         <div className="authIntro">
           <BrandSignature size="lg" />
 
-          <h1 className="authTitle">Entre na central da sua família.</h1>
+          <h1 className="authTitle">Recupere o acesso ao NÚCLEO.</h1>
 
           <p className="authDescription">
-            Acesse o NÚCLEO para acompanhar finanças, agenda, compras e rotinas
-            familiares em um ambiente privado e seguro.
+            Informe o e-mail cadastrado e enviaremos as instruções para
+            redefinir sua senha com segurança.
           </p>
 
           <div className="authHighlights">
+            <span>Seguro</span>
             <span>Privado</span>
-            <span>Responsivo</span>
-            <span>Organizado</span>
+            <span>Verificado por e-mail</span>
           </div>
         </div>
 
         <GlassCard className="authCard">
           <div className="authCardHeader">
-            <p className="eyebrow">Acesso familiar</p>
-            <h2>Login</h2>
-            <p>Use seu e-mail e senha para entrar.</p>
+            <p className="eyebrow">Redefinição de senha</p>
+            <h2>Recuperar acesso</h2>
+            <p>Digite o e-mail usado no cadastro.</p>
           </div>
 
           <form className="form">
@@ -41,20 +41,11 @@ export default function LoginPage() {
               <input type="email" placeholder="seuemail@familia.com" />
             </label>
 
-            <label>
-              Senha
-              <input type="password" placeholder="Digite sua senha" />
-            </label>
-
-            <div className="formInlineAction">
-              <Link href="/redefinir-senha">Esqueci minha senha</Link>
-            </div>
-
-            <AppButton type="submit">Entrar</AppButton>
+            <AppButton type="submit">Enviar instruções</AppButton>
           </form>
 
           <p className="authFooterText">
-            Ainda não tem acesso? <Link href="/cadastro">Criar administrador</Link>
+            Lembrou sua senha? <Link href="/login">Voltar para login</Link>
           </p>
         </GlassCard>
       </section>
