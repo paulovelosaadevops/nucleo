@@ -3,32 +3,36 @@ import { GlassCard } from "@/components/ui/GlassCard";
 
 const modules = [
   {
+    key: "FIN",
     title: "Finanças",
-    value: "R$ 0,00",
-    description: "Resumo financeiro do mês",
+    description: "Contas, entradas, saídas, categorias e resumo mensal.",
+    status: "Em breve",
   },
   {
+    key: "COM",
     title: "Compras",
-    value: "0",
-    description: "Itens pendentes no mercado",
+    description: "Lista de mercado, itens recorrentes e organização da casa.",
+    status: "Em breve",
   },
   {
+    key: "AGE",
     title: "Agenda",
-    value: "0",
-    description: "Compromissos de hoje",
+    description: "Compromissos, consultas, eventos e lembretes familiares.",
+    status: "Em breve",
   },
   {
+    key: "ROT",
     title: "Rotinas",
-    value: "0",
-    description: "Tarefas familiares abertas",
+    description: "Tarefas da casa, cuidados, combinados e responsabilidades.",
+    status: "Em breve",
   },
 ];
 
-const nextActions = [
-  "Configurar família principal",
-  "Cadastrar membros",
-  "Criar categorias financeiras",
-  "Montar primeira lista de compras",
+const setupSteps = [
+  "Conectar backend Spring Boot",
+  "Criar autenticação real",
+  "Cadastrar família principal",
+  "Criar primeiro módulo financeiro",
 ];
 
 export default function DashboardPage() {
@@ -50,11 +54,14 @@ export default function DashboardPage() {
       </aside>
 
       <section className="dashboardContent">
-        <header className="dashboardHeader">
+        <header className="dashboardHeader dashboardHeroHeader">
           <div>
             <p className="eyebrow">Central da Família</p>
             <h1>Bom dia, Paulo.</h1>
-            <p>Este é o painel inicial do NÚCLEO.</p>
+            <p>
+              Este é o painel inicial do NÚCLEO. A partir daqui vamos conectar
+              cada área real da rotina familiar.
+            </p>
           </div>
 
           <div className="userPill">
@@ -62,40 +69,109 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <div className="dashboardGrid">
-          {modules.map((module) => (
-            <GlassCard key={module.title} className="dashboardMetric">
-              <p>{module.title}</p>
-              <strong>{module.value}</strong>
-              <span>{module.description}</span>
-            </GlassCard>
-          ))}
-        </div>
+        <section className="overviewStrip">
+          <GlassCard className="overviewPrimary">
+            <p className="eyebrow">Status geral</p>
+            <h2>Ambiente familiar em configuração</h2>
+            <p>
+              O frontend inicial já está estruturado. O próximo grande marco é
+              conectar autenticação, família e banco de dados.
+            </p>
+          </GlassCard>
 
-        <div className="dashboardBottom">
+          <GlassCard className="overviewMini">
+            <p>Família</p>
+            <strong>1</strong>
+            <span>Administrador inicial</span>
+          </GlassCard>
+
+          <GlassCard className="overviewMini">
+            <p>Módulos</p>
+            <strong>4</strong>
+            <span>Planejados na primeira fase</span>
+          </GlassCard>
+        </section>
+
+        <section className="moduleHub">
+          <div className="sectionTitle">
+            <div>
+              <p className="eyebrow">Módulos</p>
+              <h2>Organização completa da casa</h2>
+            </div>
+
+            <span>Fase visual</span>
+          </div>
+
+          <div className="moduleGrid">
+            {modules.map((module) => (
+              <GlassCard key={module.key} className="moduleCard">
+                <div className="moduleIcon">{module.key}</div>
+
+                <div>
+                  <div className="moduleCardHeader">
+                    <h3>{module.title}</h3>
+                    <span>{module.status}</span>
+                  </div>
+
+                  <p>{module.description}</p>
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+        </section>
+
+        <section className="familyGrid">
+          <GlassCard className="familyPanel">
+            <p className="eyebrow">Família</p>
+            <h2>Família Bertão</h2>
+            <p>
+              O primeiro administrador será responsável por convidar membros,
+              definir permissões e configurar o ambiente familiar.
+            </p>
+
+            <div className="familyMembers">
+              <div className="memberAvatar">P</div>
+              <div>
+                <strong>Paulo</strong>
+                <span>Administrador</span>
+              </div>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="dayPanel">
+            <p className="eyebrow">Hoje</p>
+            <h2>Sem compromissos conectados</h2>
+            <p>
+              Quando a agenda for integrada, esta área mostrará consultas,
+              vencimentos, lembretes e eventos do dia.
+            </p>
+          </GlassCard>
+
+          <GlassCard className="dayPanel">
+            <p className="eyebrow">Compras</p>
+            <h2>Lista ainda vazia</h2>
+            <p>
+              O módulo de compras será usado para mercado, farmácia, casa e
+              itens recorrentes da família.
+            </p>
+          </GlassCard>
+        </section>
+
+        <section className="setupPanel">
           <GlassCard className="wideCard">
-            <p className="eyebrow">Próximas ações</p>
-            <h2>Fundação da família</h2>
+            <p className="eyebrow">Próximos passos técnicos</p>
+            <h2>Fundação real do sistema</h2>
 
             <div className="actionList">
-              {nextActions.map((action) => (
-                <div key={action} className="actionItem">
+              {setupSteps.map((step) => (
+                <div key={step} className="actionItem">
                   <span />
-                  {action}
+                  {step}
                 </div>
               ))}
             </div>
           </GlassCard>
-
-          <GlassCard className="wideCard accentCard">
-            <p className="eyebrow">Status</p>
-            <h2>Frontend em construção</h2>
-            <p>
-              Esta tela ainda usa dados estáticos visuais. A integração real
-              será feita quando conectarmos o backend Spring Boot e o PostgreSQL.
-            </p>
-          </GlassCard>
-        </div>
+        </section>
       </section>
     </main>
   );
