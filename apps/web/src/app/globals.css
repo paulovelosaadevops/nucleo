@@ -621,3 +621,49 @@ button {
     width: min(330px, 88vw);
   }
 }
+
+.dashboardPage,
+.dashboardPage h1,
+.dashboardPage h2,
+.dashboardPage h3,
+.dashboardPage strong,
+.dashboardPage p,
+.dashboardPage span {
+  color: #ffffff;
+}
+
+.dashboardHeader p,
+.dashboardMetric p,
+.wideCard p {
+  color: #cbd5e1;
+}
+
+.dashboardMetric span {
+  color: #93c5fd;
+}
+
+.dashboardHeader .eyebrow,
+.wideCard .eyebrow {
+  color: #93c5fd;
+}
+
+.dashboardMetric strong {
+  color: #ffffff;
+}
+
+.actionItem {
+  color: #f8fafc;
+}
+
+.sidebarNav a {
+  color: #dbeafe;
+}
+
+.sidebarNav a:hover,
+.sidebarNav a.active {
+  color: #ffffff;
+}
+
+.userPill span {
+  color: #cffafe;
+}
