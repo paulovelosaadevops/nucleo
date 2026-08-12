@@ -1,5 +1,8 @@
-﻿import { AppShell } from "@/components/layout/AppShell";
+﻿"use client";
+
+import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const modules = [
   {
@@ -35,13 +38,23 @@ const setupSteps = [
   "Criar primeiro módulo financeiro",
 ];
 
+function getFirstName(name?: string) {
+  if (!name) {
+    return "Paulo";
+  }
+
+  return name.split(" ")[0];
+}
+
 export default function DashboardPage() {
+  const { user } = useCurrentUser();
+
   return (
     <AppShell active="dashboard">
       <header className="dashboardHeader dashboardHeroHeader">
         <div>
           <p className="eyebrow">Central da Família</p>
-          <h1>Bom dia, Paulo.</h1>
+          <h1>Bom dia, {getFirstName(user?.name)}.</h1>
           <p>
             Este é o painel inicial do NÚCLEO. A partir daqui vamos conectar
             cada área real da rotina familiar.

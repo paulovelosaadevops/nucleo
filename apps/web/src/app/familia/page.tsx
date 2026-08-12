@@ -1,7 +1,16 @@
-﻿import { AppShell } from "@/components/layout/AppShell";
+﻿"use client";
+
+import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+function getInitial(name?: string) {
+  return name?.charAt(0).toUpperCase() ?? "P";
+}
 
 export default function FamiliaPage() {
+  const { user } = useCurrentUser();
+
   return (
     <AppShell active="familia">
       <header className="dashboardHeader">
@@ -26,9 +35,9 @@ export default function FamiliaPage() {
           </p>
 
           <div className="familyMembers">
-            <div className="memberAvatar">P</div>
+            <div className="memberAvatar">{getInitial(user?.name)}</div>
             <div>
-              <strong>Paulo</strong>
+              <strong>{user?.name ?? "Paulo"}</strong>
               <span>Administrador</span>
             </div>
           </div>

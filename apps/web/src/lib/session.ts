@@ -1,4 +1,5 @@
 ﻿import type { AuthResponse } from "@/types/auth";
+import type { CurrentUser } from "@/types/user";
 
 const ACCESS_TOKEN_KEY = "nucleo.accessToken";
 const USER_KEY = "nucleo.user";
@@ -6,6 +7,10 @@ const USER_KEY = "nucleo.user";
 export function saveSession(auth: AuthResponse) {
   localStorage.setItem(ACCESS_TOKEN_KEY, auth.accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
+}
+
+export function saveCurrentUser(user: CurrentUser) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function getAccessToken() {
@@ -20,7 +25,7 @@ export function getCurrentUser() {
   }
 
   try {
-    return JSON.parse(rawUser) as AuthResponse["user"];
+    return JSON.parse(rawUser) as CurrentUser;
   } catch {
     return null;
   }
