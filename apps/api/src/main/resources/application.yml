@@ -1,5 +1,10 @@
-﻿server:
+server:
   port: 8080
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:nucleo-local-development-secret-key-with-at-least-32-chars}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:900}
 
 spring:
   application:
