@@ -56,4 +56,20 @@ public class FamilyMembership {
             createdAt = Instant.now();
         }
     }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public FamilyRole getRole() {
+        return role;
+    }
 }

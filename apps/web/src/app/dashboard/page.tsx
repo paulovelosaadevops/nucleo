@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useCurrentFamily } from "@/hooks/useCurrentFamily";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const modules = [
@@ -32,10 +33,10 @@ const modules = [
 ];
 
 const setupSteps = [
-  "Conectar backend Spring Boot",
-  "Criar autenticação real",
-  "Cadastrar família principal",
+  "Criar convites de membros",
   "Criar primeiro módulo financeiro",
+  "Cadastrar categorias reais",
+  "Exibir dados reais no dashboard",
 ];
 
 function getFirstName(name?: string) {
@@ -46,8 +47,17 @@ function getFirstName(name?: string) {
   return name.split(" ")[0];
 }
 
+function getRoleLabel(role?: string) {
+  if (role === "OWNER") {
+    return "Administrador";
+  }
+
+  return "Membro";
+}
+
 export default function DashboardPage() {
   const { user } = useCurrentUser();
+  const { family } = useCurrentFamily();
 
   return (
     <AppShell active="dashboard">
@@ -56,30 +66,30 @@ export default function DashboardPage() {
           <p className="eyebrow">Central da Família</p>
           <h1>Bom dia, {getFirstName(user?.name)}.</h1>
           <p>
-            Este é o painel inicial do NÚCLEO. A partir daqui vamos conectar
-            cada área real da rotina familiar.
+            Este é o painel inicial da {family?.name ?? "sua família"}. A partir
+            daqui vamos conectar cada área real da rotina familiar.
           </p>
         </div>
 
         <div className="userPill">
-          <span>Administrador</span>
+          <span>{getRoleLabel(family?.role)}</span>
         </div>
       </header>
 
       <section className="overviewStrip">
         <GlassCard className="overviewPrimary">
           <p className="eyebrow">Status geral</p>
-          <h2>Ambiente familiar em configuração</h2>
+          <h2>{family?.name ?? "Ambiente familiar em configuração"}</h2>
           <p>
-            O frontend inicial já está estruturado. O próximo grande marco é
-            conectar autenticação, família e banco de dados.
+            Família conectada ao backend. O próximo grande marco é permitir
+            convites, membros e permissões reais.
           </p>
         </GlassCard>
 
         <GlassCard className="overviewMini">
           <p>Família</p>
           <strong>1</strong>
-          <span>Administrador inicial</span>
+          <span>{getRoleLabel(family?.role)} inicial</span>
         </GlassCard>
 
         <GlassCard className="overviewMini">

@@ -2,14 +2,24 @@
 
 import { AppShell } from "@/components/layout/AppShell";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useCurrentFamily } from "@/hooks/useCurrentFamily";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function getInitial(name?: string) {
   return name?.charAt(0).toUpperCase() ?? "P";
 }
 
+function getRoleLabel(role?: string) {
+  if (role === "OWNER") {
+    return "Administrador";
+  }
+
+  return "Membro";
+}
+
 export default function FamiliaPage() {
   const { user } = useCurrentUser();
+  const { family } = useCurrentFamily();
 
   return (
     <AppShell active="familia">
@@ -21,14 +31,14 @@ export default function FamiliaPage() {
         </div>
 
         <div className="userPill">
-          <span>Administrador</span>
+          <span>{getRoleLabel(family?.role)}</span>
         </div>
       </header>
 
       <section className="familyGrid">
         <GlassCard className="familyPanel">
           <p className="eyebrow">Família principal</p>
-          <h2>Família Bertão</h2>
+          <h2>{family?.name ?? "Sua família"}</h2>
           <p>
             Ambiente privado para organizar a rotina, as finanças e as decisões
             familiares.
@@ -37,8 +47,8 @@ export default function FamiliaPage() {
           <div className="familyMembers">
             <div className="memberAvatar">{getInitial(user?.name)}</div>
             <div>
-              <strong>{user?.name ?? "Paulo"}</strong>
-              <span>Administrador</span>
+              <strong>{user?.name ?? "Usuário"}</strong>
+              <span>{getRoleLabel(family?.role)}</span>
             </div>
           </div>
         </GlassCard>
