@@ -1,9 +1,41 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { BrandSignature } from "@/components/brand/BrandSignature";
 import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { saveSession } from "@/lib/session";
+import { authService } from "@/services/authService";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsLoading(true);
+    setFeedback("");
+
+    try {
+      const auth = await authService.login({ email, password });
+      saveSession(auth);
+      router.replace("/dashboard");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível entrar no NÚCLEO."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <main className="authPage">
       <div className="glowLeft" />
@@ -35,22 +67,38 @@ export default function LoginPage() {
             <p>Use seu e-mail e senha para entrar.</p>
           </div>
 
-          <form className="form">
+          <form className="form" onSubmit={handleSubmit}>
             <label>
               E-mail
-              <input type="email" placeholder="seuemail@familia.com" />
+              <input
+                type="email"
+                placeholder="seuemail@familia.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
             </label>
 
             <label>
               Senha
-              <input type="password" placeholder="Digite sua senha" />
+              <input
+                type="password"
+                placeholder="Digite sua senha"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
             </label>
 
             <div className="formInlineAction">
               <Link href="/redefinir-senha">Esqueci minha senha</Link>
             </div>
 
-            <AppButton type="submit">Entrar</AppButton>
+            {feedback && <p className="formFeedback">{feedback}</p>}
+
+            <AppButton type="submit">
+              {isLoading ? "Entrando..." : "Entrar"}
+            </AppButton>
           </form>
 
           <p className="authFooterText">

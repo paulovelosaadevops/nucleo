@@ -987,3 +987,36 @@ button {
   cursor: not-allowed;
   transform: none;
 }
+
+.sidebarFooter {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logoutButton {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbeafe;
+  font-weight: 800;
+  transition: 0.2s ease;
+}
+
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.loadingState {
+  position: relative;
+  z-index: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 14px 18px;
+  color: #dbeafe;
+  backdrop-filter: blur(20px);
+}

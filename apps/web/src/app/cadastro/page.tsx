@@ -1,13 +1,16 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BrandSignature } from "@/components/brand/BrandSignature";
 import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { saveSession } from "@/lib/session";
 import { authService } from "@/services/authService";
 
 export default function CadastroPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,8 +24,9 @@ export default function CadastroPage() {
     setFeedback("");
 
     try {
-      await authService.register({ name, familyName, email, password });
-      setFeedback("Cadastro criado. Em breve vamos redirecionar para o dashboard.");
+      const auth = await authService.register({ name, familyName, email, password });
+      saveSession(auth);
+      router.replace("/dashboard");
     } catch (error) {
       setFeedback(
         error instanceof Error
