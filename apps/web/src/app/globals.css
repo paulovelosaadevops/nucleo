@@ -940,3 +940,33 @@ button {
     min-height: auto;
   }
 }
+
+.moduleDetailGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.tagList span {
+  border-radius: 999px;
+  border: 1px solid rgba(165, 243, 252, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 9px 13px;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .moduleDetailGrid {
+    grid-template-columns: 1fr;
+  }
+}
