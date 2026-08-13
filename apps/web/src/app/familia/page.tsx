@@ -1,9 +1,14 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useCurrentFamily } from "@/hooks/useCurrentFamily";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getAccessToken } from "@/lib/session";
+import { familyInvitationService } from "@/services/familyInvitationService";
+import type { FamilyInvitation } from "@/types/familyInvitation";
 
 function getInitial(name?: string) {
   return name?.charAt(0).toUpperCase() ?? "P";
@@ -17,9 +22,82 @@ function getRoleLabel(role?: string) {
   return "Membro";
 }
 
+function getStatusLabel(status: string) {
+  if (status === "PENDING") {
+    return "Pendente";
+  }
+
+  if (status === "ACCEPTED") {
+    return "Aceito";
+  }
+
+  return "Revogado";
+}
+
 export default function FamiliaPage() {
   const { user } = useCurrentUser();
   const { family } = useCurrentFamily();
+  const [invitedEmail, setInvitedEmail] = useState("");
+  const [invitations, setInvitations] = useState<FamilyInvitation[]>([]);
+  const [feedback, setFeedback] = useState("");
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
+  const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
+
+  async function loadInvitations() {
+    const token = getAccessToken();
+
+    if (!token) {
+      setIsLoadingInvitations(false);
+      return;
+    }
+
+    setIsLoadingInvitations(true);
+
+    try {
+      const data = await familyInvitationService.list(token);
+      setInvitations(data);
+    } catch {
+      setFeedback("Não foi possível carregar os convites.");
+    } finally {
+      setIsLoadingInvitations(false);
+    }
+  }
+
+  async function handleCreateInvitation(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const token = getAccessToken();
+
+    if (!token) {
+      return;
+    }
+
+    setIsCreatingInvitation(true);
+    setFeedback("");
+
+    try {
+      const invitation = await familyInvitationService.create(token, {
+        invitedEmail,
+        role: "MEMBER",
+      });
+
+      setInvitations((current) => [invitation, ...current]);
+      setInvitedEmail("");
+      setFeedback("Convite criado com sucesso.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar o convite."
+      );
+    } finally {
+      setIsCreatingInvitation(false);
+    }
+  }
+
+  useEffect(() => {
+    loadInvitations();
+  }, []);
 
   return (
     <AppShell active="familia">
@@ -53,20 +131,63 @@ export default function FamiliaPage() {
           </div>
         </GlassCard>
 
-        <GlassCard className="dayPanel">
-          <p className="eyebrow">Convites</p>
-          <h2>Nenhum convite enviado</h2>
+        <GlassCard className="dayPanel invitePanel">
+          <p className="eyebrow">Novo convite</p>
+          <h2>Convidar membro</h2>
           <p>
-            Depois do backend, o administrador poderá convidar membros por e-mail.
+            Convide uma pessoa da família para acessar o NÚCLEO como membro.
           </p>
+
+          <form className="compactForm" onSubmit={handleCreateInvitation}>
+            <input
+              type="email"
+              placeholder="email@familia.com"
+              value={invitedEmail}
+              onChange={(event) => setInvitedEmail(event.target.value)}
+              required
+            />
+
+            <AppButton type="submit">
+              {isCreatingInvitation ? "Criando..." : "Criar convite"}
+            </AppButton>
+          </form>
+
+          {feedback && <p className="formFeedback">{feedback}</p>}
         </GlassCard>
 
         <GlassCard className="dayPanel">
           <p className="eyebrow">Permissões</p>
           <h2>Controle familiar</h2>
           <p>
-            Vamos separar administrador, membro e permissões por módulo.
+            Administrador convida membros. Nas próximas etapas, cada módulo terá
+            permissões próprias.
           </p>
+        </GlassCard>
+      </section>
+
+      <section className="setupPanel">
+        <GlassCard className="wideCard">
+          <p className="eyebrow">Convites enviados</p>
+          <h2>Lista de convites</h2>
+
+          {isLoadingInvitations ? (
+            <p>Carregando convites...</p>
+          ) : invitations.length === 0 ? (
+            <p>Nenhum convite enviado até agora.</p>
+          ) : (
+            <div className="invitationList">
+              {invitations.map((invitation) => (
+                <div className="invitationItem" key={invitation.id}>
+                  <div>
+                    <strong>{invitation.invitedEmail}</strong>
+                    <span>{getRoleLabel(invitation.role)}</span>
+                  </div>
+
+                  <em>{getStatusLabel(invitation.status)}</em>
+                </div>
+              ))}
+            </div>
+          )}
         </GlassCard>
       </section>
     </AppShell>
