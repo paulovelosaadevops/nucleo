@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,9 +45,19 @@ public class FamilyInvitationController {
         return familyInvitationService.create(userId, request);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
+    @PatchMapping("/api/family-invitations/{invitationId}/revoke")
+    public FamilyInvitationResponse revoke(
+            Authentication authentication,
+            @PathVariable UUID invitationId
+    ) {
+        UUID userId = UUID.fromString(authentication.getName());
+
+        return familyInvitationService.revoke(userId, invitationId);
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MessageResponse handleIllegalArgument(IllegalArgumentException exception) {
+    public MessageResponse handleBadRequest(RuntimeException exception) {
         return new MessageResponse(exception.getMessage());
     }
 }

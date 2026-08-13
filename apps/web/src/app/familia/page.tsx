@@ -42,6 +42,7 @@ export default function FamiliaPage() {
   const [feedback, setFeedback] = useState("");
   const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
   const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
+  const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
 
   async function loadInvitations() {
     const token = getAccessToken();
@@ -92,6 +93,40 @@ export default function FamiliaPage() {
       );
     } finally {
       setIsCreatingInvitation(false);
+    }
+  }
+
+  async function handleRevokeInvitation(invitationId: string) {
+    const token = getAccessToken();
+
+    if (!token) {
+      return;
+    }
+
+    setRevokingInvitationId(invitationId);
+    setFeedback("");
+
+    try {
+      const updatedInvitation = await familyInvitationService.revoke(
+        token,
+        invitationId
+      );
+
+      setInvitations((current) =>
+        current.map((invitation) =>
+          invitation.id === invitationId ? updatedInvitation : invitation
+        )
+      );
+
+      setFeedback("Convite revogado com sucesso.");
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível revogar o convite."
+      );
+    } finally {
+      setRevokingInvitationId(null);
     }
   }
 
@@ -183,7 +218,22 @@ export default function FamiliaPage() {
                     <span>{getRoleLabel(invitation.role)}</span>
                   </div>
 
-                  <em>{getStatusLabel(invitation.status)}</em>
+                  <div className="invitationActions">
+                    <em>{getStatusLabel(invitation.status)}</em>
+
+                    {invitation.status === "PENDING" && (
+                      <button
+                        type="button"
+                        className="smallDangerButton"
+                        onClick={() => handleRevokeInvitation(invitation.id)}
+                        disabled={revokingInvitationId === invitation.id}
+                      >
+                        {revokingInvitationId === invitation.id
+                          ? "Revogando..."
+                          : "Revogar"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

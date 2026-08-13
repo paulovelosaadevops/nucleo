@@ -29,13 +29,7 @@ public class FamilyInvitationService {
 
     @Transactional
     public FamilyInvitationResponse create(UUID userId, CreateFamilyInvitationRequest request) {
-        FamilyMembership membership = familyMembershipRepository.findFirstByUserId(userId)
-                .orElseThrow();
-
-        if (membership.getRole() != FamilyRole.OWNER) {
-            throw new IllegalArgumentException("Somente o administrador pode convidar membros.");
-        }
-
+        FamilyMembership membership = getOwnerMembership(userId);
         User user = userRepository.findById(userId).orElseThrow();
 
         FamilyInvitation invitation = familyInvitationRepository.save(new FamilyInvitation(
@@ -57,5 +51,29 @@ public class FamilyInvitationService {
                 .stream()
                 .map(FamilyInvitationResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public FamilyInvitationResponse revoke(UUID userId, UUID invitationId) {
+        FamilyMembership membership = getOwnerMembership(userId);
+
+        FamilyInvitation invitation = familyInvitationRepository
+                .findByIdAndFamilyId(invitationId, membership.getFamily().getId())
+                .orElseThrow();
+
+        invitation.revoke();
+
+        return FamilyInvitationResponse.from(invitation);
+    }
+
+    private FamilyMembership getOwnerMembership(UUID userId) {
+        FamilyMembership membership = familyMembershipRepository.findFirstByUserId(userId)
+                .orElseThrow();
+
+        if (membership.getRole() != FamilyRole.OWNER) {
+            throw new IllegalArgumentException("Somente o administrador pode gerenciar convites.");
+        }
+
+        return membership;
     }
 }

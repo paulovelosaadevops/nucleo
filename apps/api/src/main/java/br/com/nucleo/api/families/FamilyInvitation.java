@@ -71,6 +71,14 @@ public class FamilyInvitation {
         }
     }
 
+    public void revoke() {
+        if (status != FamilyInvitationStatus.PENDING) {
+            throw new IllegalStateException("Somente convites pendentes podem ser revogados.");
+        }
+
+        status = FamilyInvitationStatus.REVOKED;
+    }
+
     public UUID getId() {
         return id;
     }

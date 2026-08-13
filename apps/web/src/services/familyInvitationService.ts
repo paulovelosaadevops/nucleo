@@ -19,4 +19,14 @@ export const familyInvitationService = {
       body: payload,
     });
   },
+
+  revoke(token: string, invitationId: string) {
+    return apiRequest<FamilyInvitation>(
+      `/family-invitations/${invitationId}/revoke`,
+      {
+        method: "PATCH",
+        token,
+      }
+    );
+  },
 };
