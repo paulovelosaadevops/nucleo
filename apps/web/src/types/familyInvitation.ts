@@ -3,6 +3,7 @@
   invitedEmail: string;
   role: "OWNER" | "MEMBER";
   status: "PENDING" | "ACCEPTED" | "REVOKED";
+  token: string;
   createdAt: string;
 };
 

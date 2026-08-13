@@ -34,6 +34,14 @@ function getStatusLabel(status: string) {
   return "Revogado";
 }
 
+function getInvitationLink(token: string) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return `${window.location.origin}/aceitar-convite/${token}`;
+}
+
 export default function FamiliaPage() {
   const { user } = useCurrentUser();
   const { family } = useCurrentFamily();
@@ -130,6 +138,13 @@ export default function FamiliaPage() {
     }
   }
 
+  async function handleCopyInvitationLink(invitation: FamilyInvitation) {
+    const link = getInvitationLink(invitation.token);
+
+    await navigator.clipboard.writeText(link);
+    setFeedback("Link do convite copiado.");
+  }
+
   useEffect(() => {
     loadInvitations();
   }, []);
@@ -216,22 +231,38 @@ export default function FamiliaPage() {
                   <div>
                     <strong>{invitation.invitedEmail}</strong>
                     <span>{getRoleLabel(invitation.role)}</span>
+
+                    {invitation.status === "PENDING" && (
+                      <code className="invitationLink">
+                        {getInvitationLink(invitation.token)}
+                      </code>
+                    )}
                   </div>
 
                   <div className="invitationActions">
                     <em>{getStatusLabel(invitation.status)}</em>
 
                     {invitation.status === "PENDING" && (
-                      <button
-                        type="button"
-                        className="smallDangerButton"
-                        onClick={() => handleRevokeInvitation(invitation.id)}
-                        disabled={revokingInvitationId === invitation.id}
-                      >
-                        {revokingInvitationId === invitation.id
-                          ? "Revogando..."
-                          : "Revogar"}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="smallNeutralButton"
+                          onClick={() => handleCopyInvitationLink(invitation)}
+                        >
+                          Copiar link
+                        </button>
+
+                        <button
+                          type="button"
+                          className="smallDangerButton"
+                          onClick={() => handleRevokeInvitation(invitation.id)}
+                          disabled={revokingInvitationId === invitation.id}
+                        >
+                          {revokingInvitationId === invitation.id
+                            ? "Revogando..."
+                            : "Revogar"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

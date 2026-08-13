@@ -12,6 +12,7 @@ public record FamilyInvitationResponse(
         String invitedEmail,
         FamilyRole role,
         FamilyInvitationStatus status,
+        String token,
         Instant createdAt
 ) {
 
@@ -21,6 +22,7 @@ public record FamilyInvitationResponse(
                 invitation.getInvitedEmail(),
                 invitation.getRole(),
                 invitation.getStatus(),
+                invitation.getToken(),
                 invitation.getCreatedAt()
         );
     }

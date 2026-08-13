@@ -1080,3 +1080,31 @@ button {
   font-style: normal;
   font-weight: 800;
 }
+
+.invitationLink {
+  display: block;
+  max-width: 620px;
+  margin-top: 8px;
+  overflow: hidden;
+  color: #93c5fd;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smallNeutralButton {
+  border-radius: 999px;
+  border: 1px solid rgba(147, 197, 253, 0.22);
+  background: rgba(147, 197, 253, 0.08);
+  color: #dbeafe;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.smallNeutralButton:hover {
+  background: rgba(147, 197, 253, 0.14);
+  color: #ffffff;
+}

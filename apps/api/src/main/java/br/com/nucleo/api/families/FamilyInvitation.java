@@ -37,6 +37,9 @@ public class FamilyInvitation {
     @Column(nullable = false, length = 30)
     private FamilyInvitationStatus status;
 
+    @Column(nullable = false, unique = true, length = 120)
+    private String token;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
@@ -58,12 +61,17 @@ public class FamilyInvitation {
         this.role = role;
         this.createdBy = createdBy;
         this.status = FamilyInvitationStatus.PENDING;
+        this.token = UUID.randomUUID().toString();
     }
 
     @PrePersist
     void prePersist() {
         if (id == null) {
             id = UUID.randomUUID();
+        }
+
+        if (token == null) {
+            token = UUID.randomUUID().toString();
         }
 
         if (createdAt == null) {
@@ -97,6 +105,10 @@ public class FamilyInvitation {
 
     public FamilyInvitationStatus getStatus() {
         return status;
+    }
+
+    public String getToken() {
+        return token;
     }
 
     public Instant getCreatedAt() {
