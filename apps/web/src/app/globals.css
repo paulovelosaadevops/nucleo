@@ -884,6 +884,16 @@ button {
   padding: 14px;
 }
 
+.memberList {
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.memberList .familyMembers {
+  margin-top: 0;
+}
+
 .memberAvatar {
   display: flex;
   width: 48px;

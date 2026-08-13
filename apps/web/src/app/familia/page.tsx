@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AppButton } from "@/components/ui/AppButton";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useCurrentFamily } from "@/hooks/useCurrentFamily";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFamilyMembers } from "@/hooks/useFamilyMembers";
 import { getAccessToken } from "@/lib/session";
 import { familyInvitationService } from "@/services/familyInvitationService";
 import type { FamilyInvitation } from "@/types/familyInvitation";
@@ -43,8 +43,9 @@ function getInvitationLink(token: string) {
 }
 
 export default function FamiliaPage() {
-  const { user } = useCurrentUser();
   const { family } = useCurrentFamily();
+  const { members, isLoadingMembers, membersError, reloadMembers } =
+    useFamilyMembers();
   const [invitedEmail, setInvitedEmail] = useState("");
   const [invitations, setInvitations] = useState<FamilyInvitation[]>([]);
   const [feedback, setFeedback] = useState("");
@@ -93,6 +94,7 @@ export default function FamiliaPage() {
       setInvitations((current) => [invitation, ...current]);
       setInvitedEmail("");
       setFeedback("Convite criado com sucesso.");
+      reloadMembers();
     } catch (error) {
       setFeedback(
         error instanceof Error
@@ -127,6 +129,7 @@ export default function FamiliaPage() {
       );
 
       setFeedback("Convite revogado com sucesso.");
+      reloadMembers();
     } catch (error) {
       setFeedback(
         error instanceof Error
@@ -172,13 +175,33 @@ export default function FamiliaPage() {
             familiares.
           </p>
 
-          <div className="familyMembers">
-            <div className="memberAvatar">{getInitial(user?.name)}</div>
-            <div>
-              <strong>{user?.name ?? "Usuário"}</strong>
-              <span>{getRoleLabel(family?.role)}</span>
+          {isLoadingMembers ? (
+            <div className="familyMembers">
+              <div className="memberAvatar">...</div>
+              <div>
+                <strong>Carregando membros...</strong>
+                <span>{getRoleLabel(family?.role)}</span>
+              </div>
             </div>
-          </div>
+          ) : membersError ? (
+            <p className="formFeedback">{membersError}</p>
+          ) : members.length === 0 ? (
+            <p>Nenhum membro encontrado.</p>
+          ) : (
+            <div className="memberList">
+              {members.map((member) => (
+                <div className="familyMembers" key={member.id}>
+                  <div className="memberAvatar">{getInitial(member.name)}</div>
+                  <div>
+                    <strong>{member.name}</strong>
+                    <span>
+                      {member.email} · {getRoleLabel(member.role)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </GlassCard>
 
         <GlassCard className="dayPanel invitePanel">

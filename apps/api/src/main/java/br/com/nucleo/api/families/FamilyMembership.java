@@ -72,4 +72,8 @@ public class FamilyMembership {
     public FamilyRole getRole() {
         return role;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }

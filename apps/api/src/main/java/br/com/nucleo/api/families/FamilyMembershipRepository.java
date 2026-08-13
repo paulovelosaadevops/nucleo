@@ -1,5 +1,6 @@
 package br.com.nucleo.api.families;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +11,7 @@ public interface FamilyMembershipRepository extends JpaRepository<FamilyMembersh
 
     @EntityGraph(attributePaths = "family")
     Optional<FamilyMembership> findFirstByUserId(UUID userId);
+
+    @EntityGraph(attributePaths = "user")
+    List<FamilyMembership> findByFamilyIdOrderByCreatedAtAsc(UUID familyId);
 }
