@@ -87,6 +87,14 @@ public class FamilyInvitation {
         status = FamilyInvitationStatus.REVOKED;
     }
 
+    public void accept() {
+        if (status != FamilyInvitationStatus.PENDING) {
+            throw new IllegalStateException("Somente convites pendentes podem ser aceitos.");
+        }
+
+        status = FamilyInvitationStatus.ACCEPTED;
+    }
+
     public UUID getId() {
         return id;
     }
