@@ -1,0 +1,44 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Java
+target/
+*.class
+*.jar
+*.war
+*.log
+.mvn/timing.properties
+.factorypath
+.project
+.classpath
+.settings/
+bin/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+docker-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
