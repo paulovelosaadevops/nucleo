@@ -1,20 +1,21 @@
 package br.com.nucleo.api.finance.service;
 
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
+import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialBudget;
 import br.com.nucleo.api.finance.domain.FinancialCategory;
 import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInstallment;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoiceStatus;
 import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
 import br.com.nucleo.api.finance.dto.CreateFinancialBudgetRequest;
 import br.com.nucleo.api.finance.dto.FinancialBudgetResponse;
 import br.com.nucleo.api.finance.dto.UpdateFinancialBudgetRequest;
 import br.com.nucleo.api.finance.repository.FinancialBudgetRepository;
 import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardInstallmentRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
-
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.family.domain.FamilyMembership;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,17 +30,22 @@ public class FinancialBudgetService {
     private final FinancialCategoryRepository categoryRepository;
     private final FinancialBudgetRepository budgetRepository;
     private final FinancialTransactionRepository transactionRepository;
+    private final FinancialCreditCardInstallmentRepository
+            installmentRepository;
 
     public FinancialBudgetService(
             FamilyAccessService familyAccessService,
             FinancialCategoryRepository categoryRepository,
             FinancialBudgetRepository budgetRepository,
-            FinancialTransactionRepository transactionRepository
+            FinancialTransactionRepository transactionRepository,
+            FinancialCreditCardInstallmentRepository
+                    installmentRepository
     ) {
         this.familyAccessService = familyAccessService;
         this.categoryRepository = categoryRepository;
         this.budgetRepository = budgetRepository;
         this.transactionRepository = transactionRepository;
+        this.installmentRepository = installmentRepository;
     }
 
     @Transactional
@@ -217,6 +223,48 @@ public class FinancialBudgetService {
                         from,
                         to
                 );
+
+        List<FinancialCreditCardInstallment> installments =
+                installmentRepository.findAllForReferenceMonth(
+                        budget.getFamily().getId(),
+                        budget.getReferenceMonth()
+                );
+
+        for (FinancialCreditCardInstallment installment
+                : installments) {
+            FinancialCategory category =
+                    installment.getPurchase().getCategory();
+
+            if (
+                    category == null
+                            || !category.getId().equals(
+                            budget.getCategory().getId()
+                    )
+            ) {
+                continue;
+            }
+
+            FinancialCreditCardInvoiceStatus invoiceStatus =
+                    installment.getInvoice().getStatus();
+
+            if (
+                    invoiceStatus
+                            == FinancialCreditCardInvoiceStatus.PAID
+            ) {
+                paidAmount = paidAmount.add(
+                        installment.getAmount()
+                );
+            } else if (
+                    invoiceStatus
+                            == FinancialCreditCardInvoiceStatus.OPEN
+                            || invoiceStatus
+                            == FinancialCreditCardInvoiceStatus.CLOSED
+            ) {
+                pendingAmount = pendingAmount.add(
+                        installment.getAmount()
+                );
+            }
+        }
 
         return FinancialBudgetResponse.from(
                 budget,

@@ -4,7 +4,6 @@ import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
 import br.com.nucleo.api.finance.domain.FinancialTransaction;
 import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
 import br.com.nucleo.api.finance.domain.FinancialTransactionType;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,6 +27,11 @@ public record FinancialTransactionResponse(
         Instant paidAt,
         boolean overdue,
         String notes,
+        UUID recurrenceId,
+        Integer recurrenceSequence,
+        UUID creditCardInvoiceId,
+        boolean invoicePayment,
+        boolean excludedFromReports,
         UUID createdByUserId,
         String createdByName,
         Instant createdAt,
@@ -48,6 +52,19 @@ public record FinancialTransactionResponse(
             categoryName = transaction.getCategory().getName();
             categoryColor = transaction.getCategory().getColor();
             categoryIcon = transaction.getCategory().getIcon();
+        }
+
+        UUID recurrenceId = null;
+
+        if (transaction.getRecurrence() != null) {
+            recurrenceId = transaction.getRecurrence().getId();
+        }
+
+        UUID creditCardInvoiceId = null;
+
+        if (transaction.getCreditCardInvoice() != null) {
+            creditCardInvoiceId =
+                    transaction.getCreditCardInvoice().getId();
         }
 
         boolean overdue =
@@ -73,6 +90,11 @@ public record FinancialTransactionResponse(
                 transaction.getPaidAt(),
                 overdue,
                 transaction.getNotes(),
+                recurrenceId,
+                transaction.getRecurrenceSequence(),
+                creditCardInvoiceId,
+                transaction.isInvoicePayment(),
+                transaction.isExcludedFromReports(),
                 transaction.getCreatedBy().getId(),
                 transaction.getCreatedBy().getName(),
                 transaction.getCreatedAt(),

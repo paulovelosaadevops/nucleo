@@ -1,5 +1,9 @@
 package br.com.nucleo.api.finance.service;
 
+import br.com.nucleo.api.common.error.ForbiddenOperationException;
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.domain.FamilyRole;
 import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialAccount;
 import br.com.nucleo.api.finance.domain.FinancialCategory;
@@ -13,12 +17,6 @@ import br.com.nucleo.api.finance.dto.UpdateFinancialTransactionRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
-
-import br.com.nucleo.api.common.error.ForbiddenOperationException;
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.family.domain.FamilyMembership;
-import br.com.nucleo.api.family.domain.FamilyRole;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -173,6 +171,8 @@ public class FinancialTransactionService {
                         membership.getFamily().getId()
                 );
 
+        ensureNotInvoicePayment(transaction);
+
         FinancialAccount account = requireActiveAccount(
                 request.accountId(),
                 membership.getFamily().getId()
@@ -215,6 +215,8 @@ public class FinancialTransactionService {
                         transactionId
                 );
 
+        ensureNotInvoicePayment(transaction);
+
         transaction.markAsPaid();
 
         return toResponse(transaction);
@@ -230,6 +232,8 @@ public class FinancialTransactionService {
                         currentUserId,
                         transactionId
                 );
+
+        ensureNotInvoicePayment(transaction);
 
         transaction.markAsPending();
 
@@ -247,6 +251,8 @@ public class FinancialTransactionService {
                         transactionId
                 );
 
+        ensureNotInvoicePayment(transaction);
+
         transaction.cancel();
 
         return toResponse(transaction);
@@ -262,6 +268,8 @@ public class FinancialTransactionService {
                         currentUserId,
                         transactionId
                 );
+
+        ensureNotInvoicePayment(transaction);
 
         transaction.restore();
 
@@ -283,6 +291,8 @@ public class FinancialTransactionService {
                         transactionId,
                         membership.getFamily().getId()
                 );
+
+        ensureNotInvoicePayment(transaction);
 
         boolean isCreator = Objects.equals(
                 transaction.getCreatedBy().getId(),
@@ -391,6 +401,16 @@ public class FinancialTransactionService {
         return category;
     }
 
+    private void ensureNotInvoicePayment(
+            FinancialTransaction transaction
+    ) {
+        if (transaction.isInvoicePayment()) {
+            throw new IllegalArgumentException(
+                    "O pagamento da fatura deve ser gerenciado pela própria fatura"
+            );
+        }
+    }
+
     private void validateDates(
             LocalDate transactionDate,
             LocalDate dueDate
@@ -421,8 +441,10 @@ public class FinancialTransactionService {
             );
         }
 
-        if (ChronoUnit.DAYS.between(from, to)
-                > MAXIMUM_PERIOD_IN_DAYS) {
+        if (
+                ChronoUnit.DAYS.between(from, to)
+                        > MAXIMUM_PERIOD_IN_DAYS
+        ) {
             throw new IllegalArgumentException(
                     "O período consultado não pode ultrapassar 366 dias"
             );

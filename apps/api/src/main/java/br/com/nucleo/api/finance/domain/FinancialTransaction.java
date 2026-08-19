@@ -19,6 +19,7 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -48,6 +49,13 @@ public class FinancialTransaction {
 
     @Column(name = "recurrence_sequence")
     private Integer recurrenceSequence;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "credit_card_invoice_id")
+    private FinancialCreditCardInvoice creditCardInvoice;
+
+    @Column(name = "exclude_from_reports", nullable = false)
+    private boolean excludedFromReports;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -102,6 +110,8 @@ public class FinancialTransaction {
             FinancialCategory category,
             FinancialRecurrence recurrence,
             Integer recurrenceSequence,
+            FinancialCreditCardInvoice creditCardInvoice,
+            boolean excludedFromReports,
             FinancialTransactionType type,
             String description,
             BigDecimal amount,
@@ -112,39 +122,26 @@ public class FinancialTransaction {
             User createdBy,
             String notes
     ) {
-        this.family = Objects.requireNonNull(
-                family,
-                "Family cannot be null"
-        );
-        this.account = Objects.requireNonNull(
-                account,
-                "Financial account cannot be null"
-        );
+        this.family = Objects.requireNonNull(family);
+        this.account = Objects.requireNonNull(account);
         this.category = category;
         this.recurrence = recurrence;
         this.recurrenceSequence = recurrenceSequence;
-        this.type = Objects.requireNonNull(
-                type,
-                "Financial transaction type cannot be null"
-        );
+        this.creditCardInvoice = creditCardInvoice;
+        this.excludedFromReports = excludedFromReports;
+        this.type = Objects.requireNonNull(type);
         this.description = normalizeDescription(description);
         this.amount = validatePositiveMoney(amount);
-        this.transactionDate = Objects.requireNonNull(
-                transactionDate,
-                "Transaction date cannot be null"
-        );
+        this.transactionDate = Objects.requireNonNull(transactionDate);
         this.dueDate = dueDate;
         this.status = status == null
                 ? FinancialTransactionStatus.PENDING
                 : status;
         this.paymentMethod = paymentMethod;
-        this.createdBy = Objects.requireNonNull(
-                createdBy,
-                "Transaction creator cannot be null"
-        );
+        this.createdBy = Objects.requireNonNull(createdBy);
         this.notes = normalizeOptionalText(notes, 1000);
 
-        validateRecurrenceState();
+        validateOrigins();
         normalizePaidState();
     }
 
@@ -168,6 +165,8 @@ public class FinancialTransaction {
                 category,
                 null,
                 null,
+                null,
+                false,
                 type,
                 description,
                 amount,
@@ -182,15 +181,13 @@ public class FinancialTransaction {
 
     public static FinancialTransaction createFromRecurrence(
             FinancialRecurrence recurrence,
-            int recurrenceSequence,
+            int sequence,
             LocalDate generationDate
     ) {
-        FinancialRecurrence source = Objects.requireNonNull(
-                recurrence,
-                "Recurrence cannot be null"
-        );
+        FinancialRecurrence source =
+                Objects.requireNonNull(recurrence);
 
-        if (recurrenceSequence < 1) {
+        if (sequence < 1) {
             throw new IllegalArgumentException(
                     "Recurrence sequence must be greater than zero"
             );
@@ -201,7 +198,9 @@ public class FinancialTransaction {
                 source.getAccount(),
                 source.getCategory(),
                 source,
-                recurrenceSequence,
+                sequence,
+                null,
+                false,
                 source.getType(),
                 source.getDescription(),
                 source.getAmount(),
@@ -211,6 +210,44 @@ public class FinancialTransaction {
                 source.getPaymentMethod(),
                 source.getCreatedBy(),
                 source.getNotes()
+        );
+    }
+
+    public static FinancialTransaction createInvoicePayment(
+            FinancialCreditCardInvoice invoice,
+            FinancialAccount account,
+            BigDecimal amount,
+            LocalDate paymentDate,
+            FinancialPaymentMethod paymentMethod,
+            User createdBy
+    ) {
+        FinancialCreditCardInvoice source =
+                Objects.requireNonNull(invoice);
+
+        String reference = source
+                .getReferenceMonth()
+                .format(DateTimeFormatter.ofPattern("MM/yyyy"));
+
+        return new FinancialTransaction(
+                source.getCreditCard().getFamily(),
+                account,
+                null,
+                null,
+                null,
+                source,
+                true,
+                FinancialTransactionType.EXPENSE,
+                "Pagamento da fatura "
+                        + source.getCreditCard().getName()
+                        + " - "
+                        + reference,
+                amount,
+                paymentDate,
+                source.getDueDate(),
+                FinancialTransactionStatus.PAID,
+                paymentMethod,
+                createdBy,
+                "Pagamento de fatura de cartão de crédito"
         );
     }
 
@@ -225,30 +262,24 @@ public class FinancialTransaction {
             FinancialPaymentMethod paymentMethod,
             String notes
     ) {
+        ensureRegularTransaction();
         ensureNotCancelled();
 
-        this.account = Objects.requireNonNull(
-                account,
-                "Financial account cannot be null"
-        );
+        this.account = Objects.requireNonNull(account);
         this.category = category;
-        this.type = Objects.requireNonNull(
-                type,
-                "Financial transaction type cannot be null"
-        );
+        this.type = Objects.requireNonNull(type);
         this.description = normalizeDescription(description);
         this.amount = validatePositiveMoney(amount);
-        this.transactionDate = Objects.requireNonNull(
-                transactionDate,
-                "Transaction date cannot be null"
-        );
+        this.transactionDate = Objects.requireNonNull(transactionDate);
         this.dueDate = dueDate;
         this.paymentMethod = paymentMethod;
         this.notes = normalizeOptionalText(notes, 1000);
     }
 
     public void markAsPaid() {
-        if (status == FinancialTransactionStatus.CANCELLED) {
+        ensureRegularTransaction();
+
+        if (isCancelled()) {
             throw new IllegalStateException(
                     "Cancelled transaction cannot be paid"
             );
@@ -259,7 +290,9 @@ public class FinancialTransaction {
     }
 
     public void markAsPending() {
-        if (status == FinancialTransactionStatus.CANCELLED) {
+        ensureRegularTransaction();
+
+        if (isCancelled()) {
             throw new IllegalStateException(
                     "Cancelled transaction cannot become pending"
             );
@@ -270,12 +303,16 @@ public class FinancialTransaction {
     }
 
     public void cancel() {
+        ensureRegularTransaction();
+
         status = FinancialTransactionStatus.CANCELLED;
         paidAt = null;
     }
 
     public void restore() {
-        if (status != FinancialTransactionStatus.CANCELLED) {
+        ensureRegularTransaction();
+
+        if (!isCancelled()) {
             throw new IllegalStateException(
                     "Only cancelled transactions can be restored"
             );
@@ -301,10 +338,13 @@ public class FinancialTransaction {
         return recurrence != null;
     }
 
+    public boolean isInvoicePayment() {
+        return creditCardInvoice != null;
+    }
+
     @PrePersist
     private void onCreate() {
         Instant now = Instant.now();
-
         createdAt = now;
         updatedAt = now;
 
@@ -312,22 +352,19 @@ public class FinancialTransaction {
             status = FinancialTransactionStatus.PENDING;
         }
 
-        validateRecurrenceState();
+        validateOrigins();
         normalizePaidState();
     }
 
     @PreUpdate
     private void onUpdate() {
         updatedAt = Instant.now();
-        validateRecurrenceState();
+        validateOrigins();
         normalizePaidState();
     }
 
-    private void validateRecurrenceState() {
-        if (
-                recurrence == null
-                        && recurrenceSequence != null
-        ) {
+    private void validateOrigins() {
+        if (recurrence == null && recurrenceSequence != null) {
             throw new IllegalStateException(
                     "Transaction without recurrence cannot have a sequence"
             );
@@ -342,6 +379,32 @@ public class FinancialTransaction {
         ) {
             throw new IllegalStateException(
                     "Recurring transaction must have a valid sequence"
+            );
+        }
+
+        if (
+                recurrence != null
+                        && creditCardInvoice != null
+        ) {
+            throw new IllegalStateException(
+                    "Transaction cannot have multiple origins"
+            );
+        }
+
+        if (
+                creditCardInvoice != null
+                        && !excludedFromReports
+        ) {
+            throw new IllegalStateException(
+                    "Invoice payment must be excluded from reports"
+            );
+        }
+    }
+
+    private void ensureRegularTransaction() {
+        if (isInvoicePayment()) {
+            throw new IllegalStateException(
+                    "Invoice payment must be managed through the invoice"
             );
         }
     }
@@ -364,7 +427,7 @@ public class FinancialTransaction {
             throw new IllegalStateException(
                     "Cancelled transaction cannot be changed"
             );
-        }
+               }
     }
 
     private static User userOrThrow(User user) {
@@ -465,6 +528,14 @@ public class FinancialTransaction {
 
     public Integer getRecurrenceSequence() {
         return recurrenceSequence;
+    }
+
+    public FinancialCreditCardInvoice getCreditCardInvoice() {
+        return creditCardInvoice;
+    }
+
+    public boolean isExcludedFromReports() {
+        return excludedFromReports;
     }
 
     public FinancialTransactionType getType() {
