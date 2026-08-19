@@ -1,5 +1,6 @@
 package br.com.nucleo.api.auth;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -35,12 +36,29 @@ public record RegisterRequest(
         )
         String password,
 
-        @NotBlank(message = "Informe o nome do núcleo familiar")
         @Size(
-                min = 2,
                 max = 120,
-                message = "O nome do núcleo deve ter entre 2 e 120 caracteres"
+                message = "O nome do núcleo deve ter no máximo 120 caracteres"
         )
-        String familyName
+        String familyName,
+
+        @Size(
+                max = 200,
+                message = "Token de convite inválido"
+        )
+        String invitationToken
 ) {
+
+    @AssertTrue(
+            message = "Informe o nome do núcleo ou um convite, mas não ambos"
+    )
+    public boolean isFamilySelectionValid() {
+        boolean hasFamilyName = familyName != null
+                && !familyName.isBlank();
+
+        boolean hasInvitation = invitationToken != null
+                && !invitationToken.isBlank();
+
+        return hasFamilyName != hasInvitation;
+    }
 }

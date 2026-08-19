@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -34,43 +33,42 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
+                .sessionCreationPolicy(
+                        SessionCreationPolicy.STATELESS
+                )
                 )
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(securityErrorWriter)
-                        .accessDeniedHandler(securityErrorWriter)
+                .authenticationEntryPoint(securityErrorWriter)
+                .accessDeniedHandler(securityErrorWriter)
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/refresh",
-                                "/api/auth/logout",
-                                "/actuator/health",
-                                "/actuator/health/**",
-                                "/error"
-                        ).permitAll()
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/invitations/**"
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                .requestMatchers(
+                        "/api/auth/register",
+                        "/api/auth/login",
+                        "/api/auth/refresh",
+                        "/api/auth/logout",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/error"
+                ).permitAll()
+                .requestMatchers(
+                        "/api/invitations/**"
+                ).permitAll()
+                .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(resourceServer ->
-                        resourceServer
-                                .authenticationEntryPoint(
-                                        securityErrorWriter
-                                )
-                                .accessDeniedHandler(
-                                        securityErrorWriter
-                                )
-                                .jwt(jwt -> jwt
-                                        .jwtAuthenticationConverter(
-                                                jwtAuthenticationConverter()
-                                        )
-                                )
+                .oauth2ResourceServer(resourceServer
+                        -> resourceServer
+                        .authenticationEntryPoint(
+                                securityErrorWriter
+                        )
+                        .accessDeniedHandler(
+                                securityErrorWriter
+                        )
+                        .jwt(jwt -> jwt
+                        .jwtAuthenticationConverter(
+                                jwtAuthenticationConverter()
+                        )
+                        )
                 );
 
         return http.build();
@@ -83,8 +81,8 @@ public class SecurityConfig {
 
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter =
-                new JwtAuthenticationConverter();
+        JwtAuthenticationConverter converter
+                = new JwtAuthenticationConverter();
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             String role = jwt.getClaimAsString("role");
@@ -103,8 +101,7 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:3000}")
-            List<String> allowedOrigins
+            @Value("${app.cors.allowed-origins:http://localhost:3000}") List<String> allowedOrigins
     ) {
         CorsConfiguration configuration = new CorsConfiguration();
 
@@ -130,8 +127,8 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source
+                = new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
 
