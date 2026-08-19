@@ -14,15 +14,18 @@ public class FinancialCategoryService {
     private final FamilyAccessService familyAccessService;
     private final FinancialCategoryRepository categoryRepository;
     private final FinancialTransactionRepository transactionRepository;
+    private final FinancialBudgetRepository budgetRepository;
 
     public FinancialCategoryService(
             FamilyAccessService familyAccessService,
             FinancialCategoryRepository categoryRepository,
-            FinancialTransactionRepository transactionRepository
+            FinancialTransactionRepository transactionRepository,
+            FinancialBudgetRepository budgetRepository
     ) {
         this.familyAccessService = familyAccessService;
         this.categoryRepository = categoryRepository;
         this.transactionRepository = transactionRepository;
+        this.budgetRepository = budgetRepository;
     }
 
     @Transactional
@@ -179,6 +182,12 @@ public class FinancialCategoryService {
         if (transactionRepository.existsByCategory_Id(categoryId)) {
             throw new IllegalArgumentException(
                     "A categoria possui lançamentos e não pode ser excluída. Desative-a."
+            );
+        }
+
+        if (budgetRepository.existsByCategory_Id(categoryId)) {
+            throw new IllegalArgumentException(
+                    "A categoria possui orçamentos e não pode ser excluída. Remova os orçamentos primeiro."
             );
         }
 

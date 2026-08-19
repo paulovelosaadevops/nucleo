@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "financial_transactions")
-public class FinancialTransaction {
+@Table(name = "financial_recurrences")
+public class FinancialRecurrence {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,13 +42,6 @@ public class FinancialTransaction {
     @JoinColumn(name = "category_id")
     private FinancialCategory category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recurrence_id")
-    private FinancialRecurrence recurrence;
-
-    @Column(name = "recurrence_sequence")
-    private Integer recurrenceSequence;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private FinancialTransactionType type;
@@ -59,25 +52,34 @@ public class FinancialTransaction {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "transaction_date", nullable = false)
-    private LocalDate transactionDate;
-
-    @Column(name = "due_date")
-    private LocalDate dueDate;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private FinancialTransactionStatus status;
+    private FinancialRecurrenceFrequency frequency;
+
+    @Column(name = "recurrence_interval", nullable = false)
+    private int interval;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "next_generation_date", nullable = false)
+    private LocalDate nextGenerationDate;
+
+    @Column(name = "remaining_occurrences")
+    private Integer remainingOccurrences;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", length = 30)
     private FinancialPaymentMethod paymentMethod;
 
-    @Column(name = "paid_at")
-    private Instant paidAt;
-
     @Column(length = 1000)
     private String notes;
+
+    @Column(nullable = false)
+    private boolean active;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_user_id", nullable = false)
@@ -93,24 +95,24 @@ public class FinancialTransaction {
     @Column(nullable = false)
     private long version;
 
-    protected FinancialTransaction() {
+    protected FinancialRecurrence() {
     }
 
-    private FinancialTransaction(
+    private FinancialRecurrence(
             Family family,
             FinancialAccount account,
             FinancialCategory category,
-            FinancialRecurrence recurrence,
-            Integer recurrenceSequence,
             FinancialTransactionType type,
             String description,
             BigDecimal amount,
-            LocalDate transactionDate,
-            LocalDate dueDate,
-            FinancialTransactionStatus status,
+            FinancialRecurrenceFrequency frequency,
+            int interval,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer occurrenceCount,
             FinancialPaymentMethod paymentMethod,
-            User createdBy,
-            String notes
+            String notes,
+            User createdBy
     ) {
         this.family = Objects.requireNonNull(
                 family,
@@ -121,96 +123,67 @@ public class FinancialTransaction {
                 "Financial account cannot be null"
         );
         this.category = category;
-        this.recurrence = recurrence;
-        this.recurrenceSequence = recurrenceSequence;
         this.type = Objects.requireNonNull(
                 type,
-                "Financial transaction type cannot be null"
+                "Transaction type cannot be null"
         );
         this.description = normalizeDescription(description);
         this.amount = validatePositiveMoney(amount);
-        this.transactionDate = Objects.requireNonNull(
-                transactionDate,
-                "Transaction date cannot be null"
+        this.frequency = Objects.requireNonNull(
+                frequency,
+                "Recurrence frequency cannot be null"
         );
-        this.dueDate = dueDate;
-        this.status = status == null
-                ? FinancialTransactionStatus.PENDING
-                : status;
+        this.interval = validateInterval(interval);
+        this.startDate = Objects.requireNonNull(
+                startDate,
+                "Start date cannot be null"
+        );
+        this.endDate = endDate;
+        this.remainingOccurrences =
+                validateOccurrenceCount(occurrenceCount);
         this.paymentMethod = paymentMethod;
+        this.notes = normalizeOptionalText(notes, 1000);
         this.createdBy = Objects.requireNonNull(
                 createdBy,
-                "Transaction creator cannot be null"
+                "Recurrence creator cannot be null"
         );
-        this.notes = normalizeOptionalText(notes, 1000);
+        this.nextGenerationDate = startDate;
+        this.active = true;
 
-        validateRecurrenceState();
-        normalizePaidState();
+        validatePeriod(startDate, endDate);
     }
 
-    public static FinancialTransaction create(
+    public static FinancialRecurrence create(
             Family family,
             FinancialAccount account,
             FinancialCategory category,
             FinancialTransactionType type,
             String description,
             BigDecimal amount,
-            LocalDate transactionDate,
-            LocalDate dueDate,
-            FinancialTransactionStatus status,
+            FinancialRecurrenceFrequency frequency,
+            int interval,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer occurrenceCount,
             FinancialPaymentMethod paymentMethod,
-            User createdBy,
-            String notes
+            String notes,
+            User createdBy
     ) {
-        return new FinancialTransaction(
+        return new FinancialRecurrence(
                 family,
                 account,
                 category,
-                null,
-                null,
                 type,
                 description,
                 amount,
-                transactionDate,
-                dueDate,
-                status,
+                frequency,
+                interval,
+                startDate,
+                endDate,
+                occurrenceCount,
                 paymentMethod,
-                userOrThrow(createdBy),
-                notes
-        );
-    }
-
-    public static FinancialTransaction createFromRecurrence(
-            FinancialRecurrence recurrence,
-            int recurrenceSequence,
-            LocalDate generationDate
-    ) {
-        FinancialRecurrence source = Objects.requireNonNull(
-                recurrence,
-                "Recurrence cannot be null"
-        );
-
-        if (recurrenceSequence < 1) {
-            throw new IllegalArgumentException(
-                    "Recurrence sequence must be greater than zero"
-            );
-        }
-
-        return new FinancialTransaction(
-                source.getFamily(),
-                source.getAccount(),
-                source.getCategory(),
-                source,
-                recurrenceSequence,
-                source.getType(),
-                source.getDescription(),
-                source.getAmount(),
-                generationDate,
-                generationDate,
-                FinancialTransactionStatus.PENDING,
-                source.getPaymentMethod(),
-                source.getCreatedBy(),
-                source.getNotes()
+                notes,
+                createdBy
         );
     }
 
@@ -220,13 +193,9 @@ public class FinancialTransaction {
             FinancialTransactionType type,
             String description,
             BigDecimal amount,
-            LocalDate transactionDate,
-            LocalDate dueDate,
             FinancialPaymentMethod paymentMethod,
             String notes
     ) {
-        ensureNotCancelled();
-
         this.account = Objects.requireNonNull(
                 account,
                 "Financial account cannot be null"
@@ -234,71 +203,95 @@ public class FinancialTransaction {
         this.category = category;
         this.type = Objects.requireNonNull(
                 type,
-                "Financial transaction type cannot be null"
+                "Transaction type cannot be null"
         );
         this.description = normalizeDescription(description);
         this.amount = validatePositiveMoney(amount);
-        this.transactionDate = Objects.requireNonNull(
-                transactionDate,
-                "Transaction date cannot be null"
-        );
-        this.dueDate = dueDate;
         this.paymentMethod = paymentMethod;
         this.notes = normalizeOptionalText(notes, 1000);
     }
 
-    public void markAsPaid() {
-        if (status == FinancialTransactionStatus.CANCELLED) {
+    public void pause() {
+        active = false;
+    }
+
+    public void resume() {
+        if (
+                remainingOccurrences != null
+                        && remainingOccurrences == 0
+        ) {
             throw new IllegalStateException(
-                    "Cancelled transaction cannot be paid"
+                    "Finished recurrence cannot be resumed"
             );
         }
 
-        status = FinancialTransactionStatus.PAID;
-        paidAt = Instant.now();
-    }
-
-    public void markAsPending() {
-        if (status == FinancialTransactionStatus.CANCELLED) {
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
             throw new IllegalStateException(
-                    "Cancelled transaction cannot become pending"
+                    "Expired recurrence cannot be resumed"
             );
         }
 
-        status = FinancialTransactionStatus.PENDING;
-        paidAt = null;
+        active = true;
     }
 
-    public void cancel() {
-        status = FinancialTransactionStatus.CANCELLED;
-        paidAt = null;
+    public boolean canGenerateOnOrBefore(LocalDate limitDate) {
+        if (!active) {
+            return false;
+        }
+
+        if (nextGenerationDate.isAfter(limitDate)) {
+            return false;
+        }
+
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
+            return false;
+        }
+
+        return remainingOccurrences == null
+                || remainingOccurrences > 0;
     }
 
-    public void restore() {
-        if (status != FinancialTransactionStatus.CANCELLED) {
+    public void advanceAfterGeneration() {
+        if (!active) {
             throw new IllegalStateException(
-                    "Only cancelled transactions can be restored"
+                    "Inactive recurrence cannot be advanced"
             );
         }
 
-        status = FinancialTransactionStatus.PENDING;
-        paidAt = null;
+        if (remainingOccurrences != null) {
+            remainingOccurrences--;
+
+            if (remainingOccurrences == 0) {
+                active = false;
+                return;
+            }
+        }
+
+        nextGenerationDate = calculateNextDate(
+                nextGenerationDate
+        );
+
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
+            active = false;
+        }
     }
 
-    public boolean isPaid() {
-        return status == FinancialTransactionStatus.PAID;
-    }
-
-    public boolean isPending() {
-        return status == FinancialTransactionStatus.PENDING;
-    }
-
-    public boolean isCancelled() {
-        return status == FinancialTransactionStatus.CANCELLED;
-    }
-
-    public boolean isGeneratedFromRecurrence() {
-        return recurrence != null;
+    private LocalDate calculateNextDate(LocalDate currentDate) {
+        return switch (frequency) {
+            case DAILY -> currentDate.plusDays(interval);
+            case WEEKLY -> currentDate.plusWeeks(interval);
+            case MONTHLY -> currentDate.plusMonths(interval);
+            case YEARLY -> currentDate.plusYears(interval);
+        };
     }
 
     @PrePersist
@@ -307,82 +300,58 @@ public class FinancialTransaction {
 
         createdAt = now;
         updatedAt = now;
-
-        if (status == null) {
-            status = FinancialTransactionStatus.PENDING;
-        }
-
-        validateRecurrenceState();
-        normalizePaidState();
     }
 
     @PreUpdate
     private void onUpdate() {
         updatedAt = Instant.now();
-        validateRecurrenceState();
-        normalizePaidState();
     }
 
-    private void validateRecurrenceState() {
+    private static void validatePeriod(
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         if (
-                recurrence == null
-                        && recurrenceSequence != null
+                endDate != null
+                        && endDate.isBefore(startDate)
         ) {
-            throw new IllegalStateException(
-                    "Transaction without recurrence cannot have a sequence"
-            );
-        }
-
-        if (
-                recurrence != null
-                        && (
-                        recurrenceSequence == null
-                                || recurrenceSequence < 1
-                )
-        ) {
-            throw new IllegalStateException(
-                    "Recurring transaction must have a valid sequence"
+            throw new IllegalArgumentException(
+                    "End date cannot be before start date"
             );
         }
     }
 
-    private void normalizePaidState() {
-        if (
-                status == FinancialTransactionStatus.PAID
-                        && paidAt == null
-        ) {
-            paidAt = Instant.now();
-        }
-
-        if (status != FinancialTransactionStatus.PAID) {
-            paidAt = null;
-        }
-    }
-
-    private void ensureNotCancelled() {
-        if (isCancelled()) {
-            throw new IllegalStateException(
-                    "Cancelled transaction cannot be changed"
+    private static int validateInterval(int value) {
+        if (value < 1 || value > 365) {
+            throw new IllegalArgumentException(
+                    "Recurrence interval must be between 1 and 365"
             );
         }
+
+        return value;
     }
 
-    private static User userOrThrow(User user) {
-        return Objects.requireNonNull(
-                user,
-                "Transaction creator cannot be null"
-        );
+    private static Integer validateOccurrenceCount(
+            Integer value
+    ) {
+        if (value != null && value < 1) {
+            throw new IllegalArgumentException(
+                    "Occurrence count must be greater than zero"
+            );
+        }
+
+        return value;
     }
 
     private static String normalizeDescription(String value) {
         String normalized = Objects.requireNonNull(
                 value,
-                "Transaction description cannot be null"
+                "Description cannot be null"
         ).trim().replaceAll("\\s+", " ");
 
         if (normalized.isEmpty() || normalized.length() > 160) {
             throw new IllegalArgumentException(
-                    "Transaction description must contain between 1 and 160 characters"
+                    "Description must contain between 1 and 160 characters"
             );
         }
 
@@ -415,24 +384,24 @@ public class FinancialTransaction {
     ) {
         BigDecimal money = Objects.requireNonNull(
                 value,
-                "Transaction amount cannot be null"
+                "Amount cannot be null"
         );
 
         if (money.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException(
-                    "Transaction amount must be greater than zero"
+                    "Amount must be greater than zero"
             );
         }
 
         if (normalizedScale(money) > 2) {
             throw new IllegalArgumentException(
-                    "Money can contain at most 2 decimal places"
+                    "Amount can contain at most 2 decimal places"
             );
         }
 
         if (money.precision() > 18) {
             throw new IllegalArgumentException(
-                    "Money value is too large"
+                    "Amount is too large"
             );
         }
 
@@ -459,14 +428,6 @@ public class FinancialTransaction {
         return category;
     }
 
-    public FinancialRecurrence getRecurrence() {
-        return recurrence;
-    }
-
-    public Integer getRecurrenceSequence() {
-        return recurrenceSequence;
-    }
-
     public FinancialTransactionType getType() {
         return type;
     }
@@ -479,28 +440,40 @@ public class FinancialTransaction {
         return amount;
     }
 
-    public LocalDate getTransactionDate() {
-        return transactionDate;
+    public FinancialRecurrenceFrequency getFrequency() {
+        return frequency;
     }
 
-    public LocalDate getDueDate() {
-        return dueDate;
+    public int getInterval() {
+        return interval;
     }
 
-    public FinancialTransactionStatus getStatus() {
-        return status;
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalDate getNextGenerationDate() {
+        return nextGenerationDate;
+    }
+
+    public Integer getRemainingOccurrences() {
+        return remainingOccurrences;
     }
 
     public FinancialPaymentMethod getPaymentMethod() {
         return paymentMethod;
     }
 
-    public Instant getPaidAt() {
-        return paidAt;
-    }
-
     public String getNotes() {
         return notes;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     public User getCreatedBy() {

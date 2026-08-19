@@ -1,5 +1,6 @@
 package br.com.nucleo.api.finance;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +17,8 @@ public interface FinancialTransactionRepository
             "family",
             "account",
             "category",
-            "createdBy"
+            "createdBy",
+            "recurrence"
     })
     Optional<FinancialTransaction> findByIdAndFamily_Id(
             UUID transactionId,
@@ -26,7 +28,8 @@ public interface FinancialTransactionRepository
     @EntityGraph(attributePaths = {
             "account",
             "category",
-            "createdBy"
+            "createdBy",
+            "recurrence"
     })
     List<FinancialTransaction>
             findAllByFamily_IdAndTransactionDateBetweenOrderByTransactionDateDescCreatedAtDesc(
@@ -38,7 +41,8 @@ public interface FinancialTransactionRepository
     @EntityGraph(attributePaths = {
             "account",
             "category",
-            "createdBy"
+            "createdBy",
+            "recurrence"
     })
     @Query("""
             select transaction
@@ -78,7 +82,8 @@ public interface FinancialTransactionRepository
     @EntityGraph(attributePaths = {
             "account",
             "category",
-            "createdBy"
+            "createdBy",
+            "recurrence"
     })
     List<FinancialTransaction>
             findAllByFamily_IdAndStatusAndDueDateBeforeOrderByDueDateAsc(
@@ -87,7 +92,40 @@ public interface FinancialTransactionRepository
                     LocalDate date
             );
 
+    @Query("""
+            select coalesce(
+                max(transaction.recurrenceSequence),
+                0
+            )
+            from FinancialTransaction transaction
+            where transaction.recurrence.id = :recurrenceId
+            """)
+    int findMaximumRecurrenceSequence(
+            @Param("recurrenceId") UUID recurrenceId
+    );
+
+    @Query("""
+            select coalesce(sum(transaction.amount), 0)
+            from FinancialTransaction transaction
+            where transaction.family.id = :familyId
+              and transaction.category.id = :categoryId
+              and transaction.type =
+                  br.com.nucleo.api.finance.FinancialTransactionType.EXPENSE
+              and transaction.status = :status
+              and transaction.transactionDate between :from and :to
+            """)
+    BigDecimal calculateCategoryExpense(
+            @Param("familyId") UUID familyId,
+            @Param("categoryId") UUID categoryId,
+            @Param("status")
+            FinancialTransactionStatus status,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
+    );
+
     boolean existsByAccount_Id(UUID accountId);
 
     boolean existsByCategory_Id(UUID categoryId);
+
+    boolean existsByRecurrence_Id(UUID recurrenceId);
 }
