@@ -1,11 +1,14 @@
 package br.com.nucleo.api.shopping;
 
+import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+
 import br.com.nucleo.api.common.error.ForbiddenOperationException;
 import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.FamilyAccessService;
-import br.com.nucleo.api.family.FamilyMembership;
-import br.com.nucleo.api.family.FamilyMembershipRepository;
-import br.com.nucleo.api.family.FamilyRole;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+import br.com.nucleo.api.family.domain.FamilyRole;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;

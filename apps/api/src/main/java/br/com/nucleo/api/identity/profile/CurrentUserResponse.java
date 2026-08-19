@@ -1,10 +1,12 @@
 package br.com.nucleo.api.identity.profile;
 
+import br.com.nucleo.api.family.domain.Family;
+
 import java.time.Instant;
 import java.util.UUID;
 
-import br.com.nucleo.api.family.FamilyRole;
-import br.com.nucleo.api.identity.user.UserStatus;
+import br.com.nucleo.api.family.domain.FamilyRole;
+import br.com.nucleo.api.identity.user.domain.UserStatus;
 
 public record CurrentUserResponse(
         UUID id,

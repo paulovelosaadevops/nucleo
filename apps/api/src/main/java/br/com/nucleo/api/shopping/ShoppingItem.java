@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-import br.com.nucleo.api.family.FamilyMembership;
+import br.com.nucleo.api.family.domain.FamilyMembership;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

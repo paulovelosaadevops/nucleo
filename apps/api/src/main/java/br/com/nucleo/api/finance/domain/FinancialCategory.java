@@ -1,12 +1,6 @@
-package br.com.nucleo.api.shopping;
-
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Objects;
-import java.util.UUID;
+package br.com.nucleo.api.finance.domain;
 
 import br.com.nucleo.api.family.domain.Family;
-import br.com.nucleo.api.identity.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,10 +15,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
-@Table(name = "shopping_lists")
-public class ShoppingList {
+@Table(name = "financial_categories")
+public class FinancialCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,22 +31,21 @@ public class ShoppingList {
     @JoinColumn(name = "family_id", nullable = false)
     private Family family;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, length = 80)
     private String name;
-
-    @Column(length = 500)
-    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ShoppingListStatus status;
+    private FinancialCategoryType type;
 
-    @Column(name = "due_date")
-    private LocalDate dueDate;
+    @Column(length = 20)
+    private String color;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by_user_id", nullable = false)
-    private User createdBy;
+    @Column(length = 50)
+    private String icon;
+
+    @Column(nullable = false)
+    private boolean active;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -61,95 +57,62 @@ public class ShoppingList {
     @Column(nullable = false)
     private long version;
 
-    protected ShoppingList() {
+    protected FinancialCategory() {
     }
 
-    private ShoppingList(
+    private FinancialCategory(
             Family family,
             String name,
-            String description,
-            LocalDate dueDate,
-            User createdBy
+            FinancialCategoryType type,
+            String color,
+            String icon
     ) {
         this.family = Objects.requireNonNull(
                 family,
                 "Family cannot be null"
         );
         this.name = normalizeName(name);
-        this.description = normalizeOptionalText(description, 500);
-        this.dueDate = dueDate;
-        this.createdBy = Objects.requireNonNull(
-                createdBy,
-                "List creator cannot be null"
+        this.type = Objects.requireNonNull(
+                type,
+                "Financial category type cannot be null"
         );
-        this.status = ShoppingListStatus.ACTIVE;
+        this.color = normalizeOptionalText(color, 20);
+        this.icon = normalizeOptionalText(icon, 50);
+        this.active = true;
     }
 
-    public static ShoppingList create(
+    public static FinancialCategory create(
             Family family,
             String name,
-            String description,
-            LocalDate dueDate,
-            User createdBy
+            FinancialCategoryType type,
+            String color,
+            String icon
     ) {
-        return new ShoppingList(
+        return new FinancialCategory(
                 family,
                 name,
-                description,
-                dueDate,
-                createdBy
+                type,
+                color,
+                icon
         );
     }
 
     public void update(
             String name,
-            String description,
-            LocalDate dueDate
+            String color,
+            String icon
     ) {
-        ensureNotArchived();
-
         this.name = normalizeName(name);
-        this.description = normalizeOptionalText(description, 500);
-        this.dueDate = dueDate;
+        this.color = normalizeOptionalText(color, 20);
+        this.icon = normalizeOptionalText(icon, 50);
     }
 
-    public void complete() {
-        ensureNotArchived();
-        status = ShoppingListStatus.COMPLETED;
+    public void activate() {
+        active = true;
     }
 
-    public void reopen() {
-        if (status == ShoppingListStatus.ARCHIVED) {
-            throw new IllegalStateException(
-                    "Archived shopping list cannot be reopened"
-            );
-        }
-
-        status = ShoppingListStatus.ACTIVE;
-    }
-
-    public void archive() {
-        status = ShoppingListStatus.ARCHIVED;
-    }
-
-    public boolean isActive() {
-        return status == ShoppingListStatus.ACTIVE;
-    }
-
-    public boolean isCompleted() {
-        return status == ShoppingListStatus.COMPLETED;
-    }
-
-    public boolean isArchived() {
-        return status == ShoppingListStatus.ARCHIVED;
-    }
-
-    private void ensureNotArchived() {
-        if (isArchived()) {
-            throw new IllegalStateException(
-                    "Archived shopping list cannot be changed"
-            );
-        }
+    public void deactivate() {
+        active = false;
     }
 
     @PrePersist
@@ -158,10 +121,6 @@ public class ShoppingList {
 
         createdAt = now;
         updatedAt = now;
-
-        if (status == null) {
-            status = ShoppingListStatus.ACTIVE;
-        }
     }
 
     @PreUpdate
@@ -172,12 +131,12 @@ public class ShoppingList {
     private static String normalizeName(String value) {
         String normalized = Objects.requireNonNull(
                 value,
-                "Shopping list name cannot be null"
+                "Financial category name cannot be null"
         ).trim().replaceAll("\\s+", " ");
 
-        if (normalized.length() < 2 || normalized.length() > 120) {
+        if (normalized.length() < 2 || normalized.length() > 80) {
             throw new IllegalArgumentException(
-                    "Shopping list name must contain between 2 and 120 characters"
+                    "Financial category name must contain between 2 and 80 characters"
             );
         }
 
@@ -192,7 +151,7 @@ public class ShoppingList {
             return null;
         }
 
-        String normalized = value.trim().replaceAll("\\s+", " ");
+        String normalized = value.trim();
 
         if (normalized.length() > maximumLength) {
             throw new IllegalArgumentException(
@@ -217,20 +176,20 @@ public class ShoppingList {
         return name;
     }
 
-    public String getDescription() {
-        return description;
+    public FinancialCategoryType getType() {
+        return type;
     }
 
-    public ShoppingListStatus getStatus() {
-        return status;
+    public String getColor() {
+        return color;
     }
 
-    public LocalDate getDueDate() {
-        return dueDate;
+    public String getIcon() {
+        return icon;
     }
 
-    public User getCreatedBy() {
-        return createdBy;
+    public boolean isActive() {
+        return active;
     }
 
     public Instant getCreatedAt() {

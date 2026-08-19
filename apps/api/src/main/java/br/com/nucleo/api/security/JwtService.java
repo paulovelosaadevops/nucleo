@@ -22,8 +22,8 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import br.com.nucleo.api.family.FamilyMembership;
-import br.com.nucleo.api.identity.user.User;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.identity.user.domain.User;
 
 @Service
 public class JwtService {

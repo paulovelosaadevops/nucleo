@@ -1,14 +1,17 @@
 package br.com.nucleo.api.identity.profile;
 
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.nucleo.api.common.error.AccountUnavailableException;
-import br.com.nucleo.api.family.FamilyMembership;
-import br.com.nucleo.api.family.FamilyMembershipRepository;
-import br.com.nucleo.api.identity.user.User;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+import br.com.nucleo.api.identity.user.domain.User;
 
 @Service
 public class CurrentUserService {
