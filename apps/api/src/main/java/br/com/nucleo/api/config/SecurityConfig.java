@@ -17,7 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import br.com.nucleo.api.security.SecurityErrorWriter;
+import br.com.nucleo.api.security.handler.SecurityErrorWriter;
 
 @Configuration
 public class SecurityConfig {

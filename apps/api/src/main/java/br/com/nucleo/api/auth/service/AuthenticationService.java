@@ -21,9 +21,9 @@ import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
 import br.com.nucleo.api.identity.user.domain.User;
 import br.com.nucleo.api.identity.user.repository.UserRepository;
-import br.com.nucleo.api.security.JwtService;
-import br.com.nucleo.api.security.RefreshToken;
-import br.com.nucleo.api.security.RefreshTokenRepository;
+import br.com.nucleo.api.security.service.JwtService;
+import br.com.nucleo.api.security.domain.RefreshToken;
+import br.com.nucleo.api.security.repository.RefreshTokenRepository;
 
 @Service
 public class AuthenticationService {
