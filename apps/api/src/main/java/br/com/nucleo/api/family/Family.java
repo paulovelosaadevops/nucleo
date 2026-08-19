@@ -1,6 +1,8 @@
 package br.com.nucleo.api.family;
 
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,12 +24,18 @@ import jakarta.persistence.Version;
 @Table(name = "families")
 public class Family {
 
+    private static final String DEFAULT_TIME_ZONE =
+            "America/Sao_Paulo";
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, length = 120)
     private String name;
+
+    @Column(name = "time_zone", nullable = false, length = 50)
+    private String timeZone;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_user_id", nullable = false)
@@ -48,6 +56,7 @@ public class Family {
 
     private Family(String name, User createdBy) {
         this.name = normalizeName(name);
+        this.timeZone = DEFAULT_TIME_ZONE;
         this.createdBy = Objects.requireNonNull(
                 createdBy,
                 "Family owner cannot be null"
@@ -61,6 +70,11 @@ public class Family {
     @PrePersist
     private void onCreate() {
         Instant now = Instant.now();
+
+        if (timeZone == null || timeZone.isBlank()) {
+            timeZone = DEFAULT_TIME_ZONE;
+        }
+
         createdAt = now;
         updatedAt = now;
     }
@@ -72,6 +86,10 @@ public class Family {
 
     public void rename(String newName) {
         name = normalizeName(newName);
+    }
+
+    public void changeTimeZone(String newTimeZone) {
+        timeZone = normalizeTimeZone(newTimeZone);
     }
 
     private static String normalizeName(String value) {
@@ -89,12 +107,32 @@ public class Family {
         return normalized;
     }
 
+    private static String normalizeTimeZone(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Time zone cannot be null"
+        ).trim();
+
+        try {
+            return ZoneId.of(normalized).getId();
+        } catch (DateTimeException exception) {
+            throw new IllegalArgumentException(
+                    "Invalid time zone: " + normalized,
+                    exception
+            );
+        }
+    }
+
     public UUID getId() {
         return id;
     }
 
     public String getName() {
         return name;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
     }
 
     public User getCreatedBy() {

@@ -1,17 +1,15 @@
 package br.com.nucleo.api.common.error;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -112,6 +110,23 @@ public class ApiExceptionHandler {
         ProblemDetail problem = createProblem(
                 HttpStatus.CONFLICT,
                 "Conflito no convite",
+                exception.getMessage(),
+                request
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(problem);
+    }
+
+    @ExceptionHandler(AgendaConflictException.class)
+    public ResponseEntity<ProblemDetail> handleAgendaConflict(
+            AgendaConflictException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.CONFLICT,
+                "Conflito na agenda",
                 exception.getMessage(),
                 request
         );
