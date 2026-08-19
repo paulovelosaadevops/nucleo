@@ -70,6 +70,57 @@ public class ApiExceptionHandler {
                 .body(problem);
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleNotFound(
+            ResourceNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.NOT_FOUND,
+                "Recurso não encontrado",
+                exception.getMessage(),
+                request
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(problem);
+    }
+
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ProblemDetail> handleForbiddenOperation(
+            ForbiddenOperationException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.FORBIDDEN,
+                "Operação não permitida",
+                exception.getMessage(),
+                request
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(problem);
+    }
+
+    @ExceptionHandler(InvitationConflictException.class)
+    public ResponseEntity<ProblemDetail> handleInvitationConflict(
+            InvitationConflictException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.CONFLICT,
+                "Conflito no convite",
+                exception.getMessage(),
+                request
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(problem);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidation(
             MethodArgumentNotValidException exception,
@@ -96,7 +147,9 @@ public class ApiExceptionHandler {
 
         problem.setProperty("errors", errors);
 
-        return ResponseEntity.badRequest().body(problem);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(problem);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -111,7 +164,9 @@ public class ApiExceptionHandler {
                 request
         );
 
-        return ResponseEntity.badRequest().body(problem);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(problem);
     }
 
     private ProblemDetail createProblem(
@@ -126,7 +181,9 @@ public class ApiExceptionHandler {
         );
 
         problem.setTitle(title);
-        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setInstance(
+                URI.create(request.getRequestURI())
+        );
 
         return problem;
     }

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -50,6 +51,10 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/error"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/invitations/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -105,10 +110,21 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
         );
         configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", "Accept")
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept"
+                )
         );
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(true);
