@@ -17,14 +17,18 @@ $allJavaRoot = Join-Path `
     $repositoryRoot `
     "apps\api\src"
 
-$utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+$utf8WithoutBom =
+    New-Object System.Text.UTF8Encoding($false)
 
 $featureDirectories = @(
     "br\com\nucleo\api\agenda",
     "br\com\nucleo\api\finance",
     "br\com\nucleo\api\family",
     "br\com\nucleo\api\auth",
-    "br\com\nucleo\api\identity\user"
+    "br\com\nucleo\api\shopping",
+    "br\com\nucleo\api\identity\user",
+    "br\com\nucleo\api\identity\profile",
+    "br\com\nucleo\api\security"
 )
 
 function Get-Layer {
@@ -53,6 +57,26 @@ function Get-Layer {
         $TypeName -match "Response$"
     ) {
         return "dto"
+    }
+
+    if ($TypeName -match "Filter$") {
+        return "filter"
+    }
+
+    if (
+        $TypeName -match "Writer$" -or
+        $TypeName -match "Handler$" -or
+        $TypeName -match "EntryPoint$"
+    ) {
+        return "handler"
+    }
+
+    if (
+        $TypeName -match "Config$" -or
+        $TypeName -match "Configuration$" -or
+        $TypeName -match "Properties$"
+    ) {
+        return "config"
     }
 
     return "domain"
@@ -90,23 +114,6 @@ function Write-Utf8File {
         $Content,
         $utf8WithoutBom
     )
-}
-
-function Get-RelativePath {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FullPath
-    )
-
-    $rootUri = New-Object System.Uri(
-        $repositoryRoot.TrimEnd("\") + "\"
-    )
-
-    $fileUri = New-Object System.Uri($FullPath)
-
-    return [System.Uri]::UnescapeDataString(
-        $rootUri.MakeRelativeUri($fileUri).ToString()
-    ).Replace("/", "\")
 }
 
 $movementPlan = @()
@@ -158,8 +165,9 @@ foreach ($featureDirectory in $featureDirectories) {
 }
 
 if ($movementPlan.Count -eq 0) {
-    Write-Host "Nenhum arquivo direto encontrado para reorganização."
-    Write-Host "A estrutura pode já ter sido organizada."
+    Write-Host ""
+    Write-Host "Nenhum arquivo pendente de organização."
+    Write-Host "A estrutura já está organizada."
     exit 0
 }
 
@@ -169,8 +177,7 @@ $duplicateTypes = $movementPlan |
 
 if ($duplicateTypes) {
     $names = $duplicateTypes.Name -join ", "
-
-    throw "Existem tipos duplicados no plano: $names"
+    throw "Existem tipos duplicados: $names"
 }
 
 Write-Host ""
@@ -188,7 +195,8 @@ $movementPlan |
 
 if (-not $Apply) {
     Write-Host ""
-    Write-Host "Simulação concluída. Nenhum arquivo foi alterado."
+    Write-Host "Simulação concluída."
+    Write-Host "Nenhum arquivo foi alterado."
     Write-Host ""
     Write-Host "Para aplicar:"
     Write-Host ".\scripts\organize-java-packages.ps1 -Apply"
@@ -207,11 +215,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($gitStatus) {
     throw @"
 O repositório possui alterações pendentes.
-Faça commit antes de aplicar a reorganização.
-
-Execute:
-git add .
-git commit -m "chore: add package organization script"
+Faça commit antes de executar com -Apply.
 "@
 }
 
@@ -226,20 +230,9 @@ foreach ($item in $movementPlan) {
         -Force |
         Out-Null
 
-    $relativeSource = Get-RelativePath $item.SourcePath
-    $relativeDestination = Get-RelativePath `
-        $item.DestinationPath
-
-    & git `
-        -C $repositoryRoot `
-        mv `
-        -- `
-        $relativeSource `
-        $relativeDestination
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao mover $relativeSource"
-    }
+    Move-Item `
+        -LiteralPath $item.SourcePath `
+        -Destination $item.DestinationPath
 }
 
 foreach ($item in $movementPlan) {
@@ -252,20 +245,22 @@ foreach ($item in $movementPlan) {
         [regex]::Escape($item.OldPackage) +
         "\s*;"
 
-    $newPackageDeclaration =
-        "package $($item.NewPackage);"
-
-    $updatedContent = [regex]::Replace(
+    $content = [regex]::Replace(
         $content,
         $packagePattern,
-        $newPackageDeclaration,
+        "package $($item.NewPackage);",
         1
     )
 
     Write-Utf8File `
         -Path $item.DestinationPath `
-        -Content $updatedContent
+        -Content $content
 }
+
+$replacementPlan = $movementPlan |
+    Sort-Object `
+        { $_.OldQualifiedName.Length } `
+        -Descending
 
 $allJavaFiles = Get-ChildItem `
     -Path $allJavaRoot `
@@ -278,7 +273,7 @@ foreach ($javaFile in $allJavaFiles) {
         $javaFile.FullName
     )
 
-    foreach ($item in $movementPlan) {
+    foreach ($item in $replacementPlan) {
         $content = $content.Replace(
             $item.OldQualifiedName,
             $item.NewQualifiedName
@@ -328,8 +323,7 @@ foreach ($javaFile in $allJavaFiles) {
 
     if ($importsToAdd.Count -gt 0) {
         $importsToAdd = $importsToAdd |
-            Sort-Object `
-            -Unique
+            Sort-Object -Unique
 
         $newline = if ($content.Contains("`r`n")) {
             "`r`n"
@@ -343,10 +337,10 @@ foreach ($javaFile in $allJavaFiles) {
         )
 
         if (-not $packageMatch.Success) {
-            throw "Package não encontrado em $($javaFile.FullName)"
+            throw "Package não encontrado: $($javaFile.FullName)"
         }
 
-        $insertionPosition =
+        $position =
             $packageMatch.Index +
             $packageMatch.Length
 
@@ -356,7 +350,7 @@ foreach ($javaFile in $allJavaFiles) {
             ($importsToAdd -join $newline)
 
         $content = $content.Insert(
-            $insertionPosition,
+            $position,
             $importBlock
         )
     }
@@ -369,6 +363,6 @@ foreach ($javaFile in $allJavaFiles) {
 Write-Host ""
 Write-Host "Reorganização aplicada com sucesso."
 Write-Host ""
-Write-Host "Próximos comandos:"
+Write-Host "Execute agora:"
 Write-Host "cd C:\nucleo\apps\api"
 Write-Host ".\mvnw.cmd clean test"
