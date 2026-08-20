@@ -3,7 +3,6 @@ package br.com.nucleo.api.finance.repository;
 import br.com.nucleo.api.finance.domain.FinancialTransaction;
 import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
 import br.com.nucleo.api.finance.domain.FinancialTransactionType;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +21,8 @@ public interface FinancialTransactionRepository
             "account",
             "category",
             "createdBy",
-            "recurrence"
+            "recurrence",
+            "creditCardInvoice"
     })
     Optional<FinancialTransaction> findByIdAndFamily_Id(
             UUID transactionId,
@@ -30,10 +30,12 @@ public interface FinancialTransactionRepository
     );
 
     @EntityGraph(attributePaths = {
+            "family",
             "account",
             "category",
             "createdBy",
-            "recurrence"
+            "recurrence",
+            "creditCardInvoice"
     })
     List<FinancialTransaction>
             findAllByFamily_IdAndTransactionDateBetweenOrderByTransactionDateDescCreatedAtDesc(
@@ -43,10 +45,12 @@ public interface FinancialTransactionRepository
             );
 
     @EntityGraph(attributePaths = {
+            "family",
             "account",
             "category",
             "createdBy",
-            "recurrence"
+            "recurrence",
+            "creditCardInvoice"
     })
     @Query("""
             select transaction
@@ -84,10 +88,12 @@ public interface FinancialTransactionRepository
     );
 
     @EntityGraph(attributePaths = {
+            "family",
             "account",
             "category",
             "createdBy",
-            "recurrence"
+            "recurrence",
+            "creditCardInvoice"
     })
     List<FinancialTransaction>
             findAllByFamily_IdAndStatusAndDueDateBeforeOrderByDueDateAsc(
@@ -95,6 +101,31 @@ public interface FinancialTransactionRepository
                     FinancialTransactionStatus status,
                     LocalDate date
             );
+
+    @EntityGraph(attributePaths = {
+            "family",
+            "account",
+            "category",
+            "createdBy"
+    })
+    @Query("""
+            select transaction
+              from FinancialTransaction transaction
+             where transaction.status = :status
+               and transaction.type = :type
+               and transaction.dueDate
+                   between :periodStart and :periodEnd
+               and transaction.excludedFromReports = false
+             order by transaction.dueDate asc
+            """)
+    List<FinancialTransaction> findAllDueForNotifications(
+            @Param("status")
+            FinancialTransactionStatus status,
+            @Param("type")
+            FinancialTransactionType type,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd") LocalDate periodEnd
+    );
 
     @Query("""
             select coalesce(
@@ -117,6 +148,7 @@ public interface FinancialTransactionRepository
                   br.com.nucleo.api.finance.domain.FinancialTransactionType.EXPENSE
               and transaction.status = :status
               and transaction.transactionDate between :from and :to
+              and transaction.excludedFromReports = false
             """)
     BigDecimal calculateCategoryExpense(
             @Param("familyId") UUID familyId,

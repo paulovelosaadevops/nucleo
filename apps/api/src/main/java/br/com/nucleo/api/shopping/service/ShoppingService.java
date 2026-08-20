@@ -1,5 +1,13 @@
 package br.com.nucleo.api.shopping.service;
 
+import br.com.nucleo.api.common.error.ForbiddenOperationException;
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.domain.FamilyRole;
+import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import br.com.nucleo.api.notification.service.NotificationService;
 import br.com.nucleo.api.shopping.domain.ShoppingItem;
 import br.com.nucleo.api.shopping.domain.ShoppingList;
 import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
@@ -13,16 +21,6 @@ import br.com.nucleo.api.shopping.dto.UpdateShoppingItemRequest;
 import br.com.nucleo.api.shopping.dto.UpdateShoppingListRequest;
 import br.com.nucleo.api.shopping.repository.ShoppingItemRepository;
 import br.com.nucleo.api.shopping.repository.ShoppingListRepository;
-
-import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-
-import br.com.nucleo.api.common.error.ForbiddenOperationException;
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.family.domain.FamilyMembership;
-import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
-import br.com.nucleo.api.family.domain.FamilyRole;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -37,17 +35,20 @@ public class ShoppingService {
     private final FamilyMembershipRepository membershipRepository;
     private final ShoppingListRepository listRepository;
     private final ShoppingItemRepository itemRepository;
+    private final NotificationService notificationService;
 
     public ShoppingService(
             FamilyAccessService familyAccessService,
             FamilyMembershipRepository membershipRepository,
             ShoppingListRepository listRepository,
-            ShoppingItemRepository itemRepository
+            ShoppingItemRepository itemRepository,
+            NotificationService notificationService
     ) {
         this.familyAccessService = familyAccessService;
         this.membershipRepository = membershipRepository;
         this.listRepository = listRepository;
         this.itemRepository = itemRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -69,6 +70,21 @@ public class ShoppingService {
         );
 
         listRepository.save(shoppingList);
+
+        notificationService.notifyActiveFamilyMembers(
+                currentMembership.getFamily(),
+                currentMembership.getUser().getId(),
+                NotificationType.SHOPPING_LIST_UPDATED,
+                "Nova lista de compras",
+                currentMembership.getUser().getName()
+                        + " criou a lista “"
+                        + shoppingList.getName()
+                        + "”.",
+                "/compras?listId=" + shoppingList.getId(),
+                shoppingList.getId(),
+                "shopping-list-created:"
+                        + shoppingList.getId()
+        );
 
         return ShoppingListDetailsResponse.from(
                 shoppingList,
@@ -106,10 +122,12 @@ public class ShoppingService {
         }
 
         return lists.stream()
-                .map(list -> ShoppingListSummaryResponse.from(
-                        list,
-                        findItems(list.getId())
-                ))
+                .map(list ->
+                        ShoppingListSummaryResponse.from(
+                                list,
+                                findItems(list.getId())
+                        )
+                )
                 .toList();
     }
 
@@ -320,6 +338,22 @@ public class ShoppingService {
         );
 
         itemRepository.save(item);
+
+        notificationService.notifyActiveFamilyMembers(
+                currentMembership.getFamily(),
+                currentMembership.getUser().getId(),
+                NotificationType.SHOPPING_ITEM_ADDED,
+                "Novo item na lista",
+                currentMembership.getUser().getName()
+                        + " adicionou “"
+                        + item.getName()
+                        + "” à lista “"
+                        + shoppingList.getName()
+                        + "”.",
+                "/compras?listId=" + shoppingList.getId(),
+                item.getId(),
+                "shopping-item-added:" + item.getId()
+        );
 
         return ShoppingItemResponse.from(item);
     }
@@ -571,7 +605,9 @@ public class ShoppingService {
         return item;
     }
 
-    private List<ShoppingItem> findItems(UUID listId) {
+    private List<ShoppingItem> findItems(
+            UUID listId
+    ) {
         return itemRepository
                 .findAllByShoppingList_IdOrderBySortOrderAscCreatedAtAsc(
                         listId

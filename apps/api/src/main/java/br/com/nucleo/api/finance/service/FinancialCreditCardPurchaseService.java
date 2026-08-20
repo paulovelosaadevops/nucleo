@@ -40,9 +40,13 @@ public class FinancialCreditCardPurchaseService {
     private final FamilyAccessService familyAccessService;
     private final FinancialCreditCardRepository cardRepository;
     private final FinancialCategoryRepository categoryRepository;
-    private final FinancialCreditCardPurchaseRepository purchaseRepository;
-    private final FinancialCreditCardInvoiceRepository invoiceRepository;
-    private final FinancialCreditCardInstallmentRepository installmentRepository;
+    private final FinancialCreditCardPurchaseRepository
+            purchaseRepository;
+    private final FinancialCreditCardInvoiceRepository
+            invoiceRepository;
+    private final FinancialCreditCardInstallmentRepository
+            installmentRepository;
+    private final FinancialBudgetAlertService budgetAlertService;
 
     public FinancialCreditCardPurchaseService(
             FamilyAccessService familyAccessService,
@@ -50,7 +54,9 @@ public class FinancialCreditCardPurchaseService {
             FinancialCategoryRepository categoryRepository,
             FinancialCreditCardPurchaseRepository purchaseRepository,
             FinancialCreditCardInvoiceRepository invoiceRepository,
-            FinancialCreditCardInstallmentRepository installmentRepository
+            FinancialCreditCardInstallmentRepository
+                    installmentRepository,
+            FinancialBudgetAlertService budgetAlertService
     ) {
         this.familyAccessService = familyAccessService;
         this.cardRepository = cardRepository;
@@ -58,6 +64,7 @@ public class FinancialCreditCardPurchaseService {
         this.purchaseRepository = purchaseRepository;
         this.invoiceRepository = invoiceRepository;
         this.installmentRepository = installmentRepository;
+        this.budgetAlertService = budgetAlertService;
     }
 
     @Transactional
@@ -124,7 +131,10 @@ public class FinancialCreditCardPurchaseService {
                     firstDueMonth.plusMonths(index);
 
             FinancialCreditCardInvoice invoice =
-                    findOrCreateInvoice(card, dueMonth);
+                    findOrCreateInvoice(
+                            card,
+                            dueMonth
+                    );
 
             FinancialCreditCardInstallment installment =
                     FinancialCreditCardInstallment.create(
@@ -139,7 +149,16 @@ public class FinancialCreditCardPurchaseService {
 
         installmentRepository.saveAll(installments);
 
-        return toResponse(purchase, installments);
+        evaluateBudgetAlerts(
+                membership,
+                category,
+                installments
+        );
+
+        return toResponse(
+                purchase,
+                installments
+        );
     }
 
     @Transactional(readOnly = true)
@@ -153,7 +172,10 @@ public class FinancialCreditCardPurchaseService {
                         currentUserId
                 );
 
-        validateSearchPeriod(from, to);
+        validateSearchPeriod(
+                from,
+                to
+        );
 
         return purchaseRepository
                 .findAllByFamily_IdAndPurchaseDateBetweenOrderByPurchaseDateDescCreatedAtDesc(
@@ -218,7 +240,16 @@ public class FinancialCreditCardPurchaseService {
                 request.notes()
         );
 
-        return toResponse(purchase, installments);
+        evaluateBudgetAlerts(
+                membership,
+                category,
+                installments
+        );
+
+        return toResponse(
+                purchase,
+                installments
+        );
     }
 
     @Transactional
@@ -243,11 +274,15 @@ public class FinancialCreditCardPurchaseService {
         ensureNoPaidInvoice(installments);
 
         purchase.cancel();
+
         installments.forEach(
                 FinancialCreditCardInstallment::cancel
         );
 
-        return toResponse(purchase, installments);
+        return toResponse(
+                purchase,
+                installments
+        );
     }
 
     @Transactional
@@ -272,11 +307,21 @@ public class FinancialCreditCardPurchaseService {
         ensureNoPaidOrCancelledInvoice(installments);
 
         purchase.restore();
+
         installments.forEach(
                 FinancialCreditCardInstallment::restore
         );
 
-        return toResponse(purchase, installments);
+        evaluateBudgetAlerts(
+                membership,
+                purchase.getCategory(),
+                installments
+        );
+
+        return toResponse(
+                purchase,
+                installments
+        );
     }
 
     @Transactional
@@ -295,7 +340,10 @@ public class FinancialCreditCardPurchaseService {
                         membership.getFamily().getId()
                 );
 
-        requireDeletePermission(purchase, membership);
+        requireDeletePermission(
+                purchase,
+                membership
+        );
 
         List<FinancialCreditCardInstallment> installments =
                 findInstallments(purchaseId);
@@ -310,7 +358,10 @@ public class FinancialCreditCardPurchaseService {
             UUID familyId
     ) {
         FinancialCreditCard card = cardRepository
-                .findByIdAndFamily_Id(cardId, familyId)
+                .findByIdAndFamily_Id(
+                        cardId,
+                        familyId
+                )
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Cartão de crédito não encontrado"
@@ -351,7 +402,10 @@ public class FinancialCreditCardPurchaseService {
         }
 
         FinancialCategory category = categoryRepository
-                .findByIdAndFamily_Id(categoryId, familyId)
+                .findByIdAndFamily_Id(
+                        categoryId,
+                        familyId
+                )
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Categoria financeira não encontrada"
@@ -364,8 +418,10 @@ public class FinancialCreditCardPurchaseService {
             );
         }
 
-        if (category.getType()
-                != FinancialCategoryType.EXPENSE) {
+        if (
+                category.getType()
+                        != FinancialCategoryType.EXPENSE
+        ) {
             throw new IllegalArgumentException(
                     "Compras no cartão exigem categoria de despesa"
             );
@@ -399,7 +455,9 @@ public class FinancialCreditCardPurchaseService {
                             );
 
                     LocalDate dueDate =
-                            dueMonth.atDay(card.getDueDay());
+                            dueMonth.atDay(
+                                    card.getDueDay()
+                            );
 
                     FinancialCreditCardInvoice invoice =
                             FinancialCreditCardInvoice.create(
@@ -409,7 +467,9 @@ public class FinancialCreditCardPurchaseService {
                                     dueDate
                             );
 
-                    return invoiceRepository.save(invoice);
+                    return invoiceRepository.save(
+                            invoice
+                    );
                 });
     }
 
@@ -420,12 +480,18 @@ public class FinancialCreditCardPurchaseService {
         YearMonth closingMonth =
                 YearMonth.from(purchaseDate);
 
-        if (purchaseDate.getDayOfMonth()
-                > card.getClosingDay()) {
-            closingMonth = closingMonth.plusMonths(1);
+        if (
+                purchaseDate.getDayOfMonth()
+                        > card.getClosingDay()
+        ) {
+            closingMonth =
+                    closingMonth.plusMonths(1);
         }
 
-        if (card.getDueDay() > card.getClosingDay()) {
+        if (
+                card.getDueDay()
+                        > card.getClosingDay()
+        ) {
             return closingMonth;
         }
 
@@ -437,16 +503,27 @@ public class FinancialCreditCardPurchaseService {
             int installmentCount
     ) {
         long totalCents = totalAmount
-                .setScale(2, RoundingMode.UNNECESSARY)
+                .setScale(
+                        2,
+                        RoundingMode.UNNECESSARY
+                )
                 .movePointRight(2)
                 .longValueExact();
 
-        long baseCents = totalCents / installmentCount;
-        long remainder = totalCents % installmentCount;
+        long baseCents =
+                totalCents / installmentCount;
 
-        List<BigDecimal> amounts = new ArrayList<>();
+        long remainder =
+                totalCents % installmentCount;
 
-        for (int index = 0; index < installmentCount; index++) {
+        List<BigDecimal> amounts =
+                new ArrayList<>();
+
+        for (
+                int index = 0;
+                index < installmentCount;
+                index++
+        ) {
             long cents = baseCents;
 
             if (index < remainder) {
@@ -454,7 +531,10 @@ public class FinancialCreditCardPurchaseService {
             }
 
             amounts.add(
-                    BigDecimal.valueOf(cents, 2)
+                    BigDecimal.valueOf(
+                            cents,
+                            2
+                    )
             );
         }
 
@@ -466,7 +546,10 @@ public class FinancialCreditCardPurchaseService {
             int installmentCount
     ) {
         long totalCents = totalAmount
-                .setScale(2, RoundingMode.UNNECESSARY)
+                .setScale(
+                        2,
+                        RoundingMode.UNNECESSARY
+                )
                 .movePointRight(2)
                 .longValueExact();
 
@@ -493,8 +576,10 @@ public class FinancialCreditCardPurchaseService {
             );
         }
 
-        if (ChronoUnit.DAYS.between(from, to)
-                > MAXIMUM_SEARCH_PERIOD) {
+        if (
+                ChronoUnit.DAYS.between(from, to)
+                        > MAXIMUM_SEARCH_PERIOD
+        ) {
             throw new IllegalArgumentException(
                     "O período não pode ultrapassar 366 dias"
             );
@@ -504,10 +589,13 @@ public class FinancialCreditCardPurchaseService {
     private void ensureNoPaidInvoice(
             List<FinancialCreditCardInstallment> installments
     ) {
-        boolean containsPaidInvoice = installments.stream()
-                .anyMatch(installment ->
-                        installment.getInvoice().isPaid()
-                );
+        boolean containsPaidInvoice =
+                installments.stream()
+                        .anyMatch(installment ->
+                                installment
+                                        .getInvoice()
+                                        .isPaid()
+                        );
 
         if (containsPaidInvoice) {
             throw new IllegalArgumentException(
@@ -519,13 +607,16 @@ public class FinancialCreditCardPurchaseService {
     private void ensureNoPaidOrCancelledInvoice(
             List<FinancialCreditCardInstallment> installments
     ) {
-        boolean blocked = installments.stream()
-                .anyMatch(installment ->
-                        installment.getInvoice().isPaid()
-                                || installment
-                                .getInvoice()
-                                .isCancelled()
-                );
+        boolean blocked =
+                installments.stream()
+                        .anyMatch(installment ->
+                                installment
+                                        .getInvoice()
+                                        .isPaid()
+                                        || installment
+                                        .getInvoice()
+                                        .isCancelled()
+                        );
 
         if (blocked) {
             throw new IllegalArgumentException(
@@ -535,7 +626,9 @@ public class FinancialCreditCardPurchaseService {
     }
 
     private List<FinancialCreditCardInstallment>
-            findInstallments(UUID purchaseId) {
+            findInstallments(
+                    UUID purchaseId
+            ) {
         return installmentRepository
                 .findAllByPurchase_IdOrderByInstallmentNumberAsc(
                         purchaseId
@@ -558,7 +651,8 @@ public class FinancialCreditCardPurchaseService {
         List<FinancialCreditCardInstallmentResponse> responses =
                 installments.stream()
                         .map(
-                                FinancialCreditCardInstallmentResponse::from
+                                FinancialCreditCardInstallmentResponse
+                                        ::from
                         )
                         .toList();
 
@@ -566,6 +660,34 @@ public class FinancialCreditCardPurchaseService {
                 purchase,
                 responses
         );
+    }
+
+    private void evaluateBudgetAlerts(
+            FamilyMembership membership,
+            FinancialCategory category,
+            List<FinancialCreditCardInstallment> installments
+    ) {
+        if (
+                category == null
+                        || installments.isEmpty()
+        ) {
+            return;
+        }
+
+        installments.stream()
+                .map(installment ->
+                        installment
+                                .getInvoice()
+                                .getReferenceMonth()
+                )
+                .distinct()
+                .forEach(referenceMonth ->
+                        budgetAlertService.evaluate(
+                                membership.getFamily(),
+                                category,
+                                referenceMonth
+                        )
+                );
     }
 
     private void requireDeletePermission(
@@ -579,7 +701,8 @@ public class FinancialCreditCardPurchaseService {
 
         boolean isAdministrator =
                 membership.getRole() == FamilyRole.OWNER
-                        || membership.getRole() == FamilyRole.ADMIN;
+                        || membership.getRole()
+                        == FamilyRole.ADMIN;
 
         if (!isCreator && !isAdministrator) {
             throw new ForbiddenOperationException(

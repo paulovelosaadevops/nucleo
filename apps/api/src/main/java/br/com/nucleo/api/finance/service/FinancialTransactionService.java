@@ -34,17 +34,20 @@ public class FinancialTransactionService {
     private final FinancialAccountRepository accountRepository;
     private final FinancialCategoryRepository categoryRepository;
     private final FinancialTransactionRepository transactionRepository;
+    private final FinancialBudgetAlertService budgetAlertService;
 
     public FinancialTransactionService(
             FamilyAccessService familyAccessService,
             FinancialAccountRepository accountRepository,
             FinancialCategoryRepository categoryRepository,
-            FinancialTransactionRepository transactionRepository
+            FinancialTransactionRepository transactionRepository,
+            FinancialBudgetAlertService budgetAlertService
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
         this.transactionRepository = transactionRepository;
+        this.budgetAlertService = budgetAlertService;
     }
 
     @Transactional
@@ -101,6 +104,8 @@ public class FinancialTransactionService {
                 );
 
         transactionRepository.save(transaction);
+
+        evaluateBudgetAlert(transaction);
 
         return toResponse(transaction);
     }
@@ -201,6 +206,8 @@ public class FinancialTransactionService {
                 request.notes()
         );
 
+        evaluateBudgetAlert(transaction);
+
         return toResponse(transaction);
     }
 
@@ -216,7 +223,6 @@ public class FinancialTransactionService {
                 );
 
         ensureNotInvoicePayment(transaction);
-
         transaction.markAsPaid();
 
         return toResponse(transaction);
@@ -234,7 +240,6 @@ public class FinancialTransactionService {
                 );
 
         ensureNotInvoicePayment(transaction);
-
         transaction.markAsPending();
 
         return toResponse(transaction);
@@ -252,7 +257,6 @@ public class FinancialTransactionService {
                 );
 
         ensureNotInvoicePayment(transaction);
-
         transaction.cancel();
 
         return toResponse(transaction);
@@ -270,8 +274,9 @@ public class FinancialTransactionService {
                 );
 
         ensureNotInvoicePayment(transaction);
-
         transaction.restore();
+
+        evaluateBudgetAlert(transaction);
 
         return toResponse(transaction);
     }
@@ -409,6 +414,26 @@ public class FinancialTransactionService {
                     "O pagamento da fatura deve ser gerenciado pela própria fatura"
             );
         }
+    }
+
+    private void evaluateBudgetAlert(
+            FinancialTransaction transaction
+    ) {
+        if (
+                transaction.getType()
+                        != FinancialTransactionType.EXPENSE
+                        || transaction.getCategory() == null
+                        || transaction.getStatus()
+                        == FinancialTransactionStatus.CANCELLED
+        ) {
+            return;
+        }
+
+        budgetAlertService.evaluate(
+                transaction.getFamily(),
+                transaction.getCategory(),
+                transaction.getTransactionDate()
+        );
     }
 
     private void validateDates(

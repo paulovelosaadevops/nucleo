@@ -1,12 +1,11 @@
 package br.com.nucleo.api.agenda.repository;
 
 import br.com.nucleo.api.agenda.domain.AgendaOccurrence;
-
+import br.com.nucleo.api.agenda.domain.OccurrenceStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -60,7 +59,29 @@ public interface AgendaOccurrenceRepository
             @Param("periodEnd") Instant periodEnd
     );
 
-    List<AgendaOccurrence> findAllByEvent_IdOrderByOccurrenceStartsAtAsc(
-            UUID eventId
+    @EntityGraph(attributePaths = {
+            "event",
+            "event.family",
+            "event.assignedTo",
+            "event.assignedTo.user",
+            "event.createdBy"
+    })
+    @Query("""
+            select occurrence
+              from AgendaOccurrence occurrence
+             where occurrence.status = :status
+               and occurrence.occurrenceStartsAt
+                   between :periodStart and :periodEnd
+             order by occurrence.occurrenceStartsAt asc
+            """)
+    List<AgendaOccurrence> findAllScheduledForNotifications(
+            @Param("status") OccurrenceStatus status,
+            @Param("periodStart") Instant periodStart,
+            @Param("periodEnd") Instant periodEnd
     );
+
+    List<AgendaOccurrence>
+            findAllByEvent_IdOrderByOccurrenceStartsAtAsc(
+                    UUID eventId
+            );
 }

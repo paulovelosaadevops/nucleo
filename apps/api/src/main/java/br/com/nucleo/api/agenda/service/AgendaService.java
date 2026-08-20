@@ -10,12 +10,11 @@ import br.com.nucleo.api.agenda.dto.RecurrenceRequest;
 import br.com.nucleo.api.agenda.repository.AgendaEventRepository;
 import br.com.nucleo.api.agenda.repository.AgendaOccurrenceRepository;
 import br.com.nucleo.api.agenda.repository.AgendaReminderRepository;
-import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-
-import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import br.com.nucleo.api.notification.service.NotificationService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.util.Comparator;
@@ -35,6 +34,7 @@ public class AgendaService {
     private final AgendaOccurrenceRepository occurrenceRepository;
     private final AgendaReminderRepository reminderRepository;
     private final AgendaOccurrenceGenerator occurrenceGenerator;
+    private final NotificationService notificationService;
 
     public AgendaService(
             FamilyAccessService familyAccessService,
@@ -42,7 +42,8 @@ public class AgendaService {
             AgendaEventRepository eventRepository,
             AgendaOccurrenceRepository occurrenceRepository,
             AgendaReminderRepository reminderRepository,
-            AgendaOccurrenceGenerator occurrenceGenerator
+            AgendaOccurrenceGenerator occurrenceGenerator,
+            NotificationService notificationService
     ) {
         this.familyAccessService = familyAccessService;
         this.membershipRepository = membershipRepository;
@@ -50,6 +51,7 @@ public class AgendaService {
         this.occurrenceRepository = occurrenceRepository;
         this.reminderRepository = reminderRepository;
         this.occurrenceGenerator = occurrenceGenerator;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -105,7 +107,24 @@ public class AgendaService {
 
         occurrenceRepository.saveAll(occurrences);
 
-        saveReminders(event, request.remindersInMinutes());
+        saveReminders(
+                event,
+                request.remindersInMinutes()
+        );
+
+        notificationService.notifyActiveFamilyMembers(
+                currentMembership.getFamily(),
+                currentMembership.getUser().getId(),
+                NotificationType.AGENDA_EVENT_CREATED,
+                "Novo compromisso na agenda",
+                currentMembership.getUser().getName()
+                        + " adicionou “"
+                        + event.getTitle()
+                        + "” à agenda da família.",
+                "/agenda?eventId=" + event.getId(),
+                event.getId(),
+                "agenda-event-created:" + event.getId()
+        );
 
         return new CreateAgendaEventResponse(
                 event.getId(),
@@ -130,7 +149,9 @@ public class AgendaService {
                 membershipRepository
                         .findByIdAndFamily_Id(
                                 membershipId,
-                                currentMembership.getFamily().getId()
+                                currentMembership
+                                        .getFamily()
+                                        .getId()
                         )
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
@@ -230,7 +251,9 @@ public class AgendaService {
                         || recurrence.count() != null
                         || (
                         recurrence.daysOfWeek() != null
-                                && !recurrence.daysOfWeek().isEmpty()
+                                && !recurrence
+                                .daysOfWeek()
+                                .isEmpty()
                 );
 
         if (containsExtraRules) {
@@ -275,7 +298,10 @@ public class AgendaService {
                 .distinct()
                 .sorted()
                 .map(minutes ->
-                        AgendaReminder.create(event, minutes)
+                        AgendaReminder.create(
+                                event,
+                                minutes
+                        )
                 )
                 .toList();
 

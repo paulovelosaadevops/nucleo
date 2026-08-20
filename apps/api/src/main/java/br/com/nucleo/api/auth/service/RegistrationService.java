@@ -2,23 +2,20 @@ package br.com.nucleo.api.auth.service;
 
 import br.com.nucleo.api.auth.dto.RegisterRequest;
 import br.com.nucleo.api.auth.dto.RegisterResponse;
-import br.com.nucleo.api.family.repository.FamilyInvitationRepository;
-import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
-import br.com.nucleo.api.family.repository.FamilyRepository;
-import br.com.nucleo.api.identity.user.repository.UserRepository;
-
 import br.com.nucleo.api.common.error.EmailAlreadyInUseException;
 import br.com.nucleo.api.common.error.InvitationConflictException;
 import br.com.nucleo.api.common.error.ResourceNotFoundException;
 import br.com.nucleo.api.family.domain.Family;
 import br.com.nucleo.api.family.domain.FamilyInvitation;
-import br.com.nucleo.api.family.repository.FamilyInvitationRepository;
 import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.repository.FamilyInvitationRepository;
 import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
 import br.com.nucleo.api.family.repository.FamilyRepository;
 import br.com.nucleo.api.family.service.InvitationTokenService;
 import br.com.nucleo.api.identity.user.domain.User;
 import br.com.nucleo.api.identity.user.repository.UserRepository;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import br.com.nucleo.api.notification.service.NotificationService;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +31,7 @@ public class RegistrationService {
     private final FamilyInvitationRepository invitationRepository;
     private final InvitationTokenService invitationTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     public RegistrationService(
             UserRepository userRepository,
@@ -41,7 +39,8 @@ public class RegistrationService {
             FamilyMembershipRepository membershipRepository,
             FamilyInvitationRepository invitationRepository,
             InvitationTokenService invitationTokenService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            NotificationService notificationService
     ) {
         this.userRepository = userRepository;
         this.familyRepository = familyRepository;
@@ -49,15 +48,22 @@ public class RegistrationService {
         this.invitationRepository = invitationRepository;
         this.invitationTokenService = invitationTokenService;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     @Transactional
-    public RegisterResponse register(RegisterRequest request) {
+    public RegisterResponse register(
+            RegisterRequest request
+    ) {
         String normalizedEmail = request.email()
                 .trim()
                 .toLowerCase(Locale.ROOT);
 
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+        if (
+                userRepository.existsByEmailIgnoreCase(
+                        normalizedEmail
+                )
+        ) {
             throw new EmailAlreadyInUseException();
         }
 
@@ -90,7 +96,10 @@ public class RegistrationService {
             RegisterRequest request,
             String normalizedEmail
     ) {
-        User user = createUser(request, normalizedEmail);
+        User user = createUser(
+                request,
+                normalizedEmail
+        );
 
         Family family = Family.create(
                 request.familyName(),
@@ -100,11 +109,18 @@ public class RegistrationService {
         familyRepository.save(family);
 
         FamilyMembership membership =
-                FamilyMembership.createOwner(family, user);
+                FamilyMembership.createOwner(
+                        family,
+                        user
+                );
 
         membershipRepository.save(membership);
 
-        return toResponse(user, family, membership);
+        return toResponse(
+                user,
+                family,
+                membership
+        );
     }
 
     private RegisterResponse registerFromInvitation(
@@ -117,13 +133,21 @@ public class RegistrationService {
 
         FamilyInvitation invitation = invitationRepository
                 .findByTokenHash(tokenHash)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Convite não encontrado"
-                ));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Convite não encontrado"
+                        )
+                );
 
-        validateInvitation(invitation, normalizedEmail);
+        validateInvitation(
+                invitation,
+                normalizedEmail
+        );
 
-        User user = createUser(request, normalizedEmail);
+        User user = createUser(
+                request,
+                normalizedEmail
+        );
 
         FamilyMembership membership =
                 FamilyMembership.createMember(
@@ -134,6 +158,19 @@ public class RegistrationService {
 
         membershipRepository.save(membership);
         invitation.accept();
+
+        notificationService.notifyActiveFamilyMembers(
+                invitation.getFamily(),
+                user.getId(),
+                NotificationType.FAMILY_MEMBER_JOINED,
+                "Novo membro na família",
+                user.getName()
+                        + " entrou no núcleo familiar.",
+                "/familia",
+                membership.getId(),
+                "family-member-joined:"
+                        + membership.getId()
+        );
 
         return toResponse(
                 user,
@@ -149,7 +186,9 @@ public class RegistrationService {
         User user = User.create(
                 request.name(),
                 normalizedEmail,
-                passwordEncoder.encode(request.password())
+                passwordEncoder.encode(
+                        request.password()
+                )
         );
 
         return userRepository.save(user);
@@ -193,7 +232,9 @@ public class RegistrationService {
         );
     }
 
-    private boolean hasInvitation(RegisterRequest request) {
+    private boolean hasInvitation(
+            RegisterRequest request
+    ) {
         return request.invitationToken() != null
                 && !request.invitationToken().isBlank();
     }

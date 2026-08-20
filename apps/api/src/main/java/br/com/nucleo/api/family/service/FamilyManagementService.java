@@ -1,5 +1,7 @@
 package br.com.nucleo.api.family.service;
 
+import br.com.nucleo.api.common.error.InvitationConflictException;
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
 import br.com.nucleo.api.family.domain.FamilyInvitation;
 import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.domain.FamilyRole;
@@ -11,12 +13,10 @@ import br.com.nucleo.api.family.dto.InvitationPreviewResponse;
 import br.com.nucleo.api.family.dto.InvitationResponse;
 import br.com.nucleo.api.family.repository.FamilyInvitationRepository;
 import br.com.nucleo.api.family.repository.FamilyMembershipRepository;
-import br.com.nucleo.api.identity.user.repository.UserRepository;
-
-import br.com.nucleo.api.common.error.InvitationConflictException;
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
 import br.com.nucleo.api.identity.user.domain.User;
 import br.com.nucleo.api.identity.user.repository.UserRepository;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import br.com.nucleo.api.notification.service.NotificationService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -35,6 +35,7 @@ public class FamilyManagementService {
     private final FamilyInvitationRepository invitationRepository;
     private final UserRepository userRepository;
     private final InvitationTokenService invitationTokenService;
+    private final NotificationService notificationService;
     private final String webUrl;
     private final Duration invitationTtl;
 
@@ -44,6 +45,7 @@ public class FamilyManagementService {
             FamilyInvitationRepository invitationRepository,
             UserRepository userRepository,
             InvitationTokenService invitationTokenService,
+            NotificationService notificationService,
             @Value("${app.web-url}") String webUrl,
             @Value("${app.invitations.ttl}") Duration invitationTtl
     ) {
@@ -52,12 +54,15 @@ public class FamilyManagementService {
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
         this.invitationTokenService = invitationTokenService;
+        this.notificationService = notificationService;
         this.webUrl = webUrl.replaceAll("/+$", "");
         this.invitationTtl = invitationTtl;
     }
 
     @Transactional(readOnly = true)
-    public List<FamilyMemberResponse> listMembers(UUID currentUserId) {
+    public List<FamilyMemberResponse> listMembers(
+            UUID currentUserId
+    ) {
         FamilyMembership currentMembership =
                 familyAccessService.requireActiveMembership(
                         currentUserId
@@ -68,18 +73,20 @@ public class FamilyManagementService {
                         currentMembership.getFamily().getId()
                 )
                 .stream()
-                .map(membership -> new FamilyMemberResponse(
-                        membership.getId(),
-                        membership.getUser().getId(),
-                        membership.getUser().getName(),
-                        membership.getUser().getEmail(),
-                        membership.getRole(),
-                        membership.getStatus(),
-                        membership.getJoinedAt(),
-                        membership.getUser()
-                                .getId()
-                                .equals(currentUserId)
-                ))
+                .map(membership ->
+                        new FamilyMemberResponse(
+                                membership.getId(),
+                                membership.getUser().getId(),
+                                membership.getUser().getName(),
+                                membership.getUser().getEmail(),
+                                membership.getRole(),
+                                membership.getStatus(),
+                                membership.getJoinedAt(),
+                                membership.getUser()
+                                        .getId()
+                                        .equals(currentUserId)
+                        )
+                )
                 .toList();
     }
 
@@ -104,6 +111,7 @@ public class FamilyManagementService {
                 .toLowerCase(Locale.ROOT);
 
         ensureUserIsNotAlreadyMember(email);
+
         ensurePendingInvitationDoesNotExist(
                 administrator.getFamily().getId(),
                 email
@@ -127,6 +135,21 @@ public class FamilyManagementService {
                     "Já existe um convite pendente para este e-mail"
             );
         }
+
+        notificationService.notifyActiveFamilyMembers(
+                administrator.getFamily(),
+                administrator.getUser().getId(),
+                NotificationType.FAMILY_INVITATION,
+                "Novo convite familiar",
+                administrator.getUser().getName()
+                        + " convidou "
+                        + email
+                        + " para participar do núcleo.",
+                "/familia/convites",
+                invitation.getId(),
+                "family-invitation-created:"
+                        + invitation.getId()
+        );
 
         return new InvitationCreatedResponse(
                 toResponse(invitation),
@@ -173,9 +196,11 @@ public class FamilyManagementService {
                         invitationId,
                         administrator.getFamily().getId()
                 )
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Convite não encontrado"
-                ));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Convite não encontrado"
+                        )
+                );
 
         if (!invitation.isPending()) {
             throw new InvitationConflictException(
@@ -202,9 +227,11 @@ public class FamilyManagementService {
                 .findByTokenHash(
                         invitationTokenService.hash(rawToken)
                 )
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Convite não encontrado"
-                ));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Convite não encontrado"
+                        )
+                );
 
         invitation.expireIfNecessary(Instant.now());
 
@@ -219,7 +246,9 @@ public class FamilyManagementService {
         );
     }
 
-    private void ensureUserIsNotAlreadyMember(String email) {
+    private void ensureUserIsNotAlreadyMember(
+            String email
+    ) {
         userRepository
                 .findByEmailIgnoreCase(email)
                 .map(User::getId)
