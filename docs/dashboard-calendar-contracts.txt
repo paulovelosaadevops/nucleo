@@ -1,0 +1,776 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-agenda.tsx
+============================================================
+import { Surface } from "@/components/ui/surface";
+import type { DashboardAgendaOccurrence } from "@/types/dashboard";
+import {
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  MapPin,
+} from "lucide-react";
+import Link from "next/link";
+
+interface DashboardAgendaProps {
+  occurrences: DashboardAgendaOccurrence[];
+  unavailable?: boolean;
+}
+
+const dateFormatter = new Intl.DateTimeFormat(
+  "pt-BR",
+  {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  },
+);
+
+const timeFormatter = new Intl.DateTimeFormat(
+  "pt-BR",
+  {
+    hour: "2-digit",
+    minute: "2-digit",
+  },
+);
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase()
+    + value.slice(1);
+}
+
+export function DashboardAgenda({
+  occurrences,
+  unavailable = false,
+}: DashboardAgendaProps) {
+  return (
+    <Surface
+      variant="elevated"
+      className="h-full"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-medium text-zinc-600">
+            PrÃ³ximos 7 dias
+          </p>
+
+          <h2 className="mt-1 text-lg font-semibold text-white">
+            Agenda
+          </h2>
+        </div>
+
+        <Link
+          href="/agenda"
+          className="flex items-center gap-1 text-xs font-medium text-zinc-500 transition hover:text-white"
+        >
+          Ver agenda
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {unavailable ? (
+        <DashboardUnavailable />
+      ) : occurrences.length === 0 ? (
+        <div className="flex min-h-60 flex-col items-center justify-center text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-zinc-600">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+
+          <p className="mt-4 text-sm font-medium text-zinc-300">
+            Semana tranquila
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-600">
+            Nenhum compromisso programado.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-2">
+          {occurrences.map((occurrence) => {
+            const startsAt = new Date(
+              occurrence.startsAt,
+            );
+
+            return (
+              <Link
+                key={occurrence.occurrenceId}
+                href={`/agenda?ocorrencia=${occurrence.occurrenceId}`}
+                className="group flex gap-3 rounded-2xl border border-transparent p-3 transition hover:border-white/[0.08] hover:bg-white/[0.035]"
+              >
+                <div className="flex w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-white/[0.08] bg-black/25 py-2">
+                  <span className="text-[0.6rem] font-semibold uppercase text-zinc-600">
+                    {startsAt.toLocaleDateString(
+                      "pt-BR",
+                      { month: "short" },
+                    ).replace(".", "")}
+                  </span>
+
+                  <span className="text-lg font-semibold text-zinc-200">
+                    {startsAt
+                      .getDate()
+                      .toString()
+                      .padStart(2, "0")}
+                  </span>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-zinc-200 group-hover:text-white">
+                    {occurrence.title}
+                  </p>
+
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.68rem] text-zinc-600">
+                    <span>
+                      {capitalize(
+                        dateFormatter.format(startsAt),
+                      )}
+                    </span>
+
+                    {!occurrence.allDay && (
+                      <span className="flex items-center gap-1">
+                        <Clock3 className="h-3 w-3" />
+                        {timeFormatter.format(startsAt)}
+                      </span>
+                    )}
+
+                    {occurrence.location && (
+                      <span className="flex max-w-36 items-center gap-1 truncate">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {occurrence.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </Surface>
+  );
+}
+
+function DashboardUnavailable() {
+  return (
+    <div className="flex min-h-60 items-center justify-center text-center">
+      <p className="max-w-xs text-sm leading-6 text-zinc-600">
+        NÃ£o foi possÃ­vel carregar a agenda.
+        Os outros mÃ³dulos continuam disponÃ­veis.
+      </p>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-overview.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
+import { Surface } from "@/components/ui/surface";
+import { DashboardAgenda } from "@/features/dashboard/dashboard-agenda";
+import { DashboardFinance } from "@/features/dashboard/dashboard-finance";
+import { DashboardShopping } from "@/features/dashboard/dashboard-shopping";
+import { DashboardSummaryCard } from "@/features/dashboard/dashboard-summary-card";
+import { useDashboard } from "@/features/dashboard/use-dashboard";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Bell,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Plus,
+  RefreshCw,
+  ShoppingBasket,
+} from "lucide-react";
+import Link from "next/link";
+
+const currencyFormatter =
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
+
+export function DashboardOverview() {
+  const { session } = useAuth();
+
+  const {
+    data,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  } = useDashboard();
+
+  const firstName =
+    session?.user.name
+      .trim()
+      .split(/\s+/)[0] ?? "";
+
+  const unavailable = (
+    section:
+      | "agenda"
+      | "shopping"
+      | "finance"
+      | "notifications",
+  ) =>
+    data?.unavailableSections.includes(
+      section,
+    ) ?? false;
+
+  const pendingShoppingItems =
+    data?.shoppingLists.reduce(
+      (total, list) =>
+        total + list.pendingItems,
+      0,
+    ) ?? 0;
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex min-h-[65vh] items-center justify-center">
+        <Surface
+          variant="elevated"
+          className="max-w-md text-center"
+        >
+          <p className="text-base font-medium text-white">
+            NÃ£o foi possÃ­vel carregar sua central
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            {error}
+          </p>
+
+          <Button
+            variant="secondary"
+            className="mt-5"
+            loading={refreshing}
+            onClick={() => void refresh()}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Tentar novamente
+          </Button>
+        </Surface>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fade-up space-y-7">
+      <PageHeader
+        eyebrow={session?.family.name}
+        title={`OlÃ¡, ${firstName}`}
+        description="Aqui estÃ¡ o que estÃ¡ acontecendo no seu NÃºcleo."
+        action={
+          <Button
+            variant="ghost"
+            size="icon"
+            loading={refreshing}
+            onClick={() => void refresh()}
+            aria-label="Atualizar painel"
+          >
+            {!refreshing && (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        }
+      />
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <QuickAction
+          href="/agenda?novo=true"
+          label="Novo compromisso"
+          icon={CalendarDays}
+        />
+
+        <QuickAction
+          href="/compras?nova=true"
+          label="Nova lista"
+          icon={ShoppingBasket}
+        />
+
+        <QuickAction
+          href="/financas?novo=true"
+          label="Nova movimentaÃ§Ã£o"
+          icon={Plus}
+        />
+      </div>
+
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <DashboardSummaryCard
+          title="PrÃ³ximos eventos"
+          value={String(data?.agenda.length ?? 0)}
+          detail="Nos prÃ³ximos 7 dias"
+          href="/agenda"
+          icon={CalendarDays}
+          unavailable={unavailable("agenda")}
+        />
+
+        <DashboardSummaryCard
+          title="Itens pendentes"
+          value={String(pendingShoppingItems)}
+          detail="Nas listas em andamento"
+          href="/compras"
+          icon={ShoppingBasket}
+          unavailable={unavailable("shopping")}
+        />
+
+        <DashboardSummaryCard
+          title="Saldo das contas"
+          value={currencyFormatter.format(
+            data?.finance
+              ?.totalAccountBalance ?? 0,
+          )}
+          detail="PosiÃ§Ã£o financeira atual"
+          href="/financas"
+          icon={ChartNoAxesCombined}
+          unavailable={unavailable("finance")}
+        />
+
+        <DashboardSummaryCard
+          title="NotificaÃ§Ãµes"
+          value={String(
+            data?.unreadNotifications ?? 0,
+          )}
+          detail="Ainda nÃ£o visualizadas"
+          href="/notificacoes"
+          icon={Bell}
+          unavailable={unavailable(
+            "notifications",
+          )}
+        />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <DashboardAgenda
+          occurrences={data?.agenda ?? []}
+          unavailable={unavailable("agenda")}
+        />
+
+        <div className="grid gap-4">
+          <DashboardShopping
+            lists={data?.shoppingLists ?? []}
+            unavailable={unavailable(
+              "shopping",
+            )}
+          />
+
+          <DashboardFinance
+            finance={data?.finance ?? null}
+            unavailable={unavailable("finance")}
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+interface QuickActionProps {
+  href: string;
+  label: string;
+  icon: typeof Plus;
+}
+
+function QuickAction({
+  href,
+  label,
+  icon: Icon,
+}: QuickActionProps) {
+  return (
+    <Link
+      href={href}
+      className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 text-xs font-medium text-zinc-400 transition hover:border-white/15 hover:bg-white/[0.065] hover:text-white"
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </Link>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse space-y-7">
+      <div>
+        <div className="h-3 w-28 rounded bg-white/[0.06]" />
+        <div className="mt-3 h-8 w-48 rounded-lg bg-white/[0.07]" />
+        <div className="mt-3 h-4 w-72 rounded bg-white/[0.045]" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map(
+          (_, index) => (
+            <div
+              key={index}
+              className="h-36 rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]"
+            />
+          ),
+        )}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="h-[32rem] rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]" />
+
+        <div className="grid gap-4">
+          <div className="h-64 rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]" />
+          <div className="h-64 rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-service.ts
+============================================================
+import { apiRequest } from "@/lib/api/api-client";
+import type {
+  DashboardAgendaOccurrence,
+  DashboardData,
+  DashboardFinance,
+  DashboardSection,
+  DashboardShoppingList,
+  NotificationSummary,
+} from "@/types/dashboard";
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function agendaPeriod() {
+  const from = new Date();
+  from.setSeconds(0, 0);
+
+  const to = new Date(from);
+  to.setDate(to.getDate() + 7);
+  to.setHours(23, 59, 59, 999);
+
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+function financePeriod() {
+  const today = new Date();
+
+  const from = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1,
+  );
+
+  const to = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  );
+
+  return {
+    from: formatLocalDate(from),
+    to: formatLocalDate(to),
+  };
+}
+
+function fulfilledValue<T>(
+  result: PromiseSettledResult<T>,
+  fallback: T,
+): T {
+  return result.status === "fulfilled"
+    ? result.value
+    : fallback;
+}
+
+export async function loadDashboard(): Promise<DashboardData> {
+  const agenda = agendaPeriod();
+  const finance = financePeriod();
+
+  const agendaQuery = new URLSearchParams({
+    from: agenda.from,
+    to: agenda.to,
+  });
+
+  const financeQuery = new URLSearchParams({
+    from: finance.from,
+    to: finance.to,
+  });
+
+  const results = await Promise.allSettled([
+    apiRequest<DashboardAgendaOccurrence[]>(
+      `/api/agenda/occurrences?${agendaQuery}`,
+    ),
+    apiRequest<DashboardShoppingList[]>(
+      "/api/shopping/lists",
+    ),
+    apiRequest<DashboardFinance>(
+      `/api/finance/dashboard?${financeQuery}`,
+    ),
+    apiRequest<NotificationSummary>(
+      "/api/notifications/summary",
+    ),
+  ]);
+
+  const [
+    agendaResult,
+    shoppingResult,
+    financeResult,
+    notificationResult,
+  ] = results;
+
+  const unavailableSections: DashboardSection[] = [];
+
+  if (agendaResult.status === "rejected") {
+    unavailableSections.push("agenda");
+  }
+
+  if (shoppingResult.status === "rejected") {
+    unavailableSections.push("shopping");
+  }
+
+  if (financeResult.status === "rejected") {
+    unavailableSections.push("finance");
+  }
+
+  if (notificationResult.status === "rejected") {
+    unavailableSections.push("notifications");
+  }
+
+  const notificationSummary =
+    fulfilledValue<NotificationSummary>(
+      notificationResult,
+      {},
+    );
+
+  const shoppingLists =
+    fulfilledValue<DashboardShoppingList[]>(
+      shoppingResult,
+      [],
+    )
+      .filter(
+        (list) =>
+          list.status !== "ARCHIVED" &&
+          list.status !== "COMPLETED",
+      )
+      .sort((left, right) => {
+        if (!left.dueDate) {
+          return 1;
+        }
+
+        if (!right.dueDate) {
+          return -1;
+        }
+
+        return left.dueDate.localeCompare(
+          right.dueDate,
+        );
+      });
+
+  return {
+    agenda:
+      fulfilledValue<DashboardAgendaOccurrence[]>(
+        agendaResult,
+        [],
+      )
+        .filter(
+          (occurrence) =>
+            occurrence.status !== "CANCELLED",
+        )
+        .slice(0, 5),
+
+    shoppingLists: shoppingLists.slice(0, 4),
+
+    finance:
+      fulfilledValue<DashboardFinance | null>(
+        financeResult,
+        null,
+      ),
+
+    unreadNotifications: Number(
+      notificationSummary.unreadCount ??
+        notificationSummary.totalUnread ??
+        0,
+    ),
+
+    unavailableSections,
+    loadedAt: new Date().toISOString(),
+  };
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\use-dashboard.ts
+============================================================
+"use client";
+
+import { loadDashboard } from "@/features/dashboard/dashboard-service";
+import { getErrorMessage } from "@/lib/api/api-error";
+import type { DashboardData } from "@/types/dashboard";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+interface UseDashboardResult {
+  data: DashboardData | null;
+  loading: boolean;
+  refreshing: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+}
+
+export function useDashboard(): UseDashboardResult {
+  const [data, setData] =
+    useState<DashboardData | null>(null);
+  const [loading, setLoading] =
+    useState(true);
+  const [refreshing, setRefreshing] =
+    useState(false);
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const fetchDashboard = useCallback(
+    async (background: boolean) => {
+      if (background) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      setError(null);
+
+      try {
+        const dashboard = await loadDashboard();
+        setData(dashboard);
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void fetchDashboard(false);
+  }, [fetchDashboard]);
+
+  const refresh = useCallback(async () => {
+    await fetchDashboard(true);
+  }, [fetchDashboard]);
+
+  return {
+    data,
+    loading,
+    refreshing,
+    error,
+    refresh,
+  };
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\types\dashboard.ts
+============================================================
+export interface AgendaAssignedMember {
+  membershipId: string;
+  userId: string;
+  name: string;
+}
+
+export interface DashboardAgendaOccurrence {
+  occurrenceId: string;
+  eventId: string;
+  title: string;
+  category: string;
+  location: string | null;
+  allDay: boolean;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  assignedTo: AgendaAssignedMember | null;
+}
+
+export interface DashboardShoppingList {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  dueDate: string | null;
+  createdByName: string;
+  totalItems: number;
+  pendingItems: number;
+  purchasedItems: number;
+  cancelledItems: number;
+  estimatedTotal: number;
+  actualTotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FinancialCategorySummary {
+  categoryId: string | null;
+  categoryName: string;
+  color: string | null;
+  icon: string | null;
+  amount: number;
+  percentage: number;
+}
+
+export interface DashboardFinance {
+  from: string;
+  to: string;
+  totalAccountBalance: number;
+  totalIncome: number;
+  totalExpense: number;
+  periodBalance: number;
+  pendingIncome: number;
+  pendingExpense: number;
+  overdueExpense: number;
+  overdueTransactionCount: number;
+  incomeByCategory: FinancialCategorySummary[];
+  expenseByCategory: FinancialCategorySummary[];
+}
+
+export interface NotificationSummary {
+  unreadCount?: number;
+  totalUnread?: number;
+  hasUnread?: boolean;
+}
+
+export type DashboardSection =
+  | "agenda"
+  | "shopping"
+  | "finance"
+  | "notifications";
+
+export interface DashboardData {
+  agenda: DashboardAgendaOccurrence[];
+  shoppingLists: DashboardShoppingList[];
+  finance: DashboardFinance | null;
+  unreadNotifications: number;
+  unavailableSections: DashboardSection[];
+  loadedAt: string;
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\(app)\inicio\page.tsx
+============================================================
+import { DashboardOverview } from "@/features/dashboard/dashboard-overview";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "InÃ­cio",
+};
+
+export default function InicioPage() {
+  return <DashboardOverview />;
+}

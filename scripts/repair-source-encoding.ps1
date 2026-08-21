@@ -1,0 +1,245 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$projectRoot = Split-Path -Parent $PSScriptRoot
+
+$sourceRoots = @(
+    (Join-Path $projectRoot "apps\web\src"),
+    (Join-Path $projectRoot "apps\api\src")
+) | Where-Object {
+    Test-Path $_
+}
+
+$allowedExtensions = @(
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".css",
+    ".java",
+    ".sql",
+    ".yml",
+    ".yaml",
+    ".properties",
+    ".md"
+)
+
+# All strings below use JSON Unicode escapes.
+# Therefore, this PowerShell file contains ASCII characters only.
+$replacementJson = @'
+[
+  ["\u00c3\u0192\u00c2\u00a1", "\u00e1"],
+  ["\u00c3\u0192\u00c2\u00a0", "\u00e0"],
+  ["\u00c3\u0192\u00c2\u00a2", "\u00e2"],
+  ["\u00c3\u0192\u00c2\u00a3", "\u00e3"],
+  ["\u00c3\u0192\u00c2\u00a4", "\u00e4"],
+  ["\u00c3\u0192\u00c2\u00a9", "\u00e9"],
+  ["\u00c3\u0192\u00c2\u00a8", "\u00e8"],
+  ["\u00c3\u0192\u00c2\u00aa", "\u00ea"],
+  ["\u00c3\u0192\u00c2\u00ab", "\u00eb"],
+  ["\u00c3\u0192\u00c2\u00ad", "\u00ed"],
+  ["\u00c3\u0192\u00c2\u00ac", "\u00ec"],
+  ["\u00c3\u0192\u00c2\u00ae", "\u00ee"],
+  ["\u00c3\u0192\u00c2\u00af", "\u00ef"],
+  ["\u00c3\u0192\u00c2\u00b3", "\u00f3"],
+  ["\u00c3\u0192\u00c2\u00b2", "\u00f2"],
+  ["\u00c3\u0192\u00c2\u00b4", "\u00f4"],
+  ["\u00c3\u0192\u00c2\u00b5", "\u00f5"],
+  ["\u00c3\u0192\u00c2\u00b6", "\u00f6"],
+  ["\u00c3\u0192\u00c2\u00ba", "\u00fa"],
+  ["\u00c3\u0192\u00c2\u00b9", "\u00f9"],
+  ["\u00c3\u0192\u00c2\u00bb", "\u00fb"],
+  ["\u00c3\u0192\u00c2\u00bc", "\u00fc"],
+  ["\u00c3\u0192\u00c2\u00a7", "\u00e7"],
+
+  ["\u00c3\u0192\u00c2\u0081", "\u00c1"],
+  ["\u00c3\u0192\u00c2\u0080", "\u00c0"],
+  ["\u00c3\u0192\u00c2\u0082", "\u00c2"],
+  ["\u00c3\u0192\u00c2\u0083", "\u00c3"],
+  ["\u00c3\u0192\u00c2\u0089", "\u00c9"],
+  ["\u00c3\u0192\u00c2\u008a", "\u00ca"],
+  ["\u00c3\u0192\u00c2\u008d", "\u00cd"],
+  ["\u00c3\u0192\u00c2\u0093", "\u00d3"],
+  ["\u00c3\u0192\u00c2\u0094", "\u00d4"],
+  ["\u00c3\u0192\u00c2\u0095", "\u00d5"],
+  ["\u00c3\u0192\u00c2\u009a", "\u00da"],
+  ["\u00c3\u0192\u00c2\u0087", "\u00c7"],
+
+  ["\u00c3\u00a1", "\u00e1"],
+  ["\u00c3\u00a0", "\u00e0"],
+  ["\u00c3\u00a2", "\u00e2"],
+  ["\u00c3\u00a3", "\u00e3"],
+  ["\u00c3\u00a4", "\u00e4"],
+  ["\u00c3\u00a9", "\u00e9"],
+  ["\u00c3\u00a8", "\u00e8"],
+  ["\u00c3\u00aa", "\u00ea"],
+  ["\u00c3\u00ab", "\u00eb"],
+  ["\u00c3\u00ad", "\u00ed"],
+  ["\u00c3\u00ac", "\u00ec"],
+  ["\u00c3\u00ae", "\u00ee"],
+  ["\u00c3\u00af", "\u00ef"],
+  ["\u00c3\u00b3", "\u00f3"],
+  ["\u00c3\u00b2", "\u00f2"],
+  ["\u00c3\u00b4", "\u00f4"],
+  ["\u00c3\u00b5", "\u00f5"],
+  ["\u00c3\u00b6", "\u00f6"],
+  ["\u00c3\u00ba", "\u00fa"],
+  ["\u00c3\u00b9", "\u00f9"],
+  ["\u00c3\u00bb", "\u00fb"],
+  ["\u00c3\u00bc", "\u00fc"],
+  ["\u00c3\u00a7", "\u00e7"],
+
+  ["\u00c3\u0081", "\u00c1"],
+  ["\u00c3\u0080", "\u00c0"],
+  ["\u00c3\u0082", "\u00c2"],
+  ["\u00c3\u0083", "\u00c3"],
+  ["\u00c3\u0089", "\u00c9"],
+  ["\u00c3\u008a", "\u00ca"],
+  ["\u00c3\u008d", "\u00cd"],
+  ["\u00c3\u0093", "\u00d3"],
+  ["\u00c3\u0094", "\u00d4"],
+  ["\u00c3\u0095", "\u00d5"],
+  ["\u00c3\u009a", "\u00da"],
+  ["\u00c3\u0087", "\u00c7"],
+
+  ["\u00e2\u20ac\u201d", "\u2014"],
+  ["\u00e2\u20ac\u201c", "\u2013"],
+  ["\u00e2\u20ac\u00a2", "\u2022"],
+  ["\u00e2\u20ac\u0153", "\u201c"],
+  ["\u00e2\u20ac\u009d", "\u201d"],
+  ["\u00e2\u20ac\u02dc", "\u2018"],
+  ["\u00e2\u20ac\u2122", "\u2019"],
+  ["\u00e2\u20ac\u00a6", "\u2026"],
+
+  ["\u00c2\u00ba", "\u00ba"],
+  ["\u00c2\u00aa", "\u00aa"],
+  ["\u00c2\u00b0", "\u00b0"],
+  ["\u00c2\u00a0", " "]
+]
+'@
+
+$replacements = $replacementJson |
+    ConvertFrom-Json
+
+$utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+
+$changedFiles = [System.Collections.Generic.List[string]]::new()
+
+foreach ($sourceRoot in $sourceRoots) {
+    $files = Get-ChildItem `
+        -Path $sourceRoot `
+        -Recurse `
+        -File |
+    Where-Object {
+        $allowedExtensions -contains $_.Extension.ToLowerInvariant()
+    }
+
+    foreach ($file in $files) {
+        $originalContent = [System.IO.File]::ReadAllText(
+            $file.FullName
+        )
+
+        $correctedContent = $originalContent
+
+        foreach ($replacement in $replacements) {
+            $sourceValue = [string]$replacement[0]
+            $targetValue = [string]$replacement[1]
+
+            $correctedContent = $correctedContent.Replace(
+                $sourceValue,
+                $targetValue
+            )
+        }
+
+        if ($correctedContent -ne $originalContent) {
+            [System.IO.File]::WriteAllText(
+                $file.FullName,
+                $correctedContent,
+                $utf8WithoutBom
+            )
+
+            $relativePath = $file.FullName.Substring(
+                $projectRoot.Length + 1
+            )
+
+            $changedFiles.Add($relativePath)
+        }
+    }
+}
+
+Write-Host ""
+Write-Host "Encoding repair completed."
+Write-Host "Changed files: $($changedFiles.Count)"
+Write-Host ""
+
+foreach ($changedFile in $changedFiles) {
+    Write-Host " - $changedFile"
+}
+
+Write-Host ""
+
+$badTokensJson = @'
+[
+  "\u00c3\u0192",
+  "\u00c3\u00a1",
+  "\u00c3\u00a3",
+  "\u00c3\u00a9",
+  "\u00c3\u00ad",
+  "\u00c3\u00b3",
+  "\u00c3\u00ba",
+  "\u00c3\u00a7",
+  "\u00e2\u20ac",
+  "\ufffd"
+]
+'@
+
+$badTokens = $badTokensJson |
+    ConvertFrom-Json
+
+$remainingProblems = [System.Collections.Generic.List[object]]::new()
+
+foreach ($sourceRoot in $sourceRoots) {
+    $files = Get-ChildItem `
+        -Path $sourceRoot `
+        -Recurse `
+        -File |
+    Where-Object {
+        $allowedExtensions -contains $_.Extension.ToLowerInvariant()
+    }
+
+    foreach ($file in $files) {
+        $lines = [System.IO.File]::ReadAllLines(
+            $file.FullName
+        )
+
+        for ($index = 0; $index -lt $lines.Length; $index++) {
+            foreach ($badToken in $badTokens) {
+                if ($lines[$index].Contains([string]$badToken)) {
+                    $remainingProblems.Add(
+                        [PSCustomObject]@{
+                            Path = $file.FullName
+                            LineNumber = $index + 1
+                            Line = $lines[$index].Trim()
+                        }
+                    )
+
+                    break
+                }
+            }
+        }
+    }
+}
+
+if ($remainingProblems.Count -gt 0) {
+    Write-Host "Possible remaining encoding problems:"
+    Write-Host ""
+
+    $remainingProblems |
+        Format-Table `
+            Path,
+            LineNumber,
+            Line `
+            -AutoSize
+} else {
+    Write-Host "No known encoding problems were found."
+}

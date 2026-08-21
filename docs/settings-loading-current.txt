@@ -1,0 +1,2132 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+============================================================
+"use client";
+
+import {
+  Clock3,
+  Crown,
+  House,
+  LoaderCircle,
+  LockKeyhole,
+  Save,
+} from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+
+import type {
+  FamilyRole,
+  FamilySettings as FamilySettingsData,
+  UpdateFamilySettingsRequest,
+} from "@/types/settings";
+
+interface FamilySettingsProps {
+  settings: FamilySettingsData | null;
+  loading?: boolean;
+  onSave: (
+    request: UpdateFamilySettingsRequest,
+  ) => Promise<void>;
+}
+
+const supportedTimeZones = [
+  {
+    value: "America/Sao_Paulo",
+    label: "BrasÃ­lia â€” SÃ£o Paulo",
+  },
+  {
+    value: "America/Manaus",
+    label: "Amazonas â€” Manaus",
+  },
+  {
+    value: "America/Cuiaba",
+    label: "Mato Grosso â€” CuiabÃ¡",
+  },
+  {
+    value: "America/Rio_Branco",
+    label: "Acre â€” Rio Branco",
+  },
+  {
+    value: "America/Fortaleza",
+    label: "Nordeste â€” Fortaleza",
+  },
+  {
+    value: "America/Recife",
+    label: "Nordeste â€” Recife",
+  },
+  {
+    value: "America/Bahia",
+    label: "Bahia â€” Salvador",
+  },
+  {
+    value: "America/Belem",
+    label: "ParÃ¡ â€” BelÃ©m",
+  },
+  {
+    value: "UTC",
+    label: "UTC â€” Tempo Universal",
+  },
+];
+
+function roleLabel(role: FamilyRole): string {
+  switch (role) {
+    case "OWNER":
+      return "ProprietÃ¡rio";
+
+    case "ADMIN":
+      return "Administrador";
+
+    case "MEMBER":
+      return "Membro";
+
+    default:
+      return role;
+  }
+}
+
+function FamilySettingsLoading() {
+  return (
+    <div
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <div className="h-6 w-52 animate-pulse rounded bg-white/[0.07]" />
+      <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-white/[0.04]" />
+
+      <div className="mt-7 space-y-5">
+        <div className="h-24 animate-pulse rounded-2xl bg-white/[0.035]" />
+        <div className="h-24 animate-pulse rounded-2xl bg-white/[0.035]" />
+      </div>
+    </div>
+  );
+}
+
+function getErrorMessage(
+  exception: unknown,
+): string {
+  if (exception instanceof Error) {
+    return exception.message;
+  }
+
+  return "NÃ£o foi possÃ­vel salvar as configuraÃ§Ãµes.";
+}
+
+export function FamilySettings({
+  settings,
+  loading = false,
+  onSave,
+}: FamilySettingsProps) {
+  const [name, setName] = useState("");
+  const [timeZone, setTimeZone] =
+    useState("America/Sao_Paulo");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [success, setSuccess] =
+    useState(false);
+
+  useEffect(() => {
+    if (!settings) {
+      return;
+    }
+
+    setName(settings.name);
+    setTimeZone(settings.timeZone);
+  }, [settings]);
+
+  const timeZoneOptions = useMemo(() => {
+    if (
+      !settings?.timeZone ||
+      supportedTimeZones.some(
+        (option) =>
+          option.value === settings.timeZone,
+      )
+    ) {
+      return supportedTimeZones;
+    }
+
+    return [
+      {
+        value: settings.timeZone,
+        label: settings.timeZone,
+      },
+      ...supportedTimeZones,
+    ];
+  }, [settings?.timeZone]);
+
+  const normalizedName =
+    name.trim().replace(/\s+/g, " ");
+
+  const unchanged =
+    settings !== null &&
+    normalizedName === settings.name &&
+    timeZone === settings.timeZone;
+
+  const validName =
+    normalizedName.length >= 2 &&
+    normalizedName.length <= 120;
+
+  const canSubmit =
+    Boolean(settings?.canManage) &&
+    validName &&
+    Boolean(timeZone) &&
+    !unchanged &&
+    !saving;
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      await onSave({
+        name: normalizedName,
+        timeZone,
+      });
+
+      setName(normalizedName);
+      setSuccess(true);
+    } catch (exception) {
+      setError(
+        getErrorMessage(exception),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <FamilySettingsLoading />;
+  }
+
+  if (!settings) {
+    return (
+      <div
+        className={[
+          "rounded-3xl border",
+          "border-white/10",
+          "bg-white/[0.025] p-6",
+          "text-center",
+        ].join(" ")}
+      >
+        <House
+          aria-hidden="true"
+          className="mx-auto size-8 text-zinc-600"
+        />
+
+        <h2 className="mt-4 font-semibold text-white">
+          NÃºcleo indisponÃ­vel
+        </h2>
+
+        <p className="mt-2 text-sm text-zinc-500">
+          NÃ£o foi possÃ­vel carregar as configuraÃ§Ãµes familiares.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <header
+        className={[
+          "flex flex-col gap-4",
+          "sm:flex-row sm:items-start",
+          "sm:justify-between",
+        ].join(" ")}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={[
+              "flex size-11 shrink-0",
+              "items-center justify-center",
+              "rounded-2xl border",
+              "border-white/10",
+              "bg-white/[0.04]",
+              "text-zinc-300",
+            ].join(" ")}
+          >
+            <House
+              aria-hidden="true"
+              className="size-5"
+            />
+          </div>
+
+          <div>
+            <h2 className="font-semibold text-white">
+              NÃºcleo familiar
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-zinc-500">
+              Nome e localizaÃ§Ã£o de referÃªncia da sua famÃ­lia.
+            </p>
+          </div>
+        </div>
+
+        <span
+          className={[
+            "inline-flex w-fit items-center gap-1.5",
+            "rounded-full border",
+            "border-white/10",
+            "bg-white/[0.035]",
+            "px-3 py-1.5",
+            "text-xs font-medium",
+            "text-zinc-400",
+          ].join(" ")}
+        >
+          <Crown
+            aria-hidden="true"
+            className="size-3.5"
+          />
+
+          {roleLabel(
+            settings.currentUserRole,
+          )}
+        </span>
+      </header>
+
+      {!settings.canManage && (
+        <div
+          className={[
+            "mt-5 flex items-start gap-3",
+            "rounded-2xl border",
+            "border-amber-400/15",
+            "bg-amber-400/[0.055]",
+            "px-4 py-3",
+          ].join(" ")}
+        >
+          <LockKeyhole
+            aria-hidden="true"
+            className={[
+              "mt-0.5 size-4 shrink-0",
+              "text-amber-300",
+            ].join(" ")}
+          />
+
+          <p className="text-sm leading-6 text-amber-100/70">
+            Somente o proprietÃ¡rio ou um administrador pode
+            alterar estas configuraÃ§Ãµes.
+          </p>
+        </div>
+      )}
+
+      <fieldset
+        disabled={
+          !settings.canManage || saving
+        }
+        className={[
+          "mt-7 space-y-5",
+          !settings.canManage
+            ? "opacity-55"
+            : "",
+        ].join(" ")}
+      >
+        <div>
+          <label
+            htmlFor="family-settings-name"
+            className="text-sm font-medium text-zinc-300"
+          >
+            Nome do nÃºcleo
+          </label>
+
+          <div className="relative mt-2">
+            <House
+              aria-hidden="true"
+              className={[
+                "pointer-events-none absolute",
+                "left-4 top-1/2 size-4",
+                "-translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <input
+              id="family-settings-name"
+              type="text"
+              value={name}
+              minLength={2}
+              maxLength={120}
+              required
+              onChange={(event) => {
+                setName(event.target.value);
+                setError(null);
+                setSuccess(false);
+              }}
+              className={[
+                "min-h-12 w-full",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-black/25",
+                "py-3 pl-11 pr-4",
+                "text-sm text-white",
+                "outline-none transition",
+                "placeholder:text-zinc-700",
+                "focus:border-white/30",
+                "focus:bg-white/[0.035]",
+                "disabled:cursor-not-allowed",
+              ].join(" ")}
+              placeholder="Nome da sua famÃ­lia"
+            />
+          </div>
+
+          <div className="mt-2 flex justify-between gap-3">
+            <p className="text-xs text-zinc-600">
+              Entre 2 e 120 caracteres.
+            </p>
+
+            <p
+              className={[
+                "text-xs",
+                name.length > 120
+                  ? "text-red-300"
+                  : "text-zinc-700",
+              ].join(" ")}
+            >
+              {name.length}/120
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="family-settings-time-zone"
+            className="text-sm font-medium text-zinc-300"
+          >
+            Fuso horÃ¡rio
+          </label>
+
+          <div className="relative mt-2">
+            <Clock3
+              aria-hidden="true"
+              className={[
+                "pointer-events-none absolute",
+                "left-4 top-1/2 size-4",
+                "-translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <select
+              id="family-settings-time-zone"
+              value={timeZone}
+              required
+              onChange={(event) => {
+                setTimeZone(
+                  event.target.value,
+                );
+
+                setError(null);
+                setSuccess(false);
+              }}
+              className={[
+                "min-h-12 w-full",
+                "appearance-none",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-black py-3",
+                "pl-11 pr-10",
+                "text-sm text-white",
+                "outline-none transition",
+                "focus:border-white/30",
+                "disabled:cursor-not-allowed",
+              ].join(" ")}
+            >
+              {timeZoneOptions.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+          <p className="mt-2 text-xs leading-5 text-zinc-600">
+            Usado nos horÃ¡rios da agenda, lembretes e vencimentos.
+          </p>
+        </div>
+      </fieldset>
+
+      {error && (
+        <div
+          role="alert"
+          className={[
+            "mt-5 rounded-2xl border",
+            "border-red-400/20",
+            "bg-red-400/[0.07]",
+            "px-4 py-3",
+            "text-sm text-red-200",
+          ].join(" ")}
+        >
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div
+          role="status"
+          className={[
+            "mt-5 rounded-2xl border",
+            "border-emerald-400/20",
+            "bg-emerald-400/[0.07]",
+            "px-4 py-3",
+            "text-sm text-emerald-200",
+          ].join(" ")}
+        >
+          ConfiguraÃ§Ãµes atualizadas com sucesso.
+        </div>
+      )}
+
+      {settings.canManage && (
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className={[
+            "mt-6 inline-flex min-h-11",
+            "w-full items-center",
+            "justify-center gap-2",
+            "rounded-2xl bg-white",
+            "px-4 py-3",
+            "text-sm font-semibold text-black",
+            "transition hover:bg-zinc-200",
+            "disabled:cursor-not-allowed",
+            "disabled:opacity-40",
+            "sm:w-auto sm:min-w-52",
+          ].join(" ")}
+        >
+          {saving ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin"
+            />
+          ) : (
+            <Save
+              aria-hidden="true"
+              className="size-4"
+            />
+          )}
+
+          {saving
+            ? "Salvando..."
+            : "Salvar alteraÃ§Ãµes"}
+        </button>
+      )}
+    </form>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\notification-settings.tsx
+============================================================
+"use client";
+
+import {
+  BellRing,
+  ExternalLink,
+} from "lucide-react";
+import Link from "next/link";
+
+import { NotificationPreferences } from "@/features/notifications/notification-preferences";
+
+import type {
+  NotificationPreference,
+  UpdateNotificationPreferenceRequest,
+} from "@/types/notification";
+
+interface NotificationSettingsProps {
+  preference: NotificationPreference | null;
+  loading?: boolean;
+  onSave: (
+    request: UpdateNotificationPreferenceRequest,
+  ) => Promise<void>;
+}
+
+export function NotificationSettings({
+  preference,
+  loading = false,
+  onSave,
+}: NotificationSettingsProps) {
+  return (
+    <section className="space-y-4">
+      <div
+        className={[
+          "relative overflow-hidden",
+          "rounded-3xl border",
+          "border-white/10",
+          "bg-white/[0.025] p-5",
+          "sm:p-6",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "pointer-events-none absolute",
+            "-right-12 -top-12",
+            "size-40 rounded-full",
+            "bg-white/[0.04] blur-3xl",
+          ].join(" ")}
+        />
+
+        <div
+          className={[
+            "relative flex flex-col gap-4",
+            "sm:flex-row sm:items-center",
+            "sm:justify-between",
+          ].join(" ")}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={[
+                "flex size-11 shrink-0",
+                "items-center justify-center",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-white/[0.04]",
+                "text-zinc-300",
+              ].join(" ")}
+            >
+              <BellRing
+                aria-hidden="true"
+                className="size-5"
+              />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-white">
+                Central de alertas
+              </h2>
+
+              <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-500">
+                Defina quais Ã¡reas podem gerar notificaÃ§Ãµes
+                dentro do aplicativo.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/notificacoes"
+            className={[
+              "inline-flex min-h-10",
+              "w-fit items-center gap-2",
+              "rounded-full border",
+              "border-white/10",
+              "bg-white/[0.035]",
+              "px-4 py-2",
+              "text-sm font-medium",
+              "text-zinc-300 transition",
+              "hover:border-white/20",
+              "hover:bg-white/[0.07]",
+              "hover:text-white",
+            ].join(" ")}
+          >
+            Ver notificaÃ§Ãµes
+
+            <ExternalLink
+              aria-hidden="true"
+              className="size-4"
+            />
+          </Link>
+        </div>
+      </div>
+
+      <NotificationPreferences
+        preference={preference}
+        loading={loading}
+        onSave={onSave}
+      />
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\profile-settings.tsx
+============================================================
+import {
+  CalendarDays,
+  CircleUserRound,
+  Crown,
+  Mail,
+  ShieldCheck,
+  ShieldX,
+  UserRound,
+} from "lucide-react";
+
+import type {
+  CurrentUser,
+  FamilyRole,
+  UserStatus,
+} from "@/types/settings";
+
+interface ProfileSettingsProps {
+  user: CurrentUser | null;
+  loading?: boolean;
+}
+
+const dateFormatter = new Intl.DateTimeFormat(
+  "pt-BR",
+  {
+    dateStyle: "long",
+  },
+);
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Data indisponÃ­vel";
+  }
+
+  return dateFormatter.format(date);
+}
+
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+}
+
+function roleLabel(role: FamilyRole): string {
+  switch (role) {
+    case "OWNER":
+      return "ProprietÃ¡rio";
+
+    case "ADMIN":
+      return "Administrador";
+
+    case "MEMBER":
+      return "Membro";
+
+    default:
+      return role;
+  }
+}
+
+function statusLabel(
+  status: UserStatus,
+): string {
+  switch (status) {
+    case "ACTIVE":
+      return "Conta ativa";
+
+    case "BLOCKED":
+      return "Conta bloqueada";
+
+    case "DISABLED":
+      return "Conta desativada";
+
+    default:
+      return status;
+  }
+}
+
+function ProfileLoading() {
+  return (
+    <div
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-4">
+        <div className="size-16 animate-pulse rounded-2xl bg-white/[0.07]" />
+
+        <div className="flex-1">
+          <div className="h-5 w-48 animate-pulse rounded bg-white/[0.07]" />
+          <div className="mt-3 h-4 w-64 max-w-full animate-pulse rounded bg-white/[0.04]" />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {Array.from({ length: 4 }).map(
+          (_, index) => (
+            <div
+              key={index}
+              className="h-24 animate-pulse rounded-2xl bg-white/[0.035]"
+            />
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface InformationCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+function InformationCard({
+  icon,
+  label,
+  value,
+  detail,
+}: InformationCardProps) {
+  return (
+    <div
+      className={[
+        "flex items-start gap-3",
+        "rounded-2xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-4",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex size-10 shrink-0",
+          "items-center justify-center",
+          "rounded-xl border",
+          "border-white/10",
+          "bg-white/[0.04]",
+          "text-zinc-400",
+        ].join(" ")}
+      >
+        {icon}
+      </div>
+
+      <div className="min-w-0">
+        <p
+          className={[
+            "text-[0.65rem] font-semibold",
+            "uppercase tracking-[0.15em]",
+            "text-zinc-600",
+          ].join(" ")}
+        >
+          {label}
+        </p>
+
+        <p className="mt-1 break-words text-sm font-medium text-zinc-200">
+          {value}
+        </p>
+
+        {detail && (
+          <p className="mt-1 text-xs leading-5 text-zinc-600">
+            {detail}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ProfileSettings({
+  user,
+  loading = false,
+}: ProfileSettingsProps) {
+  if (loading) {
+    return <ProfileLoading />;
+  }
+
+  if (!user) {
+    return (
+      <div
+        className={[
+          "rounded-3xl border",
+          "border-white/10",
+          "bg-white/[0.025] p-6",
+          "text-center",
+        ].join(" ")}
+      >
+        <CircleUserRound
+          aria-hidden="true"
+          className="mx-auto size-8 text-zinc-600"
+        />
+
+        <h2 className="mt-4 font-semibold text-white">
+          Perfil indisponÃ­vel
+        </h2>
+
+        <p className="mt-2 text-sm text-zinc-500">
+          NÃ£o foi possÃ­vel carregar os dados da sua conta.
+        </p>
+      </div>
+    );
+  }
+
+  const active = user.status === "ACTIVE";
+
+  return (
+    <section
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <header
+        className={[
+          "flex flex-col gap-4",
+          "sm:flex-row sm:items-center",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "flex size-16 shrink-0",
+            "items-center justify-center",
+            "rounded-2xl border",
+            "border-white/15",
+            "bg-white text-xl",
+            "font-bold text-black",
+          ].join(" ")}
+        >
+          {initials(user.name)}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="truncate text-xl font-semibold text-white">
+              {user.name}
+            </h2>
+
+            <span
+              className={[
+                "inline-flex items-center gap-1.5",
+                "rounded-full border px-2.5 py-1",
+                "text-[0.65rem] font-semibold",
+                "uppercase tracking-[0.12em]",
+                active
+                  ? [
+                      "border-emerald-400/20",
+                      "bg-emerald-400/[0.08]",
+                      "text-emerald-300",
+                    ].join(" ")
+                  : [
+                      "border-red-400/20",
+                      "bg-red-400/[0.08]",
+                      "text-red-300",
+                    ].join(" "),
+              ].join(" ")}
+            >
+              {active ? (
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="size-3"
+                />
+              ) : (
+                <ShieldX
+                  aria-hidden="true"
+                  className="size-3"
+                />
+              )}
+
+              {statusLabel(user.status)}
+            </span>
+          </div>
+
+          <p className="mt-1 truncate text-sm text-zinc-500">
+            {user.email}
+          </p>
+        </div>
+      </header>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <InformationCard
+          icon={
+            <UserRound
+              aria-hidden="true"
+              className="size-5"
+            />
+          }
+          label="Nome"
+          value={user.name}
+          detail="Nome utilizado dentro do NÃºcleo."
+        />
+
+        <InformationCard
+          icon={
+            <Mail
+              aria-hidden="true"
+              className="size-5"
+            />
+          }
+          label="E-mail"
+          value={user.email}
+          detail={
+            user.emailVerified
+              ? "EndereÃ§o verificado."
+              : "VerificaÃ§Ã£o de e-mail pendente."
+          }
+        />
+
+        <InformationCard
+          icon={
+            <Crown
+              aria-hidden="true"
+              className="size-5"
+            />
+          }
+          label="Papel no nÃºcleo"
+          value={roleLabel(user.family.role)}
+          detail={user.family.name}
+        />
+
+        <InformationCard
+          icon={
+            <CalendarDays
+              aria-hidden="true"
+              className="size-5"
+            />
+          }
+          label="Membro desde"
+          value={formatDate(
+            user.family.joinedAt,
+          )}
+          detail="Data de entrada neste nÃºcleo familiar."
+        />
+      </div>
+
+      <div
+        className={[
+          "mt-5 rounded-2xl border",
+          "border-white/[0.07]",
+          "bg-black/20 px-4 py-3",
+          "text-xs leading-5",
+          "text-zinc-600",
+        ].join(" ")}
+      >
+        Neste momento, os dados do perfil sÃ£o apenas
+        informativos. A alteraÃ§Ã£o de nome, e-mail e senha serÃ¡
+        disponibilizada quando esses endpoints forem adicionados
+        Ã  API.
+      </div>
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-navigation.tsx
+============================================================
+"use client";
+
+import {
+  Bell,
+  House,
+  ScrollText,
+  UserRound,
+} from "lucide-react";
+
+import type {
+  SettingsSection,
+} from "@/types/settings";
+
+interface SettingsNavigationProps {
+  activeSection: SettingsSection;
+  onSectionChange: (
+    section: SettingsSection,
+  ) => void;
+}
+
+interface NavigationItem {
+  id: SettingsSection;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}
+
+const navigationItems: NavigationItem[] = [
+  {
+    id: "profile",
+    label: "Perfil",
+    description: "Sua conta e acesso",
+    icon: (
+      <UserRound
+        aria-hidden="true"
+        className="size-5"
+      />
+    ),
+  },
+  {
+    id: "family",
+    label: "NÃºcleo",
+    description: "Dados da famÃ­lia",
+    icon: (
+      <House
+        aria-hidden="true"
+        className="size-5"
+      />
+    ),
+  },
+  {
+    id: "notifications",
+    label: "NotificaÃ§Ãµes",
+    description: "Alertas e preferÃªncias",
+    icon: (
+      <Bell
+        aria-hidden="true"
+        className="size-5"
+      />
+    ),
+  },
+  {
+    id: "audit",
+    label: "Atividades",
+    description: "HistÃ³rico do nÃºcleo",
+    icon: (
+      <ScrollText
+        aria-hidden="true"
+        className="size-5"
+      />
+    ),
+  },
+];
+
+export function SettingsNavigation({
+  activeSection,
+  onSectionChange,
+}: SettingsNavigationProps) {
+  return (
+    <nav
+      aria-label="SeÃ§Ãµes das configuraÃ§Ãµes"
+      className={[
+        "grid grid-cols-2 gap-2",
+        "lg:grid-cols-1",
+      ].join(" ")}
+    >
+      {navigationItems.map((item) => {
+        const active =
+          activeSection === item.id;
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            aria-current={
+              active ? "page" : undefined
+            }
+            onClick={() =>
+              onSectionChange(item.id)
+            }
+            className={[
+              "group flex min-h-20",
+              "items-center gap-3",
+              "rounded-2xl border p-3",
+              "text-left transition",
+              "sm:p-4",
+              active
+                ? [
+                    "border-white/20",
+                    "bg-white text-black",
+                    "shadow-[0_18px_50px_rgba(0,0,0,0.28)]",
+                  ].join(" ")
+                : [
+                    "border-white/10",
+                    "bg-white/[0.025]",
+                    "text-zinc-400",
+                    "hover:border-white/20",
+                    "hover:bg-white/[0.055]",
+                    "hover:text-white",
+                  ].join(" "),
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "flex size-10 shrink-0",
+                "items-center justify-center",
+                "rounded-xl border",
+                active
+                  ? [
+                      "border-black/10",
+                      "bg-black text-white",
+                    ].join(" ")
+                  : [
+                      "border-white/10",
+                      "bg-white/[0.035]",
+                      "text-zinc-400",
+                    ].join(" "),
+              ].join(" ")}
+            >
+              {item.icon}
+            </span>
+
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                {item.label}
+              </span>
+
+              <span
+                className={[
+                  "mt-0.5 hidden text-xs",
+                  "sm:block",
+                  active
+                    ? "text-zinc-600"
+                    : "text-zinc-600",
+                ].join(" ")}
+              >
+                {item.description}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-page.tsx
+============================================================
+"use client";
+
+import {
+  LoaderCircle,
+  RefreshCw,
+  Settings2,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import { AuditHistory } from "@/features/audit/audit-history";
+import {
+  notificationPreferenceService,
+} from "@/features/notifications/notification-service";
+import { FamilySettings } from "@/features/settings/family-settings";
+import { NotificationSettings } from "@/features/settings/notification-settings";
+import { ProfileSettings } from "@/features/settings/profile-settings";
+import { SettingsNavigation } from "@/features/settings/settings-navigation";
+import { settingsService } from "@/features/settings/settings-service";
+
+import type {
+  NotificationPreference,
+  UpdateNotificationPreferenceRequest,
+} from "@/types/notification";
+import type {
+  CurrentUser,
+  FamilySettings as FamilySettingsData,
+  SettingsSection,
+  UpdateFamilySettingsRequest,
+} from "@/types/settings";
+
+function getErrorMessage(
+  exception: unknown,
+  fallback: string,
+): string {
+  if (exception instanceof Error) {
+    return exception.message;
+  }
+
+  return fallback;
+}
+
+export function SettingsPage() {
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("profile");
+
+  const [currentUser, setCurrentUser] =
+    useState<CurrentUser | null>(null);
+
+  const [
+    familySettings,
+    setFamilySettings,
+  ] =
+    useState<FamilySettingsData | null>(
+      null,
+    );
+
+  const [
+    notificationPreference,
+    setNotificationPreference,
+  ] =
+    useState<NotificationPreference | null>(
+      null,
+    );
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const loadSettings = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      setError(null);
+
+      const [
+        userResult,
+        familyResult,
+        notificationResult,
+      ] = await Promise.allSettled([
+        settingsService.getCurrentUser(),
+        settingsService.getFamilySettings(),
+        notificationPreferenceService.get(),
+      ]);
+
+      const errors: string[] = [];
+
+      if (userResult.status === "fulfilled") {
+        setCurrentUser(userResult.value);
+      } else {
+        errors.push(
+          getErrorMessage(
+            userResult.reason,
+            "NÃ£o foi possÃ­vel carregar o perfil.",
+          ),
+        );
+      }
+
+      if (
+        familyResult.status === "fulfilled"
+      ) {
+        setFamilySettings(
+          familyResult.value,
+        );
+      } else {
+        errors.push(
+          getErrorMessage(
+            familyResult.reason,
+            "NÃ£o foi possÃ­vel carregar o nÃºcleo familiar.",
+          ),
+        );
+      }
+
+      if (
+        notificationResult.status ===
+        "fulfilled"
+      ) {
+        setNotificationPreference(
+          notificationResult.value,
+        );
+      } else {
+        errors.push(
+          getErrorMessage(
+            notificationResult.reason,
+            "NÃ£o foi possÃ­vel carregar as preferÃªncias.",
+          ),
+        );
+      }
+
+      if (errors.length > 0) {
+        setError(
+          Array.from(
+            new Set(errors),
+          ).join(" "),
+        );
+      }
+
+      if (showLoading) {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+
+    try {
+      await loadSettings(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleUpdateFamily(
+    request: UpdateFamilySettingsRequest,
+  ) {
+    const updated =
+      await settingsService.updateFamilySettings(
+        request,
+      );
+
+    setFamilySettings(updated);
+
+    setCurrentUser((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        family: {
+          ...current.family,
+          name: updated.name,
+        },
+      };
+    });
+  }
+
+  async function handleUpdateNotifications(
+    request: UpdateNotificationPreferenceRequest,
+  ) {
+    const updated =
+      await notificationPreferenceService.update(
+        request,
+      );
+
+    setNotificationPreference(updated);
+  }
+
+  function renderActiveSection() {
+    switch (activeSection) {
+      case "profile":
+        return (
+          <ProfileSettings
+            user={currentUser}
+            loading={loading}
+          />
+        );
+
+      case "family":
+        return (
+          <FamilySettings
+            settings={familySettings}
+            loading={loading}
+            onSave={handleUpdateFamily}
+          />
+        );
+
+      case "notifications":
+        return (
+          <NotificationSettings
+            preference={
+              notificationPreference
+            }
+            loading={loading}
+            onSave={
+              handleUpdateNotifications
+            }
+          />
+        );
+
+      case "audit":
+        return <AuditHistory />;
+
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <main
+      className={[
+        "mx-auto w-full max-w-7xl",
+        "px-4 py-6",
+        "sm:px-6 lg:px-8",
+      ].join(" ")}
+    >
+      <header
+        className={[
+          "flex flex-col gap-5",
+          "sm:flex-row sm:items-end",
+          "sm:justify-between",
+        ].join(" ")}
+      >
+        <div>
+          <div
+            className={[
+              "inline-flex items-center gap-2",
+              "rounded-full border",
+              "border-white/10",
+              "bg-white/[0.035]",
+              "px-3 py-1.5",
+              "text-xs font-medium",
+              "text-zinc-400",
+            ].join(" ")}
+          >
+            <Settings2
+              aria-hidden="true"
+              className="size-3.5"
+            />
+
+            Controle do NÃºcleo
+          </div>
+
+          <h1
+            className={[
+              "mt-4 text-3xl font-semibold",
+              "tracking-tight text-white",
+              "sm:text-4xl",
+            ].join(" ")}
+          >
+            ConfiguraÃ§Ãµes
+          </h1>
+
+          <p
+            className={[
+              "mt-2 max-w-2xl",
+              "text-sm leading-6",
+              "text-zinc-500",
+              "sm:text-base",
+            ].join(" ")}
+          >
+            Gerencie sua conta, nÃºcleo familiar,
+            notificaÃ§Ãµes e histÃ³rico de atividades.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={loading || refreshing}
+          onClick={handleRefresh}
+          className={[
+            "inline-flex min-h-11",
+            "w-fit items-center",
+            "justify-center gap-2",
+            "rounded-full border",
+            "border-white/10",
+            "bg-white/[0.035]",
+            "px-4 py-2.5",
+            "text-sm font-medium",
+            "text-zinc-300 transition",
+            "hover:border-white/20",
+            "hover:bg-white/[0.07]",
+            "hover:text-white",
+            "disabled:cursor-not-allowed",
+            "disabled:opacity-50",
+          ].join(" ")}
+        >
+          {refreshing ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin"
+            />
+          ) : (
+            <RefreshCw
+              aria-hidden="true"
+              className="size-4"
+            />
+          )}
+
+          {refreshing
+            ? "Atualizando..."
+            : "Atualizar dados"}
+        </button>
+      </header>
+
+      {error && (
+        <div
+          role="alert"
+          className={[
+            "mt-6 rounded-2xl border",
+            "border-amber-400/20",
+            "bg-amber-400/[0.07]",
+            "px-4 py-3",
+            "text-sm leading-6",
+            "text-amber-100/80",
+          ].join(" ")}
+        >
+          {error}
+        </div>
+      )}
+
+      <div
+        className={[
+          "mt-7 grid items-start gap-6",
+          "lg:grid-cols-[250px_minmax(0,1fr)]",
+        ].join(" ")}
+      >
+        <aside className="lg:sticky lg:top-6">
+          <SettingsNavigation
+            activeSection={activeSection}
+            onSectionChange={
+              setActiveSection
+            }
+          />
+
+          <div
+            className={[
+              "mt-4 hidden rounded-2xl",
+              "border border-white/[0.07]",
+              "bg-white/[0.018] p-4",
+              "lg:block",
+            ].join(" ")}
+          >
+            <div className="flex items-start gap-3">
+              <ShieldCheck
+                aria-hidden="true"
+                className={[
+                  "mt-0.5 size-4 shrink-0",
+                  "text-zinc-500",
+                ].join(" ")}
+              />
+
+              <p className="text-xs leading-5 text-zinc-600">
+                AlteraÃ§Ãµes importantes ficam registradas
+                no histÃ³rico do nÃºcleo.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="min-w-0">
+          {renderActiveSection()}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-service.ts
+============================================================
+import { apiRequest } from "@/lib/api/api-client";
+
+import type {
+  CurrentUser,
+  FamilySettings,
+  UpdateFamilySettingsRequest,
+} from "@/types/settings";
+
+const CURRENT_USER_PATH = "/api/users/me";
+
+const FAMILY_SETTINGS_PATH =
+  "/api/family/settings";
+
+export const settingsService = {
+  getCurrentUser(): Promise<CurrentUser> {
+    return apiRequest<CurrentUser>(
+      CURRENT_USER_PATH,
+    );
+  },
+
+  getFamilySettings(): Promise<FamilySettings> {
+    return apiRequest<FamilySettings>(
+      FAMILY_SETTINGS_PATH,
+    );
+  },
+
+  updateFamilySettings(
+    request: UpdateFamilySettingsRequest,
+  ): Promise<FamilySettings> {
+    return apiRequest<FamilySettings>(
+      FAMILY_SETTINGS_PATH,
+      {
+        method: "PUT",
+        body: request,
+      },
+    );
+  },
+};
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\controller\FamilySettingsController.java
+============================================================
+package br.com.nucleo.api.settings.controller;
+
+import br.com.nucleo.api.settings.dto.FamilySettingsResponse;
+import br.com.nucleo.api.settings.dto.UpdateFamilySettingsRequest;
+import br.com.nucleo.api.settings.service.FamilySettingsService;
+import jakarta.validation.Valid;
+import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/settings/family")
+public class FamilySettingsController {
+
+    private final FamilySettingsService settingsService;
+
+    public FamilySettingsController(
+            FamilySettingsService settingsService
+    ) {
+        this.settingsService = settingsService;
+    }
+
+    @GetMapping
+    public FamilySettingsResponse get(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return settingsService.get(userId(jwt));
+    }
+
+    @PutMapping
+    public FamilySettingsResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            UpdateFamilySettingsRequest request
+    ) {
+        return settingsService.update(
+                userId(jwt),
+                request
+        );
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\domain\FamilySettings.java
+============================================================
+package br.com.nucleo.api.settings.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Instant;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "family_settings")
+public class FamilySettings {
+
+    private static final String DEFAULT_CURRENCY = "BRL";
+    private static final String DEFAULT_LOCALE = "pt-BR";
+    private static final WeekStartDay DEFAULT_WEEK_START_DAY =
+            WeekStartDay.MONDAY;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "family_id",
+            nullable = false,
+            unique = true
+    )
+    private Family family;
+
+    @Column(
+            name = "default_currency",
+            nullable = false,
+            length = 3
+    )
+    private String defaultCurrency;
+
+    @Column(nullable = false, length = 20)
+    private String locale;
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "week_start_day",
+            nullable = false,
+            length = 10
+    )
+    private WeekStartDay weekStartDay;
+
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FamilySettings() {
+    }
+
+    private FamilySettings(Family family) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Family cannot be null"
+        );
+        this.defaultCurrency = DEFAULT_CURRENCY;
+        this.locale = DEFAULT_LOCALE;
+        this.weekStartDay = DEFAULT_WEEK_START_DAY;
+    }
+
+    public static FamilySettings createDefault(Family family) {
+        return new FamilySettings(family);
+    }
+
+    public void update(
+            String defaultCurrency,
+            String locale,
+            WeekStartDay weekStartDay
+    ) {
+        this.defaultCurrency =
+                normalizeCurrency(defaultCurrency);
+        this.locale = normalizeLocale(locale);
+        this.weekStartDay = Objects.requireNonNull(
+                weekStartDay,
+                "Week start day cannot be null"
+        );
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        if (
+                defaultCurrency == null
+                        || defaultCurrency.isBlank()
+        ) {
+            defaultCurrency = DEFAULT_CURRENCY;
+        }
+
+        if (locale == null || locale.isBlank()) {
+            locale = DEFAULT_LOCALE;
+        }
+
+        if (weekStartDay == null) {
+            weekStartDay = DEFAULT_WEEK_START_DAY;
+        }
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static String normalizeCurrency(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Currency cannot be null"
+        ).trim().toUpperCase(Locale.ROOT);
+
+        if (!normalized.matches("^[A-Z]{3}$")) {
+            throw new IllegalArgumentException(
+                    "Currency must use a three-letter ISO code"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeLocale(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Locale cannot be null"
+        ).trim().replace('_', '-');
+
+        if (
+                normalized.length() < 2
+                        || normalized.length() > 20
+                        || !normalized.matches(
+                                "^[a-zA-Z]{2,8}"
+                                        + "(-[a-zA-Z0-9]{1,8})*$"
+                        )
+        ) {
+            throw new IllegalArgumentException(
+                    "Invalid locale"
+            );
+        }
+
+        Locale parsedLocale =
+                Locale.forLanguageTag(normalized);
+
+        if (parsedLocale.getLanguage().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Invalid locale"
+            );
+        }
+
+        return parsedLocale.toLanguageTag();
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public String getDefaultCurrency() {
+        return defaultCurrency;
+    }
+
+    public String getLocale() {
+        return locale;
+    }
+
+    public WeekStartDay getWeekStartDay() {
+        return weekStartDay;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\domain\WeekStartDay.java
+============================================================
+package br.com.nucleo.api.settings.domain;
+
+public enum WeekStartDay {
+    MONDAY,
+    SUNDAY,
+    SATURDAY
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\dto\FamilySettingsResponse.java
+============================================================
+package br.com.nucleo.api.settings.dto;
+
+import br.com.nucleo.api.settings.domain.FamilySettings;
+import br.com.nucleo.api.settings.domain.WeekStartDay;
+import java.time.Instant;
+import java.util.UUID;
+
+public record FamilySettingsResponse(
+        UUID id,
+        UUID familyId,
+        String familyName,
+        String timeZone,
+        String defaultCurrency,
+        String locale,
+        WeekStartDay weekStartDay,
+        Instant createdAt,
+        Instant updatedAt,
+        long version
+) {
+
+    public static FamilySettingsResponse from(
+            FamilySettings settings
+    ) {
+        return new FamilySettingsResponse(
+                settings.getId(),
+                settings.getFamily().getId(),
+                settings.getFamily().getName(),
+                settings.getFamily().getTimeZone(),
+                settings.getDefaultCurrency(),
+                settings.getLocale(),
+                settings.getWeekStartDay(),
+                settings.getCreatedAt(),
+                settings.getUpdatedAt(),
+                settings.getVersion()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\dto\UpdateFamilySettingsRequest.java
+============================================================
+package br.com.nucleo.api.settings.dto;
+
+import br.com.nucleo.api.settings.domain.WeekStartDay;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+public record UpdateFamilySettingsRequest(
+
+        @NotBlank(message = "Informe o nome do nÃºcleo familiar")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome deve ter entre 2 e 120 caracteres"
+        )
+        String familyName,
+
+        @NotBlank(message = "Informe o fuso horÃ¡rio")
+        @Size(
+                max = 50,
+                message = "O fuso horÃ¡rio deve ter no mÃ¡ximo 50 caracteres"
+        )
+        String timeZone,
+
+        @NotBlank(message = "Informe a moeda padrÃ£o")
+        @Pattern(
+                regexp = "^[a-zA-Z]{3}$",
+                message = "A moeda deve possuir trÃªs letras"
+        )
+        String defaultCurrency,
+
+        @NotBlank(message = "Informe o idioma")
+        @Size(
+                min = 2,
+                max = 20,
+                message = "O idioma deve ter entre 2 e 20 caracteres"
+        )
+        @Pattern(
+                regexp = "^[a-zA-Z]{2,8}([_-][a-zA-Z0-9]{1,8})*$",
+                message = "Informe um idioma vÃ¡lido, como pt-BR"
+        )
+        String locale,
+
+        @NotNull(message = "Informe o primeiro dia da semana")
+        WeekStartDay weekStartDay
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\repository\FamilySettingsRepository.java
+============================================================
+package br.com.nucleo.api.settings.repository;
+
+import br.com.nucleo.api.settings.domain.FamilySettings;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface FamilySettingsRepository
+        extends JpaRepository<FamilySettings, UUID> {
+
+    @EntityGraph(attributePaths = "family")
+    Optional<FamilySettings> findByFamily_Id(UUID familyId);
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\settings\service\FamilySettingsService.java
+============================================================
+package br.com.nucleo.api.settings.service;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.settings.domain.FamilySettings;
+import br.com.nucleo.api.settings.dto.FamilySettingsResponse;
+import br.com.nucleo.api.settings.dto.UpdateFamilySettingsRequest;
+import br.com.nucleo.api.settings.repository.FamilySettingsRepository;
+import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class FamilySettingsService {
+
+    private final FamilyAccessService familyAccessService;
+    private final FamilySettingsRepository settingsRepository;
+
+    public FamilySettingsService(
+            FamilyAccessService familyAccessService,
+            FamilySettingsRepository settingsRepository
+    ) {
+        this.familyAccessService = familyAccessService;
+        this.settingsRepository = settingsRepository;
+    }
+
+    @Transactional
+    public FamilySettingsResponse get(UUID currentUserId) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(
+                        currentUserId
+                );
+
+        FamilySettings settings =
+                findOrCreate(membership.getFamily());
+
+        return FamilySettingsResponse.from(settings);
+    }
+
+    @Transactional
+    public FamilySettingsResponse update(
+            UUID currentUserId,
+            UpdateFamilySettingsRequest request
+    ) {
+        FamilyMembership administrator =
+                familyAccessService.requireAdministrator(
+                        currentUserId
+                );
+
+        Family family = administrator.getFamily();
+
+        family.rename(request.familyName());
+        family.changeTimeZone(request.timeZone());
+
+        FamilySettings settings = findOrCreate(family);
+
+        settings.update(
+                request.defaultCurrency(),
+                request.locale(),
+                request.weekStartDay()
+        );
+
+        settingsRepository.flush();
+
+        return FamilySettingsResponse.from(settings);
+    }
+
+    private FamilySettings findOrCreate(Family family) {
+        return settingsRepository
+                .findByFamily_Id(family.getId())
+                .orElseGet(() -> createDefault(family));
+    }
+
+    private FamilySettings createDefault(Family family) {
+        try {
+            return settingsRepository.saveAndFlush(
+                    FamilySettings.createDefault(family)
+            );
+        } catch (DataIntegrityViolationException exception) {
+            return settingsRepository
+                    .findByFamily_Id(family.getId())
+                    .orElseThrow(() -> exception);
+        }
+    }
+}

@@ -1,0 +1,11 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+============================================================
+Linha 318: role="dialog"
+Linha 319: aria-modal="true"
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+============================================================
+Linha 247: role="dialog"
+Linha 248: aria-modal="true"

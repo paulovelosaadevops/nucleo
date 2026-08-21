@@ -1,0 +1,2918 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\globals.css
+============================================================
+@import "tailwindcss";
+
+:root {
+  --background: #050505;
+  --background-soft: #0a0a0b;
+  --surface: rgba(20, 20, 22, 0.78);
+  --surface-strong: rgba(29, 29, 32, 0.92);
+  --surface-muted: rgba(255, 255, 255, 0.045);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --foreground: #f7f7f7;
+  --foreground-muted: #a5a5aa;
+  --foreground-subtle: #707076;
+  --silver: #c9c9ce;
+  --silver-bright: #f1f1f3;
+  --danger: #ff6467;
+  --success: #5dd69b;
+  --warning: #f0bd64;
+  --radius-small: 0.875rem;
+  --radius-medium: 1.25rem;
+  --radius-large: 1.75rem;
+  --shadow-floating:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at 12% -10%,
+      rgba(255, 255, 255, 0.1),
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 95% 15%,
+      rgba(124, 124, 135, 0.08),
+      transparent 25rem
+    ),
+    linear-gradient(
+      180deg,
+      #080809 0%,
+      #050505 45%,
+      #030303 100%
+    );
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(230, 230, 235, 0.25);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 0.125rem solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+  background-clip: padding-box;
+}
+
+.nucleo-grid {
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    );
+  background-size: 2rem 2rem;
+}
+
+.nucleo-glass {
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.025)
+    );
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(1.5rem);
+  -webkit-backdrop-filter: blur(1.5rem);
+}
+
+.nucleo-noise {
+  position: relative;
+}
+
+.nucleo-noise::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  content: "";
+  background-image: url(
+    "data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.7'/%3E%3C/svg%3E"
+  );
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@keyframes nucleo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nucleo-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: nucleo-fade-up 420ms ease-out both;
+}
+
+.animate-nucleo-pulse {
+  animation: nucleo-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\components\ui\modal-shell.tsx
+============================================================
+"use client";
+
+import { X } from "lucide-react";
+import { createPortal } from "react-dom";
+
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
+interface ModalShellProps {
+  eyebrow: string;
+  title: string;
+  titleId: string;
+  busy?: boolean;
+  children: ReactNode;
+  onClose: () => void;
+}
+
+export function ModalShell({
+  eyebrow,
+  title,
+  titleId,
+  busy = false,
+  children,
+  onClose,
+}: ModalShellProps) {
+  const [mounted, setMounted] =
+    useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    function handleKeyDown(
+      event: KeyboardEvent,
+    ) {
+      if (
+        event.key === "Escape" &&
+        !busy
+      ) {
+        onClose();
+      }
+    }
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [
+    busy,
+    mounted,
+    onClose,
+  ]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      role="presentation"
+      className="
+        fixed
+        inset-0
+        z-[100]
+        flex
+        items-end
+        justify-center
+        bg-black/80
+        p-0
+        backdrop-blur-sm
+        sm:items-center
+        sm:p-6
+      "
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+            event.currentTarget &&
+          !busy
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-busy={busy}
+        className="
+          flex
+          max-h-[92dvh]
+          w-full
+          flex-col
+          overflow-hidden
+          rounded-t-[2rem]
+          border
+          border-white/10
+          bg-[#090909]
+          shadow-[0_32px_100px_rgba(0,0,0,0.8)]
+          sm:max-w-2xl
+          sm:rounded-[2rem]
+        "
+      >
+        <header
+          className="
+            relative
+            flex
+            shrink-0
+            items-start
+            justify-between
+            gap-4
+            border-b
+            border-white/10
+            bg-[#090909]/95
+            px-5
+            py-5
+            backdrop-blur-xl
+            sm:px-7
+          "
+        >
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-600">
+              {eyebrow}
+            </p>
+
+            <h2
+              id={titleId}
+              className="mt-1 text-xl font-semibold text-white"
+            >
+              {title}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            aria-label="Fechar formulÃ¡rio"
+            className="
+              flex
+              size-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-white/10
+              text-zinc-400
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        {children}
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+============================================================
+"use client";
+
+import { ModalShell } from "@/components/ui/modal-shell";
+
+import type {
+  CreateFinancialTransactionRequest,
+  FinancialAccount,
+  FinancialCategory,
+  FinancialPaymentMethod,
+  FinancialTransaction,
+  FinancialTransactionStatus,
+  FinancialTransactionType,
+  UpdateFinancialTransactionRequest,
+} from "@/types/finance";
+
+import { LoaderCircle } from "lucide-react";
+
+import {
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+
+type TransactionFormData =
+  | CreateFinancialTransactionRequest
+  | UpdateFinancialTransactionRequest;
+
+interface FinancialTransactionFormProps {
+  accounts: FinancialAccount[];
+  categories: FinancialCategory[];
+  transaction?: FinancialTransaction | null;
+  submitting?: boolean;
+  onSubmit: (
+    request: TransactionFormData,
+  ) => Promise<void>;
+  onCancel: () => void;
+}
+
+interface FormState {
+  accountId: string;
+  categoryId: string;
+  type: FinancialTransactionType;
+  description: string;
+  amount: string;
+  transactionDate: string;
+  dueDate: string;
+  status: FinancialTransactionStatus;
+  paymentMethod:
+    | FinancialPaymentMethod
+    | "";
+  notes: string;
+}
+
+const paymentMethods: Array<{
+  value: FinancialPaymentMethod;
+  label: string;
+}> = [
+  {
+    value: "PIX",
+    label: "Pix",
+  },
+  {
+    value: "CASH",
+    label: "Dinheiro",
+  },
+  {
+    value: "DEBIT_CARD",
+    label: "CartÃ£o de dÃ©bito",
+  },
+  {
+    value: "BANK_TRANSFER",
+    label: "TransferÃªncia bancÃ¡ria",
+  },
+  {
+    value: "BANK_SLIP",
+    label: "Boleto bancÃ¡rio",
+  },
+  {
+    value: "DIRECT_DEBIT",
+    label: "DÃ©bito automÃ¡tico",
+  },
+  {
+    value: "OTHER",
+    label: "Outro",
+  },
+];
+
+const inputClassName = [
+  "h-12 w-full rounded-2xl border border-white/10",
+  "bg-white/[0.04] px-4 text-sm text-white outline-none",
+  "transition placeholder:text-zinc-600",
+  "focus:border-white/25 focus:bg-white/[0.065]",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+].join(" ");
+
+const labelClassName =
+  "mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-zinc-500";
+
+function todayAsInputValue() {
+  const today = new Date();
+
+  const year =
+    today.getFullYear();
+
+  const month = String(
+    today.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    today.getDate(),
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function createInitialState(
+  transaction?:
+    | FinancialTransaction
+    | null,
+): FormState {
+  if (transaction) {
+    return {
+      accountId:
+        transaction.accountId,
+      categoryId:
+        transaction.categoryId ?? "",
+      type:
+        transaction.type,
+      description:
+        transaction.description,
+      amount:
+        String(transaction.amount),
+      transactionDate:
+        transaction.transactionDate,
+      dueDate:
+        transaction.dueDate ?? "",
+      status:
+        transaction.status,
+      paymentMethod:
+        transaction.paymentMethod ?? "",
+      notes:
+        transaction.notes ?? "",
+    };
+  }
+
+  return {
+    accountId: "",
+    categoryId: "",
+    type: "EXPENSE",
+    description: "",
+    amount: "",
+    transactionDate:
+      todayAsInputValue(),
+    dueDate: "",
+    status: "PENDING",
+    paymentMethod: "",
+    notes: "",
+  };
+}
+
+export function FinancialTransactionForm({
+  accounts,
+  categories,
+  transaction,
+  submitting = false,
+  onSubmit,
+  onCancel,
+}: FinancialTransactionFormProps) {
+  const editing =
+    Boolean(transaction);
+
+  const [form, setForm] =
+    useState<FormState>(() =>
+      createInitialState(
+        transaction,
+      ),
+    );
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const availableAccounts =
+    useMemo(
+      () =>
+        accounts.filter(
+          (account) =>
+            account.active ||
+            account.id ===
+              form.accountId,
+        ),
+      [
+        accounts,
+        form.accountId,
+      ],
+    );
+
+  const availableCategories =
+    useMemo(
+      () =>
+        categories.filter(
+          (category) =>
+            category.type ===
+              form.type &&
+            (
+              category.active ||
+              category.id ===
+                form.categoryId
+            ),
+        ),
+      [
+        categories,
+        form.categoryId,
+        form.type,
+      ],
+    );
+
+  function updateField<
+    K extends keyof FormState,
+  >(
+    field: K,
+    value: FormState[K],
+  ) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function changeType(
+    type: FinancialTransactionType,
+  ) {
+    setForm((current) => {
+      const currentCategory =
+        categories.find(
+          (category) =>
+            category.id ===
+            current.categoryId,
+        );
+
+      return {
+        ...current,
+        type,
+        categoryId:
+          currentCategory?.type === type
+            ? current.categoryId
+            : "",
+      };
+    });
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setError(null);
+
+    const description =
+      form.description.trim();
+
+    const amount =
+      Number(form.amount);
+
+    if (!form.accountId) {
+      setError(
+        "Selecione uma conta.",
+      );
+      return;
+    }
+
+    if (description.length < 2) {
+      setError(
+        "A descriÃ§Ã£o deve possuir pelo menos 2 caracteres.",
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setError(
+        "Informe um valor maior que zero.",
+      );
+      return;
+    }
+
+    if (!form.transactionDate) {
+      setError(
+        "Informe a data do lanÃ§amento.",
+      );
+      return;
+    }
+
+    const commonRequest = {
+      accountId:
+        form.accountId,
+      categoryId:
+        form.categoryId || null,
+      type:
+        form.type,
+      description,
+      amount,
+      transactionDate:
+        form.transactionDate,
+      dueDate:
+        form.dueDate || null,
+      paymentMethod:
+        form.paymentMethod || null,
+      notes:
+        form.notes.trim() || null,
+    };
+
+    try {
+      if (editing) {
+        const updateRequest:
+          UpdateFinancialTransactionRequest =
+            commonRequest;
+
+        await onSubmit(
+          updateRequest,
+        );
+
+        return;
+      }
+
+      const createRequest:
+        CreateFinancialTransactionRequest = {
+          ...commonRequest,
+          status: form.status,
+        };
+
+      await onSubmit(
+        createRequest,
+      );
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "NÃ£o foi possÃ­vel salvar o lanÃ§amento.",
+      );
+    }
+  }
+
+  return (
+    <ModalShell
+      eyebrow="FinanÃ§as"
+      title={
+        editing
+          ? "Editar lanÃ§amento"
+          : "Novo lanÃ§amento"
+      }
+      titleId="transaction-form-title"
+      busy={submitting}
+      onClose={onCancel}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="
+          flex
+          min-h-0
+          flex-1
+          flex-col
+        "
+      >
+        <div
+          className="
+            min-h-0
+            flex-1
+            space-y-6
+            overflow-y-auto
+            overscroll-contain
+            p-5
+            sm:p-7
+          "
+        >
+          <fieldset disabled={submitting}>
+            <legend className="sr-only">
+              Tipo do lanÃ§amento
+            </legend>
+
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  changeType("EXPENSE")
+                }
+                className={[
+                  "h-11 rounded-xl text-sm font-semibold transition",
+                  form.type === "EXPENSE"
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:bg-white/[0.05] hover:text-white",
+                ].join(" ")}
+              >
+                Despesa
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  changeType("INCOME")
+                }
+                className={[
+                  "h-11 rounded-xl text-sm font-semibold transition",
+                  form.type === "INCOME"
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:bg-white/[0.05] hover:text-white",
+                ].join(" ")}
+              >
+                Receita
+              </button>
+            </div>
+          </fieldset>
+
+          <div>
+            <label
+              htmlFor="transaction-description"
+              className={labelClassName}
+            >
+              DescriÃ§Ã£o
+            </label>
+
+            <input
+              id="transaction-description"
+              type="text"
+              value={form.description}
+              disabled={submitting}
+              maxLength={160}
+              autoFocus
+              placeholder={
+                form.type === "EXPENSE"
+                  ? "Ex.: Supermercado"
+                  : "Ex.: SalÃ¡rio"
+              }
+              onChange={(event) =>
+                updateField(
+                  "description",
+                  event.target.value,
+                )
+              }
+              className={inputClassName}
+            />
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-amount"
+                className={labelClassName}
+              >
+                Valor
+              </label>
+
+              <input
+                id="transaction-amount"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                disabled={submitting}
+                placeholder="0,00"
+                onChange={(event) =>
+                  updateField(
+                    "amount",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+
+            {!editing ? (
+              <div>
+                <label
+                  htmlFor="transaction-status"
+                  className={labelClassName}
+                >
+                  SituaÃ§Ã£o inicial
+                </label>
+
+                <select
+                  id="transaction-status"
+                  value={form.status}
+                  disabled={submitting}
+                  onChange={(event) =>
+                    updateField(
+                      "status",
+                      event.target
+                        .value as FinancialTransactionStatus,
+                    )
+                  }
+                  className={inputClassName}
+                >
+                  <option value="PENDING">
+                    Pendente
+                  </option>
+
+                  <option value="PAID">
+                    Pago
+                  </option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <span className={labelClassName}>
+                  SituaÃ§Ã£o atual
+                </span>
+
+                <div className="flex h-12 items-center rounded-2xl border border-white/10 bg-white/[0.025] px-4 text-sm text-zinc-400">
+                  {form.status === "PAID"
+                    ? "Pago"
+                    : form.status ===
+                        "PENDING"
+                      ? "Pendente"
+                      : "Cancelado"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-account"
+                className={labelClassName}
+              >
+                Conta
+              </label>
+
+              <select
+                id="transaction-account"
+                value={form.accountId}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField(
+                    "accountId",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              >
+                <option value="">
+                  Selecione uma conta
+                </option>
+
+                {availableAccounts.map(
+                  (account) => (
+                    <option
+                      key={account.id}
+                      value={account.id}
+                    >
+                      {account.name}
+                      {!account.active
+                        ? " â€” Inativa"
+                        : ""}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="transaction-category"
+                className={labelClassName}
+              >
+                Categoria
+              </label>
+
+              <select
+                id="transaction-category"
+                value={form.categoryId}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField(
+                    "categoryId",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              >
+                <option value="">
+                  Sem categoria
+                </option>
+
+                {availableCategories.map(
+                  (category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.name}
+                      {!category.active
+                        ? " â€” Inativa"
+                        : ""}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-date"
+                className={labelClassName}
+              >
+                Data do lanÃ§amento
+              </label>
+
+              <input
+                id="transaction-date"
+                type="date"
+                value={
+                  form.transactionDate
+                }
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField(
+                    "transactionDate",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="transaction-due-date"
+                className={labelClassName}
+              >
+                Data de vencimento
+              </label>
+
+              <input
+                id="transaction-due-date"
+                type="date"
+                value={form.dueDate}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField(
+                    "dueDate",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="transaction-payment-method"
+              className={labelClassName}
+            >
+              Forma de pagamento
+            </label>
+
+            <select
+              id="transaction-payment-method"
+              value={form.paymentMethod}
+              disabled={submitting}
+              onChange={(event) =>
+                updateField(
+                  "paymentMethod",
+                  event.target
+                    .value as
+                    | FinancialPaymentMethod
+                    | "",
+                )
+              }
+              className={inputClassName}
+            >
+              <option value="">
+                NÃ£o informada
+              </option>
+
+              {paymentMethods.map(
+                (method) => (
+                  <option
+                    key={method.value}
+                    value={method.value}
+                  >
+                    {method.label}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="transaction-notes"
+              className={labelClassName}
+            >
+              ObservaÃ§Ãµes
+            </label>
+
+            <textarea
+              id="transaction-notes"
+              value={form.notes}
+              disabled={submitting}
+              maxLength={1000}
+              rows={4}
+              placeholder="InformaÃ§Ãµes adicionais sobre o lanÃ§amento"
+              onChange={(event) =>
+                updateField(
+                  "notes",
+                  event.target.value,
+                )
+              }
+              className="
+                w-full
+                resize-none
+                rounded-2xl
+                border
+                border-white/10
+                bg-white/[0.04]
+                px-4
+                py-3
+                text-sm
+                leading-6
+                text-white
+                outline-none
+                transition
+                placeholder:text-zinc-600
+                focus:border-white/25
+                focus:bg-white/[0.065]
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            />
+          </div>
+
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm leading-6 text-rose-200"
+            >
+              {error}
+            </div>
+          ) : null}
+        </div>
+
+        <footer
+          className="
+            flex
+            shrink-0
+            flex-col-reverse
+            gap-2
+            border-t
+            border-white/10
+            bg-[#090909]/95
+            p-5
+            backdrop-blur-xl
+            sm:flex-row
+            sm:justify-end
+            sm:px-7
+          "
+        >
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={onCancel}
+            className="
+              h-11
+              rounded-2xl
+              border
+              border-white/10
+              px-5
+              text-sm
+              font-semibold
+              text-zinc-300
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="
+              inline-flex
+              h-11
+              items-center
+              justify-center
+              gap-2
+              rounded-2xl
+              bg-white
+              px-6
+              text-sm
+              font-semibold
+              text-black
+              transition
+              hover:bg-zinc-200
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+            {submitting ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : null}
+
+            {editing
+              ? "Salvar alteraÃ§Ãµes"
+              : "Criar lanÃ§amento"}
+          </button>
+        </footer>
+      </form>
+    </ModalShell>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-item-form.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/api/api-client";
+import { getErrorMessage } from "@/lib/api/api-error";
+import type {
+  CreateShoppingItemRequest,
+  ShoppingItem,
+  ShoppingItemCategory,
+  ShoppingItemPriority,
+  ShoppingItemUnit,
+} from "@/types/shopping";
+import { X } from "lucide-react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
+interface FamilyMemberOption {
+  membershipId: string;
+  name: string;
+  status: string;
+}
+
+interface ShoppingItemFormProps {
+  open: boolean;
+  loading: boolean;
+  initialItem?: ShoppingItem | null;
+  onClose: () => void;
+  onSubmit: (
+    request: CreateShoppingItemRequest,
+  ) => Promise<unknown>;
+}
+
+const categories: Array<{
+  value: ShoppingItemCategory;
+  label: string;
+}> = [
+  { value: "FOOD", label: "Alimentos" },
+  { value: "BEVERAGE", label: "Bebidas" },
+  { value: "HYGIENE", label: "Higiene" },
+  { value: "CLEANING", label: "Limpeza" },
+  { value: "PHARMACY", label: "FarmÃ¡cia" },
+  { value: "BABY", label: "BebÃª" },
+  { value: "PET", label: "Pet" },
+  { value: "HOUSEHOLD", label: "Casa" },
+  { value: "CLOTHING", label: "Roupas" },
+  { value: "ELECTRONICS", label: "EletrÃ´nicos" },
+  { value: "OTHER", label: "Outros" },
+];
+
+const units: Array<{
+  value: ShoppingItemUnit;
+  label: string;
+}> = [
+  { value: "UNIT", label: "Unidade" },
+  { value: "PACKAGE", label: "Pacote" },
+  { value: "BOX", label: "Caixa" },
+  { value: "BOTTLE", label: "Garrafa" },
+  { value: "CAN", label: "Lata" },
+  { value: "LITER", label: "Litro" },
+  { value: "MILLILITER", label: "Mililitro" },
+  { value: "KILOGRAM", label: "Quilograma" },
+  { value: "GRAM", label: "Grama" },
+  { value: "METER", label: "Metro" },
+  { value: "DOZEN", label: "DÃºzia" },
+];
+
+const priorities: Array<{
+  value: ShoppingItemPriority;
+  label: string;
+}> = [
+  { value: "LOW", label: "Baixa" },
+  { value: "NORMAL", label: "Normal" },
+  { value: "HIGH", label: "Alta" },
+  { value: "URGENT", label: "Urgente" },
+];
+
+export function ShoppingItemForm({
+  open,
+  loading,
+  initialItem,
+  onClose,
+  onSubmit,
+}: ShoppingItemFormProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] =
+    useState("");
+  const [category, setCategory] =
+    useState<ShoppingItemCategory>("OTHER");
+  const [quantity, setQuantity] =
+    useState("1");
+  const [unit, setUnit] =
+    useState<ShoppingItemUnit>("UNIT");
+  const [estimatedUnitPrice, setEstimatedUnitPrice] =
+    useState("");
+  const [priority, setPriority] =
+    useState<ShoppingItemPriority>("NORMAL");
+  const [assignedToMembershipId, setAssignedToMembershipId] =
+    useState("");
+  const [members, setMembers] =
+    useState<FamilyMemberOption[]>([]);
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  const editing = Boolean(initialItem);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setName(initialItem?.name ?? "");
+    setDescription(
+      initialItem?.description ?? "",
+    );
+    setCategory(
+      initialItem?.category ?? "OTHER",
+    );
+    setQuantity(
+      String(initialItem?.quantity ?? 1),
+    );
+    setUnit(initialItem?.unit ?? "UNIT");
+    setEstimatedUnitPrice(
+      initialItem?.estimatedUnitPrice != null
+        ? String(
+            initialItem.estimatedUnitPrice,
+          )
+        : "",
+    );
+    setPriority(
+      initialItem?.priority ?? "NORMAL",
+    );
+    setAssignedToMembershipId(
+      initialItem?.assignedToMembershipId ??
+        "",
+    );
+    setFormError(null);
+
+    void apiRequest<FamilyMemberOption[]>(
+      "/api/family/members",
+    )
+      .then((response) => {
+        setMembers(
+          response.filter(
+            (member) =>
+              member.status === "ACTIVE",
+          ),
+        );
+      })
+      .catch(() => setMembers([]));
+  }, [initialItem, open]);
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setFormError(null);
+
+    const normalizedName =
+      name.trim().replace(/\s+/g, " ");
+
+    const parsedQuantity = Number(
+      quantity.replace(",", "."),
+    );
+
+    const parsedPrice =
+      estimatedUnitPrice.trim()
+        ? Number(
+            estimatedUnitPrice.replace(
+              ",",
+              ".",
+            ),
+          )
+        : undefined;
+
+    if (!normalizedName) {
+      setFormError(
+        "Informe o nome do item.",
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(parsedQuantity) ||
+      parsedQuantity <= 0
+    ) {
+      setFormError(
+        "A quantidade deve ser maior que zero.",
+      );
+      return;
+    }
+
+    if (
+      parsedPrice !== undefined &&
+      (
+        !Number.isFinite(parsedPrice) ||
+        parsedPrice < 0
+      )
+    ) {
+      setFormError(
+        "Informe um preÃ§o estimado vÃ¡lido.",
+      );
+      return;
+    }
+
+    try {
+      await onSubmit({
+        name: normalizedName,
+        description:
+          description.trim() || undefined,
+        category,
+        quantity: parsedQuantity,
+        unit,
+        estimatedUnitPrice: parsedPrice,
+        priority,
+        assignedToMembershipId:
+          assignedToMembershipId || undefined,
+      });
+
+      onClose();
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    }
+  }
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-5">
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label="Fechar formulÃ¡rio"
+        onClick={onClose}
+      />
+
+      <form
+        onSubmit={handleSubmit}
+        className="relative z-10 max-h-[94vh] w-full max-w-xl overflow-y-auto rounded-t-[1.75rem] border border-white/10 bg-[#0b0b0c] p-5 shadow-2xl sm:rounded-[1.75rem] sm:p-7"
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-zinc-600">
+              Item da lista
+            </p>
+
+            <h2 className="mt-1 text-xl font-semibold text-white">
+              {editing
+                ? "Editar item"
+                : "Adicionar item"}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 hover:bg-white/[0.06] hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {formError && (
+          <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-sm text-red-200">
+            {formError}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-4">
+          <Input
+            label="Item"
+            placeholder="Ex.: Leite"
+            maxLength={160}
+            value={name}
+            onChange={(event) =>
+              setName(event.target.value)
+            }
+          />
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-300">
+              DescriÃ§Ã£o
+            </label>
+
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={description}
+              onChange={(event) =>
+                setDescription(
+                  event.target.value,
+                )
+              }
+              placeholder="Opcional"
+              className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/30"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Categoria"
+              value={category}
+              options={categories}
+              onChange={(value) =>
+                setCategory(
+                  value as ShoppingItemCategory,
+                )
+              }
+            />
+
+            <SelectField
+              label="Prioridade"
+              value={priority}
+              options={priorities}
+              onChange={(value) =>
+                setPriority(
+                  value as ShoppingItemPriority,
+                )
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Quantidade"
+              type="number"
+              min="0.001"
+              step="0.001"
+              value={quantity}
+              onChange={(event) =>
+                setQuantity(
+                  event.target.value,
+                )
+              }
+            />
+
+            <SelectField
+              label="Unidade"
+              value={unit}
+              options={units}
+              onChange={(value) =>
+                setUnit(
+                  value as ShoppingItemUnit,
+                )
+              }
+            />
+          </div>
+
+          <Input
+            label="PreÃ§o unitÃ¡rio estimado"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={estimatedUnitPrice}
+            onChange={(event) =>
+              setEstimatedUnitPrice(
+                event.target.value,
+              )
+            }
+          />
+
+          {members.length > 0 && (
+            <SelectField
+              label="ResponsÃ¡vel"
+              value={assignedToMembershipId}
+              options={[
+                {
+                  value: "",
+                  label: "Sem responsÃ¡vel",
+                },
+                ...members.map((member) => ({
+                  value:
+                    member.membershipId,
+                  label: member.name,
+                })),
+              ]}
+              onChange={
+                setAssignedToMembershipId
+              }
+            />
+          )}
+        </div>
+
+        <div className="mt-7 flex gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="large"
+            className="flex-1"
+            disabled={loading}
+            onClick={onClose}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            type="submit"
+            size="large"
+            className="flex-1"
+            loading={loading}
+          >
+            {editing
+              ? "Salvar"
+              : "Adicionar"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+interface SelectFieldProps {
+  label: string;
+  value: string;
+  options: Array<{
+    value: string;
+    label: string;
+  }>;
+  onChange: (value: string) => void;
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-zinc-300">
+        {label}
+      </label>
+
+      <select
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className="h-12 w-full rounded-2xl border border-white/10 bg-[#111113] px-4 text-sm text-white outline-none focus:border-white/30"
+      >
+        {options.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-list-actions.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import type { ShoppingListDetails } from "@/types/shopping";
+import {
+  Archive,
+  Check,
+  Pencil,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
+
+interface ShoppingListActionsProps {
+  list: ShoppingListDetails;
+  loading: boolean;
+  onEdit: () => void;
+  onComplete: () => Promise<void>;
+  onReopen: () => Promise<void>;
+  onArchive: () => Promise<void>;
+  onDelete: () => Promise<void>;
+}
+
+export function ShoppingListActions({
+  list,
+  loading,
+  onEdit,
+  onComplete,
+  onReopen,
+  onArchive,
+  onDelete,
+}: ShoppingListActionsProps) {
+  async function archive() {
+    if (
+      window.confirm(
+        "Arquivar esta lista?",
+      )
+    ) {
+      await onArchive();
+    }
+  }
+
+  async function remove() {
+    if (
+      window.confirm(
+        "Excluir esta lista e todos os seus itens?",
+      )
+    ) {
+      await onDelete();
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {list.status === "ACTIVE" && (
+        <>
+          <Button
+            variant="secondary"
+            disabled={loading}
+            onClick={onEdit}
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+
+          <Button
+            disabled={loading}
+            onClick={() => void onComplete()}
+          >
+            <Check className="h-4 w-4" />
+            Concluir
+          </Button>
+        </>
+      )}
+
+      {list.status === "COMPLETED" && (
+        <Button
+          variant="secondary"
+          className="col-span-2"
+          disabled={loading}
+          onClick={() => void onReopen()}
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reabrir lista
+        </Button>
+      )}
+
+      {list.status !== "ARCHIVED" && (
+        <Button
+          variant="ghost"
+          disabled={loading}
+          onClick={() => void archive()}
+        >
+          <Archive className="h-4 w-4" />
+          Arquivar
+        </Button>
+      )}
+
+      <Button
+        variant="danger"
+        disabled={loading}
+        className={
+          list.status === "ARCHIVED"
+            ? "col-span-2"
+            : undefined
+        }
+        onClick={() => void remove()}
+      >
+        <Trash2 className="h-4 w-4" />
+        Excluir
+      </Button>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-list-card.tsx
+============================================================
+import { cn } from "@/lib/cn";
+import type { ShoppingListSummary } from "@/types/shopping";
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  ShoppingBasket,
+} from "lucide-react";
+
+interface ShoppingListCardProps {
+  list: ShoppingListSummary;
+  onClick: () => void;
+}
+
+const currencyFormatter =
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+const dateFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  });
+
+function parseLocalDate(value: string): Date {
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+export function ShoppingListCard({
+  list,
+  onClick,
+}: ShoppingListCardProps) {
+  const resolvedItems =
+    list.purchasedItems +
+    list.cancelledItems;
+
+  const progress =
+    list.totalItems > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (
+              resolvedItems /
+              list.totalItems
+            ) * 100,
+          ),
+        )
+      : 0;
+
+  const completed =
+    list.status === "COMPLETED";
+
+  const archived =
+    list.status === "ARCHIVED";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group w-full rounded-[1.35rem] border p-4 text-left transition",
+        completed || archived
+          ? "border-white/[0.055] bg-white/[0.02] opacity-65"
+          : "border-white/[0.08] bg-white/[0.04] hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.065]",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-black/25 text-zinc-400">
+          {completed ? (
+            <Check className="h-5 w-5" />
+          ) : (
+            <ShoppingBasket className="h-5 w-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-zinc-200 group-hover:text-white">
+                {list.name}
+              </p>
+
+              <p className="mt-1 text-[0.68rem] text-zinc-600">
+                Criada por {list.createdByName}
+              </p>
+            </div>
+
+            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-700 transition group-hover:translate-x-0.5 group-hover:text-zinc-300" />
+          </div>
+
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-zinc-600 to-zinc-200 transition-all"
+              style={{
+                width: `${progress}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-[0.66rem] text-zinc-600">
+            <span>
+              {list.purchasedItems} de{" "}
+              {list.totalItems} comprados
+            </span>
+
+            <span>{progress}%</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.055] pt-3">
+            <div className="flex items-center gap-3 text-[0.68rem] text-zinc-600">
+              <span>
+                {list.pendingItems} pendentes
+              </span>
+
+              {list.dueDate && (
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" />
+                  {dateFormatter.format(
+                    parseLocalDate(
+                      list.dueDate,
+                    ),
+                  )}
+                </span>
+              )}
+            </div>
+
+            <span className="text-xs font-medium text-zinc-400">
+              {currencyFormatter.format(
+                list.actualTotal > 0
+                  ? list.actualTotal
+                  : list.estimatedTotal,
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-list-details.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { ShoppingItemForm } from "@/features/shopping/shopping-item-form";
+import { ShoppingItemRow } from "@/features/shopping/shopping-item-row";
+import { ShoppingListActions } from "@/features/shopping/shopping-list-actions";
+import type {
+  CreateShoppingItemRequest,
+  ShoppingItem,
+  ShoppingListDetails,
+} from "@/types/shopping";
+import {
+  CalendarDays,
+  Plus,
+  ShoppingBasket,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+
+interface ShoppingListDetailsProps {
+  list: ShoppingListDetails | null;
+  loading: boolean;
+  performingAction: boolean;
+  onClose: () => void;
+  onEditList: () => void;
+  onComplete: () => Promise<void>;
+  onReopen: () => Promise<void>;
+  onArchive: () => Promise<void>;
+  onDelete: () => Promise<void>;
+  onCreateItem: (
+    request: CreateShoppingItemRequest,
+  ) => Promise<unknown>;
+  onUpdateItem: (
+    itemId: string,
+    request: CreateShoppingItemRequest,
+  ) => Promise<unknown>;
+  onPurchaseItem: (
+    itemId: string,
+    actualUnitPrice?: number,
+  ) => Promise<unknown>;
+  onPendingItem: (
+    itemId: string,
+  ) => Promise<unknown>;
+  onCancelItem: (
+    itemId: string,
+  ) => Promise<unknown>;
+  onRestoreItem: (
+    itemId: string,
+  ) => Promise<unknown>;
+  onDeleteItem: (
+    itemId: string,
+  ) => Promise<unknown>;
+}
+
+const currencyFormatter =
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+
+function parseLocalDate(value: string) {
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+export function ShoppingListDetailsPanel({
+  list,
+  loading,
+  performingAction,
+  onClose,
+  onEditList,
+  onComplete,
+  onReopen,
+  onArchive,
+  onDelete,
+  onCreateItem,
+  onUpdateItem,
+  onPurchaseItem,
+  onPendingItem,
+  onCancelItem,
+  onRestoreItem,
+  onDeleteItem,
+}: ShoppingListDetailsProps) {
+  const [itemFormOpen, setItemFormOpen] =
+    useState(false);
+
+  const [editingItem, setEditingItem] =
+    useState<ShoppingItem | null>(null);
+
+  if (!loading && !list) {
+    return null;
+  }
+
+  const orderedItems = list
+    ? [...list.items].sort(
+        (left, right) => {
+          const statusOrder = {
+            PENDING: 0,
+            PURCHASED: 1,
+            CANCELLED: 2,
+          };
+
+          return (
+            statusOrder[left.status] -
+              statusOrder[right.status] ||
+            left.sortOrder - right.sortOrder
+          );
+        },
+      )
+    : [];
+
+  return (
+    <div className="fixed inset-0 z-[70] flex justify-end bg-black/70 backdrop-blur-sm">
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label="Fechar lista"
+        onClick={onClose}
+      />
+
+      <aside className="relative z-10 h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#0b0b0c] p-5 shadow-2xl sm:p-7">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 hover:bg-white/[0.06] hover:text-white"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {loading || !list ? (
+          <div className="mt-6 animate-pulse space-y-4">
+            <div className="h-8 w-2/3 rounded bg-white/[0.07]" />
+            <div className="h-24 rounded-2xl bg-white/[0.04]" />
+            <div className="h-20 rounded-2xl bg-white/[0.04]" />
+          </div>
+        ) : (
+          <div className="animate-fade-up">
+            <p className="text-xs uppercase tracking-[0.16em] text-zinc-600">
+              Lista de compras
+            </p>
+
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-white">
+              {list.name}
+            </h2>
+
+            {list.description && (
+              <p className="mt-3 text-sm leading-6 text-zinc-500">
+                {list.description}
+              </p>
+            )}
+
+            {list.dueDate && (
+              <p className="mt-3 flex items-center gap-2 text-xs text-zinc-600">
+                <CalendarDays className="h-3.5 w-3.5" />
+                AtÃ©{" "}
+                {parseLocalDate(
+                  list.dueDate,
+                ).toLocaleDateString(
+                  "pt-BR",
+                )}
+              </p>
+            )}
+
+            <div className="my-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Summary
+                label="Itens"
+                value={String(list.totalItems)}
+              />
+              <Summary
+                label="Pendentes"
+                value={String(list.pendingItems)}
+              />
+              <Summary
+                label="Estimado"
+                value={currencyFormatter.format(
+                  list.estimatedTotal,
+                )}
+              />
+              <Summary
+                label="Real"
+                value={currencyFormatter.format(
+                  list.actualTotal,
+                )}
+              />
+            </div>
+
+            {list.status === "ACTIVE" && (
+              <Button
+                className="w-full"
+                onClick={() =>
+                  setItemFormOpen(true)
+                }
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar item
+              </Button>
+            )}
+
+            <div className="mt-5 space-y-2">
+              {orderedItems.length === 0 ? (
+                <div className="flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] text-center">
+                  <ShoppingBasket className="h-6 w-6 text-zinc-700" />
+
+                  <p className="mt-3 text-sm text-zinc-500">
+                    Esta lista ainda estÃ¡ vazia.
+                  </p>
+                </div>
+              ) : (
+                orderedItems.map((item) => (
+                  <ShoppingItemRow
+                    key={item.id}
+                    item={item}
+                    disabled={performingAction}
+                    onEdit={() => {
+                      setEditingItem(item);
+                      setItemFormOpen(true);
+                    }}
+                    onPurchase={(price) =>
+                      onPurchaseItem(
+                        item.id,
+                        price,
+                      )
+                    }
+                    onPending={() =>
+                      onPendingItem(item.id)
+                    }
+                    onCancel={() =>
+                      onCancelItem(item.id)
+                    }
+                    onRestore={() =>
+                      onRestoreItem(item.id)
+                    }
+                    onDelete={() =>
+                      onDeleteItem(item.id)
+                    }
+                  />
+                ))
+              )}
+            </div>
+
+            <div className="mt-7 border-t border-white/[0.07] pt-5">
+              <ShoppingListActions
+                list={list}
+                loading={performingAction}
+                onEdit={onEditList}
+                onComplete={onComplete}
+                onReopen={onReopen}
+                onArchive={onArchive}
+                onDelete={onDelete}
+              />
+            </div>
+
+            <p className="mt-5 text-center text-[0.65rem] text-zinc-700">
+              Criada por {list.createdByName}
+            </p>
+          </div>
+        )}
+      </aside>
+
+      {list && (
+        <ShoppingItemForm
+          open={itemFormOpen}
+          loading={performingAction}
+          initialItem={editingItem}
+          onClose={() => {
+            setItemFormOpen(false);
+            setEditingItem(null);
+          }}
+          onSubmit={(request) =>
+            editingItem
+              ? onUpdateItem(
+                  editingItem.id,
+                  request,
+                )
+              : onCreateItem(request)
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function Summary({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
+      <p className="text-[0.65rem] text-zinc-600">
+        {label}
+      </p>
+
+      <p className="mt-1 truncate text-sm font-medium text-zinc-300">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-list-form.tsx
+============================================================
+"use client";
+
+import { ModalShell } from "@/components/ui/modal-shell";
+import { getErrorMessage } from "@/lib/api/api-error";
+
+import type {
+  CreateShoppingListRequest,
+  ShoppingListDetails,
+} from "@/types/shopping";
+
+import { LoaderCircle } from "lucide-react";
+
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
+interface ShoppingListFormProps {
+  open: boolean;
+  loading: boolean;
+  initialList?: ShoppingListDetails | null;
+  onClose: () => void;
+  onSubmit: (
+    request: CreateShoppingListRequest,
+  ) => Promise<unknown>;
+}
+
+const inputClassName = [
+  "h-12 w-full rounded-2xl border border-white/10",
+  "bg-white/[0.04] px-4 text-sm text-white outline-none",
+  "transition placeholder:text-zinc-600",
+  "focus:border-white/25 focus:bg-white/[0.065]",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+].join(" ");
+
+const labelClassName =
+  "mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-zinc-500";
+
+export function ShoppingListForm({
+  open,
+  loading,
+  initialList,
+  onClose,
+  onSubmit,
+}: ShoppingListFormProps) {
+  const [name, setName] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
+
+  const [dueDate, setDueDate] =
+    useState("");
+
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  const editing = Boolean(initialList);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setName(
+      initialList?.name ?? "",
+    );
+
+    setDescription(
+      initialList?.description ?? "",
+    );
+
+    setDueDate(
+      initialList?.dueDate ?? "",
+    );
+
+    setFormError(null);
+  }, [
+    initialList,
+    open,
+  ]);
+
+  function handleClose() {
+    if (loading) {
+      return;
+    }
+
+    setFormError(null);
+    onClose();
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setFormError(null);
+
+    const normalizedName =
+      name.trim().replace(/\s+/g, " ");
+
+    if (normalizedName.length < 2) {
+      setFormError(
+        "Informe um nome com pelo menos 2 caracteres.",
+      );
+      return;
+    }
+
+    try {
+      await onSubmit({
+        name: normalizedName,
+        description:
+          description.trim() || undefined,
+        dueDate:
+          dueDate || undefined,
+      });
+
+      onClose();
+    } catch (error) {
+      setFormError(
+        getErrorMessage(error),
+      );
+    }
+  }
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <ModalShell
+      eyebrow="Compras"
+      title={
+        editing
+          ? "Editar lista"
+          : "Nova lista"
+      }
+      titleId="shopping-list-form-title"
+      busy={loading}
+      onClose={handleClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="
+          flex
+          min-h-0
+          flex-1
+          flex-col
+        "
+      >
+        <div
+          className="
+            min-h-0
+            flex-1
+            overflow-y-auto
+            overscroll-contain
+            p-5
+            sm:p-7
+          "
+        >
+          <fieldset
+            disabled={loading}
+            className="space-y-6"
+          >
+            <div>
+              <label
+                htmlFor="shopping-list-name"
+                className={labelClassName}
+              >
+                Nome da lista
+              </label>
+
+              <input
+                id="shopping-list-name"
+                type="text"
+                value={name}
+                maxLength={120}
+                autoFocus
+                placeholder="Ex.: Compras do mÃªs"
+                onChange={(event) =>
+                  setName(
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="shopping-list-description"
+                className={labelClassName}
+              >
+                DescriÃ§Ã£o
+              </label>
+
+              <textarea
+                id="shopping-list-description"
+                rows={4}
+                maxLength={500}
+                value={description}
+                placeholder="InformaÃ§Ãµes adicionais sobre a lista"
+                onChange={(event) =>
+                  setDescription(
+                    event.target.value,
+                  )
+                }
+                className="
+                  w-full
+                  resize-none
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-white/[0.04]
+                  px-4
+                  py-3
+                  text-sm
+                  leading-6
+                  text-white
+                  outline-none
+                  transition
+                  placeholder:text-zinc-600
+                  focus:border-white/25
+                  focus:bg-white/[0.065]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="shopping-list-due-date"
+                className={labelClassName}
+              >
+                Data limite
+              </label>
+
+              <input
+                id="shopping-list-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(event) =>
+                  setDueDate(
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+          </fieldset>
+
+          {formError ? (
+            <div
+              role="alert"
+              className="mt-6 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm leading-6 text-rose-200"
+            >
+              {formError}
+            </div>
+          ) : null}
+        </div>
+
+        <footer
+          className="
+            flex
+            shrink-0
+            flex-col-reverse
+            gap-2
+            border-t
+            border-white/10
+            bg-[#090909]/95
+            p-5
+            backdrop-blur-xl
+            sm:flex-row
+            sm:justify-end
+            sm:px-7
+          "
+        >
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleClose}
+            className="
+              h-11
+              rounded-2xl
+              border
+              border-white/10
+              px-5
+              text-sm
+              font-semibold
+              text-zinc-300
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="
+              inline-flex
+              h-11
+              items-center
+              justify-center
+              gap-2
+              rounded-2xl
+              bg-white
+              px-6
+              text-sm
+              font-semibold
+              text-black
+              transition
+              hover:bg-zinc-200
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
+          >
+            {loading ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : null}
+
+            {editing
+              ? "Salvar alteraÃ§Ãµes"
+              : "Criar lista"}
+          </button>
+        </footer>
+      </form>
+    </ModalShell>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-page.tsx
+============================================================
+"use client";
+
+import { EmptyState } from "@/components/feedback/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { ShoppingListCard } from "@/features/shopping/shopping-list-card";
+import { ShoppingListDetailsPanel } from "@/features/shopping/shopping-list-details";
+import { ShoppingListForm } from "@/features/shopping/shopping-list-form";
+import { useShopping } from "@/features/shopping/use-shopping";
+import { cn } from "@/lib/cn";
+import type { ShoppingListStatus } from "@/types/shopping";
+import {
+  Plus,
+  RefreshCw,
+  ShoppingBasket,
+} from "lucide-react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+const filters: Array<{
+  label: string;
+  value: ShoppingListStatus | undefined;
+}> = [
+  { label: "Todas", value: undefined },
+  { label: "Ativas", value: "ACTIVE" },
+  { label: "ConcluÃ­das", value: "COMPLETED" },
+  { label: "Arquivadas", value: "ARCHIVED" },
+];
+
+export function ShoppingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [listFormOpen, setListFormOpen] =
+    useState(false);
+
+  const [editingList, setEditingList] =
+    useState(false);
+
+  const {
+    statusFilter,
+    setStatusFilter,
+    lists,
+    selectedList,
+    loading,
+    loadingDetails,
+    performingAction,
+    error,
+    refresh,
+    openList,
+    closeList,
+    createList,
+    updateList,
+    completeList,
+    reopenList,
+    archiveList,
+    removeList,
+    createItem,
+    updateItem,
+    purchaseItem,
+    markItemPending,
+    cancelItem,
+    restoreItem,
+    removeItem,
+  } = useShopping();
+
+  useEffect(() => {
+    if (searchParams.get("nova") === "true") {
+      setListFormOpen(true);
+    }
+
+    const listId = searchParams.get("lista");
+
+    if (listId) {
+      void openList(listId);
+    }
+  }, [openList, searchParams]);
+
+  function clearQuery() {
+    router.replace("/compras", {
+      scroll: false,
+    });
+  }
+
+  function closeDetails() {
+    closeList();
+    clearQuery();
+  }
+
+  return (
+    <div className="animate-fade-up space-y-6">
+      <PageHeader
+        eyebrow="OrganizaÃ§Ã£o familiar"
+        title="Compras"
+        description="Listas compartilhadas e atualizadas em tempo real."
+        action={
+          <Button
+            onClick={() =>
+              setListFormOpen(true)
+            }
+          >
+            <Plus className="h-4 w-4" />
+            Nova lista
+          </Button>
+        }
+      />
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {filters.map((filter) => (
+            <button
+              key={filter.label}
+              type="button"
+              onClick={() =>
+                setStatusFilter(filter.value)
+              }
+              className={cn(
+                "h-9 shrink-0 rounded-xl border px-3.5 text-xs font-medium transition",
+                statusFilter === filter.value
+                  ? "border-white bg-white text-black"
+                  : "border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:text-white",
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-600 hover:bg-white/[0.06] hover:text-white"
+          aria-label="Atualizar listas"
+        >
+          <RefreshCw
+            className={cn(
+              "h-4 w-4",
+              loading && "animate-spin",
+            )}
+          />
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-400/15 bg-red-400/[0.055] px-4 py-3 text-sm text-red-200">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map(
+            (_, index) => (
+              <div
+                key={index}
+                className="h-52 animate-pulse rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]"
+              />
+            ),
+          )}
+        </div>
+      ) : lists.length === 0 ? (
+        <EmptyState
+          icon={ShoppingBasket}
+          title="Nenhuma lista encontrada"
+          description="Crie uma lista para organizar as prÃ³ximas compras da famÃ­lia."
+          actionLabel="Criar lista"
+          actionIcon={
+            <Plus className="h-4 w-4" />
+          }
+          onAction={() =>
+            setListFormOpen(true)
+          }
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {lists.map((list) => (
+            <ShoppingListCard
+              key={list.id}
+              list={list}
+              onClick={() => {
+                router.replace(
+                  `/compras?lista=${list.id}`,
+                  {
+                    scroll: false,
+                  },
+                );
+
+                void openList(list.id);
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <ShoppingListForm
+        open={listFormOpen || editingList}
+        loading={performingAction}
+        initialList={
+          editingList
+            ? selectedList
+            : null
+        }
+        onClose={() => {
+          setListFormOpen(false);
+          setEditingList(false);
+
+          if (!selectedList) {
+            clearQuery();
+          }
+        }}
+        onSubmit={(request) =>
+          editingList && selectedList
+            ? updateList(
+                selectedList.id,
+                request,
+              )
+            : createList(request)
+        }
+      />
+
+      <ShoppingListDetailsPanel
+        list={selectedList}
+        loading={loadingDetails}
+        performingAction={performingAction}
+        onClose={closeDetails}
+        onEditList={() =>
+          setEditingList(true)
+        }
+        onComplete={async () => {
+          if (selectedList) {
+            await completeList(
+              selectedList.id,
+            );
+          }
+        }}
+        onReopen={async () => {
+          if (selectedList) {
+            await reopenList(
+              selectedList.id,
+            );
+          }
+        }}
+        onArchive={async () => {
+          if (selectedList) {
+            await archiveList(
+              selectedList.id,
+            );
+            clearQuery();
+          }
+        }}
+        onDelete={async () => {
+          if (selectedList) {
+            await removeList(
+              selectedList.id,
+            );
+            clearQuery();
+          }
+        }}
+        onCreateItem={(request) =>
+          createItem(
+            selectedList!.id,
+            request,
+          )
+        }
+        onUpdateItem={(itemId, request) =>
+          updateItem(
+            selectedList!.id,
+            itemId,
+            request,
+          )
+        }
+        onPurchaseItem={(
+          itemId,
+          actualUnitPrice,
+        ) =>
+          purchaseItem(
+            selectedList!.id,
+            itemId,
+            { actualUnitPrice },
+          )
+        }
+        onPendingItem={(itemId) =>
+          markItemPending(
+            selectedList!.id,
+            itemId,
+          )
+        }
+        onCancelItem={(itemId) =>
+          cancelItem(
+            selectedList!.id,
+            itemId,
+          )
+        }
+        onRestoreItem={(itemId) =>
+          restoreItem(
+            selectedList!.id,
+            itemId,
+          )
+        }
+        onDeleteItem={(itemId) =>
+          removeItem(
+            selectedList!.id,
+            itemId,
+          )
+        }
+      />
+    </div>
+  );
+}

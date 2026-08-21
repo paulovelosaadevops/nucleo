@@ -1,0 +1,2161 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-invitation-form.tsx
+============================================================
+"use client";
+
+import { FormEvent, useState } from "react";
+import {
+  Check,
+  Copy,
+  LoaderCircle,
+  MailPlus,
+  X,
+} from "lucide-react";
+
+import type {
+  CreateFamilyInvitationRequest,
+  FamilyInvitationCreated,
+  FamilyRole,
+} from "@/types/family";
+
+interface FamilyInvitationFormProps {
+  submitting?: boolean;
+  onSubmit: (
+    request: CreateFamilyInvitationRequest,
+  ) => Promise<FamilyInvitationCreated>;
+  onCancel: () => void;
+}
+
+const inputClassName =
+  "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-white/25 disabled:opacity-50";
+
+const labelClassName =
+  "mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500";
+
+export function FamilyInvitationForm({
+  submitting = false,
+  onSubmit,
+  onCancel,
+}: FamilyInvitationFormProps) {
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Exclude<FamilyRole, "OWNER">>(
+    "MEMBER",
+  );
+
+  const [result, setResult] =
+    useState<FamilyInvitationCreated | null>(null);
+
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+    ) {
+      setError("Informe um e-mail vÃ¡lido.");
+      return;
+    }
+
+    try {
+      const response = await onSubmit({
+        email: normalizedEmail,
+        role,
+      });
+
+      setResult(response);
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "NÃ£o foi possÃ­vel criar o convite.",
+      );
+    }
+  }
+
+  async function copyInvitationLink() {
+    if (!result) {
+      return;
+    }
+
+    const localInvitationUrl = `${window.location.origin}/convites/${result.invitationToken}`;
+
+    await navigator.clipboard.writeText(localInvitationUrl);
+    setCopied(true);
+
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (result) {
+    const localInvitationUrl =
+      typeof window === "undefined"
+        ? result.invitationUrl
+        : `${window.location.origin}/convites/${result.invitationToken}`;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-6">
+        <section className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] p-6 sm:max-w-xl sm:rounded-[2rem] sm:p-7">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+            <Check className="size-5" />
+          </div>
+
+          <h2 className="mt-5 text-xl font-semibold text-white">
+            Convite criado
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Compartilhe o link abaixo com{" "}
+            <span className="text-zinc-300">
+              {result.invitation.email}
+            </span>
+            .
+          </p>
+
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
+            <p className="break-all font-mono text-xs leading-6 text-zinc-400">
+              {localInvitationUrl}
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-11 rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
+            >
+              Fechar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void copyInvitationLink()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+            >
+              {copied ? (
+                <Check className="size-4" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+
+              {copied ? "Link copiado" : "Copiar link"}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-6">
+      <section className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] sm:max-w-xl sm:rounded-[2rem]">
+        <header className="flex items-start justify-between border-b border-white/10 p-5 sm:px-7">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-zinc-600">
+              NÃºcleo familiar
+            </p>
+
+            <h2 className="mt-1 text-xl font-semibold text-white">
+              Convidar familiar
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={onCancel}
+            className="flex size-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 p-5 sm:p-7"
+        >
+          <div>
+            <label
+              htmlFor="invitation-email"
+              className={labelClassName}
+            >
+              E-mail
+            </label>
+
+            <input
+              id="invitation-email"
+              type="email"
+              value={email}
+              autoFocus
+              maxLength={254}
+              disabled={submitting}
+              placeholder="familiar@exemplo.com"
+              onChange={(event) => setEmail(event.target.value)}
+              className={inputClassName}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="invitation-role"
+              className={labelClassName}
+            >
+              Papel
+            </label>
+
+            <select
+              id="invitation-role"
+              value={role}
+              disabled={submitting}
+              onChange={(event) =>
+                setRole(
+                  event.target.value as Exclude<
+                    FamilyRole,
+                    "OWNER"
+                  >,
+                )
+              }
+              className={inputClassName}
+            >
+              <option value="MEMBER">Membro</option>
+              <option value="ADMIN">Administrador</option>
+            </select>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+            <div className="flex gap-3">
+              <MailPlus className="mt-0.5 size-4 shrink-0 text-zinc-400" />
+
+              <p className="text-xs leading-6 text-zinc-500">
+                Administradores podem gerenciar convites. Membros
+                participam da Agenda, Compras e FinanÃ§as, mas nÃ£o
+                administram o nÃºcleo.
+              </p>
+            </div>
+          </div>
+
+          {error ? (
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+              {error}
+            </div>
+          ) : null}
+
+          <footer className="flex flex-col-reverse gap-2 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onCancel}
+              className="h-11 rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-6 text-sm font-semibold text-black disabled:opacity-60"
+            >
+              {submitting ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <MailPlus className="size-4" />
+              )}
+
+              Criar convite
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-invitations.tsx
+============================================================
+"use client";
+
+import { useState } from "react";
+import {
+  Ban,
+  Check,
+  Clock,
+  Copy,
+  LoaderCircle,
+  MailPlus,
+  ShieldCheck,
+  UserRound,
+  X,
+} from "lucide-react";
+
+import { FamilyInvitationForm } from "./family-invitation-form";
+
+import type {
+  CreateFamilyInvitationRequest,
+  FamilyInvitation,
+  FamilyInvitationCreated,
+  FamilyRole,
+  InvitationStatus,
+} from "@/types/family";
+
+interface FamilyInvitationsProps {
+  invitations: FamilyInvitation[];
+  currentRole: FamilyRole;
+  submitting: boolean;
+  actionId: string | null;
+  onCreate: (
+    request: CreateFamilyInvitationRequest,
+  ) => Promise<FamilyInvitationCreated>;
+  onRevoke: (invitationId: string) => Promise<void>;
+}
+
+const statusDetails: Record<
+  InvitationStatus,
+  {
+    label: string;
+    icon: typeof Clock;
+    className: string;
+  }
+> = {
+  PENDING: {
+    label: "Pendente",
+    icon: Clock,
+    className: "text-amber-300 bg-amber-400/10",
+  },
+  ACCEPTED: {
+    label: "Aceito",
+    icon: Check,
+    className: "text-emerald-300 bg-emerald-400/10",
+  },
+  DECLINED: {
+    label: "Recusado",
+    icon: X,
+    className: "text-zinc-400 bg-white/[0.06]",
+  },
+  REVOKED: {
+    label: "Revogado",
+    icon: Ban,
+    className: "text-zinc-500 bg-white/[0.04]",
+  },
+  EXPIRED: {
+    label: "Expirado",
+    icon: Clock,
+    className: "text-zinc-500 bg-white/[0.04]",
+  },
+};
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function FamilyInvitations({
+  invitations,
+  currentRole,
+  submitting,
+  actionId,
+  onCreate,
+  onRevoke,
+}: FamilyInvitationsProps) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(
+    null,
+  );
+
+  const canManage =
+    currentRole === "OWNER" || currentRole === "ADMIN";
+
+  async function copyEmail(email: string) {
+    await navigator.clipboard.writeText(email);
+    setCopiedEmail(email);
+
+    window.setTimeout(() => setCopiedEmail(null), 1800);
+  }
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-semibold text-white">
+            Convites do nÃºcleo
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            {invitations.length} enviados
+          </p>
+        </div>
+
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-black"
+          >
+            <MailPlus className="size-4" />
+            Novo convite
+          </button>
+        ) : null}
+      </div>
+
+      {!canManage ? (
+        <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
+          <ShieldCheck className="size-4 shrink-0" />
+          Apenas proprietÃ¡rios e administradores podem criar ou
+          revogar convites.
+        </div>
+      ) : null}
+
+      {invitations.length === 0 ? (
+        <div className="flex min-h-60 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+          <MailPlus className="size-8 text-zinc-600" />
+
+          <p className="mt-4 font-medium text-zinc-300">
+            Nenhum convite enviado
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {invitations.map((invitation) => {
+            const status = statusDetails[invitation.status];
+            const StatusIcon = status.icon;
+            const processing = actionId === invitation.id;
+
+            return (
+              <article
+                key={invitation.id}
+                className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-zinc-300">
+                      {invitation.role === "ADMIN" ? (
+                        <ShieldCheck className="size-5" />
+                      ) : (
+                        <UserRound className="size-5" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-white">
+                        {invitation.email}
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {invitation.role === "ADMIN"
+                          ? "Administrador"
+                          : "Membro"}
+                        {" â€¢ "}
+                        Enviado por {invitation.invitedBy.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-zinc-600">
+                        Expira em {formatDate(invitation.expiresAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <span
+                      className={[
+                        "inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-medium",
+                        status.className,
+                      ].join(" ")}
+                    >
+                      <StatusIcon className="size-3.5" />
+                      {status.label}
+                    </span>
+
+                    <button
+                      type="button"
+                      title="Copiar e-mail"
+                      onClick={() =>
+                        void copyEmail(invitation.email)
+                      }
+                      className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                    >
+                      {copiedEmail === invitation.email ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                    </button>
+
+                    {canManage &&
+                    invitation.status === "PENDING" ? (
+                      processing ? (
+                        <div className="flex size-9 items-center justify-center">
+                          <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          title="Revogar convite"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Deseja revogar o convite enviado para ${invitation.email}?`,
+                              )
+                            ) {
+                              void onRevoke(invitation.id);
+                            }
+                          }}
+                          className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
+                        >
+                          <Ban className="size-4" />
+                        </button>
+                      )
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {formOpen ? (
+        <FamilyInvitationForm
+          submitting={submitting}
+          onSubmit={onCreate}
+          onCancel={() => {
+            if (!submitting) {
+              setFormOpen(false);
+            }
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-member-card.tsx
+============================================================
+import {
+  Crown,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+
+import type {
+  FamilyMember,
+  FamilyRole,
+} from "@/types/family";
+
+interface FamilyMemberCardProps {
+  member: FamilyMember;
+}
+
+const roleDetails: Record<
+  FamilyRole,
+  {
+    label: string;
+    description: string;
+    icon: typeof UserRound;
+  }
+> = {
+  OWNER: {
+    label: "ProprietÃ¡rio",
+    description: "ResponsÃ¡vel principal pelo nÃºcleo",
+    icon: Crown,
+  },
+  ADMIN: {
+    label: "Administrador",
+    description: "Pode gerenciar membros e convites",
+    icon: ShieldCheck,
+  },
+  MEMBER: {
+    label: "Membro",
+    description: "Participa da rotina familiar",
+    icon: UserRound,
+  },
+};
+
+function formatJoinedAt(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+export function FamilyMemberCard({
+  member,
+}: FamilyMemberCardProps) {
+  const details = roleDetails[member.role];
+  const Icon = details.icon;
+
+  const initials = member.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+
+  return (
+    <article
+      className={[
+        "rounded-[1.5rem] border p-5 transition",
+        member.status === "ACTIVE"
+          ? "border-white/10 bg-white/[0.035]"
+          : "border-white/[0.06] bg-white/[0.015] opacity-60",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-sm font-semibold text-white">
+          {initials}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate font-semibold text-white">
+              {member.name}
+            </h3>
+
+            {member.currentUser ? (
+              <span className="rounded-lg border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-zinc-300">
+                VocÃª
+              </span>
+            ) : null}
+          </div>
+
+          <p className="mt-1 truncate text-sm text-zinc-500">
+            {member.email}
+          </p>
+        </div>
+
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-zinc-300">
+          <Icon className="size-4" />
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-4">
+        <div>
+          <p className="text-xs text-zinc-600">Papel</p>
+          <p className="mt-1 text-sm font-medium text-zinc-300">
+            {details.label}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-zinc-600">
+            Membro desde
+          </p>
+          <p className="mt-1 text-sm text-zinc-300">
+            {formatJoinedAt(member.joinedAt)}
+          </p>
+        </div>
+      </div>
+
+      {member.status === "INACTIVE" ? (
+        <p className="mt-4 text-xs font-medium text-amber-300">
+          Membro inativo
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-members.tsx
+============================================================
+import { Users } from "lucide-react";
+
+import { FamilyMemberCard } from "./family-member-card";
+
+import type { FamilyMember } from "@/types/family";
+
+interface FamilyMembersProps {
+  members: FamilyMember[];
+}
+
+export function FamilyMembers({
+  members,
+}: FamilyMembersProps) {
+  const activeMembers = members.filter(
+    (member) => member.status === "ACTIVE",
+  );
+
+  return (
+    <section className="space-y-5">
+      <div>
+        <h2 className="font-semibold text-white">
+          Membros do nÃºcleo
+        </h2>
+
+        <p className="mt-1 text-sm text-zinc-500">
+          {activeMembers.length}{" "}
+          {activeMembers.length === 1
+            ? "membro ativo"
+            : "membros ativos"}
+        </p>
+      </div>
+
+      {members.length === 0 ? (
+        <div className="flex min-h-60 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+          <Users className="size-8 text-zinc-600" />
+
+          <p className="mt-4 font-medium text-zinc-300">
+            Nenhum membro encontrado
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {members.map((member) => (
+            <FamilyMemberCard
+              key={member.membershipId}
+              member={member}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-navigation.tsx
+============================================================
+"use client";
+
+import {
+  LayoutDashboard,
+  MailPlus,
+  Users,
+} from "lucide-react";
+
+import type { FamilySection } from "@/types/family";
+
+interface FamilyNavigationProps {
+  activeSection: FamilySection;
+  pendingInvitations: number;
+  onSectionChange: (section: FamilySection) => void;
+}
+
+const items: Array<{
+  value: FamilySection;
+  label: string;
+  icon: typeof Users;
+}> = [
+  {
+    value: "overview",
+    label: "VisÃ£o geral",
+    icon: LayoutDashboard,
+  },
+  {
+    value: "members",
+    label: "Membros",
+    icon: Users,
+  },
+  {
+    value: "invitations",
+    label: "Convites",
+    icon: MailPlus,
+  },
+];
+
+export function FamilyNavigation({
+  activeSection,
+  pendingInvitations,
+  onSectionChange,
+}: FamilyNavigationProps) {
+  return (
+    <nav
+      aria-label="NavegaÃ§Ã£o do nÃºcleo familiar"
+      className="overflow-x-auto pb-1"
+    >
+      <div className="flex min-w-max gap-2">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active = activeSection === item.value;
+
+          return (
+            <button
+              key={item.value}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              onClick={() => onSectionChange(item.value)}
+              className={[
+                "inline-flex h-11 items-center gap-2 rounded-2xl border px-4",
+                "text-sm font-medium transition-all",
+                active
+                  ? "border-white bg-white text-black"
+                  : "border-white/10 bg-white/[0.035] text-zinc-400 hover:bg-white/[0.07] hover:text-white",
+              ].join(" ")}
+            >
+              <Icon className="size-4" />
+
+              {item.label}
+
+              {item.value === "invitations" &&
+              pendingInvitations > 0 ? (
+                <span
+                  className={[
+                    "flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    active
+                      ? "bg-black text-white"
+                      : "bg-white text-black",
+                  ].join(" ")}
+                >
+                  {pendingInvitations}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+============================================================
+import {
+  Crown,
+  MailCheck,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+
+import type {
+  FamilyInvitation,
+  FamilyMember,
+} from "@/types/family";
+
+interface FamilyOverviewProps {
+  members: FamilyMember[];
+  invitations: FamilyInvitation[];
+  onOpenMembers: () => void;
+  onOpenInvitations: () => void;
+}
+
+export function FamilyOverview({
+  members,
+  invitations,
+  onOpenMembers,
+  onOpenInvitations,
+}: FamilyOverviewProps) {
+  const currentMember = members.find(
+    (member) => member.currentUser,
+  );
+
+  const activeMembers = members.filter(
+    (member) => member.status === "ACTIVE",
+  );
+
+  const pendingInvitations = invitations.filter(
+    (invitation) => invitation.status === "PENDING",
+  );
+
+  const owner = members.find(
+    (member) => member.role === "OWNER",
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-zinc-500">
+                Membros ativos
+              </p>
+              <p className="mt-3 text-2xl font-semibold text-white">
+                {activeMembers.length}
+              </p>
+            </div>
+
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+              <Users className="size-5" />
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-zinc-500">
+                Convites pendentes
+              </p>
+              <p className="mt-3 text-2xl font-semibold text-white">
+                {pendingInvitations.length}
+              </p>
+            </div>
+
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+              <MailCheck className="size-5" />
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <p className="text-sm text-zinc-500">
+                ProprietÃƒÂ¡rio
+              </p>
+              <p className="mt-3 truncate text-base font-semibold text-white">
+                {owner?.name ?? "NÃƒÂ£o identificado"}
+              </p>
+            </div>
+
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white">
+              <Crown className="size-5" />
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-zinc-500">
+                Seu acesso
+              </p>
+              <p className="mt-3 text-base font-semibold text-white">
+                {currentMember?.role === "OWNER"
+                  ? "ProprietÃƒÂ¡rio"
+                  : currentMember?.role === "ADMIN"
+                    ? "Administrador"
+                    : "Membro"}
+              </p>
+            </div>
+
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-white/10 text-white">
+              <ShieldCheck className="size-5" />
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <button
+          type="button"
+          onClick={onOpenMembers}
+          className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-5 text-left transition hover:bg-white/[0.06]"
+        >
+          <Users className="size-5 text-zinc-300" />
+
+          <h2 className="mt-5 font-semibold text-white">
+            Pessoas da famÃƒÂ­lia
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Veja quem participa do nÃƒÂºcleo e o nÃƒÂ­vel de acesso
+            de cada pessoa.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenInvitations}
+          className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-5 text-left transition hover:bg-white/[0.06]"
+        >
+          <MailCheck className="size-5 text-zinc-300" />
+
+          <h2 className="mt-5 font-semibold text-white">
+            Convites
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Convide familiares e acompanhe as respostas aos
+            convites enviados.
+          </p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-page.tsx
+============================================================
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  LoaderCircle,
+  MailPlus,
+  RefreshCw,
+} from "lucide-react";
+
+import { FamilyInvitations } from "./family-invitations";
+import { FamilyMembers } from "./family-members";
+import { FamilyNavigation } from "./family-navigation";
+import { FamilyOverview } from "./family-overview";
+import { familyService } from "./family-service";
+
+import type {
+  CreateFamilyInvitationRequest,
+  FamilyInvitation,
+  FamilyInvitationCreated,
+  FamilyMember,
+  FamilySection,
+} from "@/types/family";
+
+export function FamilyPage() {
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [invitations, setInvitations] = useState<
+    FamilyInvitation[]
+  >([]);
+
+  const [activeSection, setActiveSection] =
+    useState<FamilySection>("overview");
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentMember = useMemo(
+    () => members.find((member) => member.currentUser),
+    [members],
+  );
+
+  const pendingInvitations = useMemo(
+    () =>
+      invitations.filter(
+        (invitation) => invitation.status === "PENDING",
+      ).length,
+    [invitations],
+  );
+
+  const loadFamily = useCallback(
+    async (background = false) => {
+      if (background) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      setError(null);
+
+      try {
+        const [memberResult, invitationResult] =
+          await Promise.all([
+            familyService.members.list(),
+            familyService.invitations.list(),
+          ]);
+
+        setMembers(memberResult);
+        setInvitations(invitationResult);
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "NÃ£o foi possÃ­vel carregar o nÃºcleo familiar.",
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void loadFamily();
+  }, [loadFamily]);
+
+  async function createInvitation(
+    request: CreateFamilyInvitationRequest,
+  ): Promise<FamilyInvitationCreated> {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response =
+        await familyService.invitations.create(request);
+
+      setInvitations((current) => [
+        response.invitation,
+        ...current,
+      ]);
+
+      return response;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function revokeInvitation(invitationId: string) {
+    setActionId(invitationId);
+    setError(null);
+
+    try {
+      await familyService.invitations.revoke(invitationId);
+      await loadFamily(true);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃ£o foi possÃ­vel revogar o convite.",
+      );
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-[1500px] space-y-6 pb-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+            <span className="size-1.5 rounded-full bg-white" />
+            Central familiar
+          </div>
+
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            FamÃ­lia
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+            Pessoas, acessos e convites do seu nÃºcleo familiar.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={refreshing}
+          onClick={() => void loadFamily(true)}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.06] disabled:opacity-50"
+        >
+          <RefreshCw
+            className={[
+              "size-4",
+              refreshing ? "animate-spin" : "",
+            ].join(" ")}
+          />
+          Atualizar
+        </button>
+      </header>
+
+      <FamilyNavigation
+        activeSection={activeSection}
+        pendingInvitations={pendingInvitations}
+        onSectionChange={setActiveSection}
+      />
+
+      {error ? (
+        <div className="flex gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+          <AlertCircle className="size-4 shrink-0" />
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="flex min-h-72 items-center justify-center rounded-[1.75rem] border border-white/10 bg-white/[0.025]">
+          <LoaderCircle className="size-7 animate-spin text-zinc-500" />
+        </div>
+      ) : null}
+
+      {!loading && !currentMember ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 p-6 text-center">
+          <MailPlus className="size-8 text-zinc-600" />
+
+          <p className="mt-4 font-medium text-zinc-300">
+            NÃ£o foi possÃ­vel identificar sua participaÃ§Ã£o
+          </p>
+
+          <p className="mt-2 text-sm text-zinc-600">
+            Atualize a pÃ¡gina ou entre novamente na aplicaÃ§Ã£o.
+          </p>
+        </div>
+      ) : null}
+
+      {!loading && currentMember ? (
+        <>
+          {activeSection === "overview" ? (
+            <FamilyOverview
+              members={members}
+              invitations={invitations}
+              onOpenMembers={() =>
+                setActiveSection("members")
+              }
+              onOpenInvitations={() =>
+                setActiveSection("invitations")
+              }
+            />
+          ) : null}
+
+          {activeSection === "members" ? (
+            <FamilyMembers members={members} />
+          ) : null}
+
+          {activeSection === "invitations" ? (
+            <FamilyInvitations
+              invitations={invitations}
+              currentRole={currentMember.role}
+              submitting={submitting}
+              actionId={actionId}
+              onCreate={createInvitation}
+              onRevoke={revokeInvitation}
+            />
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-service.ts
+============================================================
+import { apiRequest } from "@/lib/api/api-client";
+
+import type {
+  CreateFamilyInvitationRequest,
+  FamilyInvitation,
+  FamilyInvitationCreated,
+  FamilyInvitationPreview,
+  FamilyMember,
+} from "@/types/family";
+
+const FAMILY_BASE_PATH = "/api/family";
+const INVITATION_BASE_PATH = "/api/invitations";
+
+export const familyService = {
+  members: {
+    list(): Promise<FamilyMember[]> {
+      return apiRequest<FamilyMember[]>(
+        `${FAMILY_BASE_PATH}/members`,
+      );
+    },
+  },
+
+  invitations: {
+    list(): Promise<FamilyInvitation[]> {
+      return apiRequest<FamilyInvitation[]>(
+        `${FAMILY_BASE_PATH}/invitations`,
+      );
+    },
+
+    create(
+      request: CreateFamilyInvitationRequest,
+    ): Promise<FamilyInvitationCreated> {
+      return apiRequest<FamilyInvitationCreated>(
+        `${FAMILY_BASE_PATH}/invitations`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    revoke(invitationId: string): Promise<void> {
+      return apiRequest<void>(
+        `${FAMILY_BASE_PATH}/invitations/${invitationId}`,
+        {
+          method: "DELETE",
+        },
+      );
+    },
+
+    preview(token: string): Promise<FamilyInvitationPreview> {
+      return apiRequest<FamilyInvitationPreview>(
+        `${INVITATION_BASE_PATH}/${encodeURIComponent(token)}`,
+        {
+          authenticated: false,
+          retryOnUnauthorized: false,
+        },
+      );
+    },
+
+    decline(token: string): Promise<void> {
+      return apiRequest<void>(
+        `${INVITATION_BASE_PATH}/${encodeURIComponent(token)}/decline`,
+        {
+          method: "POST",
+          authenticated: false,
+          retryOnUnauthorized: false,
+        },
+      );
+    },
+  },
+};
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+============================================================
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  Check,
+  Clock,
+  LoaderCircle,
+  ShieldCheck,
+  UserRound,
+  X,
+} from "lucide-react";
+
+import { familyService } from "./family-service";
+
+import type { FamilyInvitationPreview } from "@/types/family";
+
+interface InvitationPreviewProps {
+  token: string;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function InvitationPreview({
+  token,
+}: InvitationPreviewProps) {
+  const [invitation, setInvitation] =
+    useState<FamilyInvitationPreview | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [declining, setDeclining] = useState(false);
+  const [declined, setDeclined] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInvitation() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response =
+          await familyService.invitations.preview(token);
+
+        if (active) {
+          setInvitation(response);
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "NÃƒÂ£o foi possÃƒÂ­vel carregar o convite.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInvitation();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  async function declineInvitation() {
+    const confirmed = window.confirm(
+      "Deseja realmente recusar este convite?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeclining(true);
+    setError(null);
+
+    try {
+      await familyService.invitations.decline(token);
+      setDeclined(true);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃƒÂ£o foi possÃƒÂ­vel recusar o convite.",
+      );
+    } finally {
+      setDeclining(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-black">
+        <LoaderCircle className="size-7 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
+
+  if (error || !invitation) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-black p-5">
+        <section className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center">
+          <AlertCircle className="mx-auto size-9 text-rose-300" />
+
+          <h1 className="mt-5 text-xl font-semibold text-white">
+            Convite indisponÃƒÂ­vel
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-zinc-500">
+            {error ??
+              "Este convite nÃƒÂ£o pÃƒÂ´de ser encontrado."}
+          </p>
+
+          <Link
+            href="/login"
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+          >
+            Ir para o login
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const invalid =
+    declined || invitation.status !== "PENDING";
+
+  const roleLabel =
+    invitation.role === "ADMIN"
+      ? "Administrador"
+      : "Membro";
+
+  const RoleIcon =
+    invitation.role === "ADMIN"
+      ? ShieldCheck
+      : UserRound;
+
+  return (
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-black p-5">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]" />
+
+      <section className="relative w-full max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+        <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-white">
+          {invalid ? (
+            <X className="size-5" />
+          ) : (
+            <Check className="size-5" />
+          )}
+        </div>
+
+        <p className="mt-6 text-xs font-medium uppercase tracking-[0.2em] text-zinc-600">
+          Convite para o NÃƒÂºcleo
+        </p>
+
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+          {invalid
+            ? "Este convite nÃƒÂ£o estÃƒÂ¡ mais disponÃƒÂ­vel"
+            : `VocÃƒÂª foi convidado para ${invitation.familyName}`}
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-zinc-500">
+          {invalid
+            ? "O convite pode ter sido aceito, recusado, revogado ou expirado."
+            : `${invitation.invitedByName} convidou ${invitation.maskedEmail} para participar da central familiar.`}
+        </p>
+
+        {!invalid ? (
+          <div className="mt-6 space-y-3 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-3">
+              <RoleIcon className="size-4 text-zinc-400" />
+
+              <div>
+                <p className="text-xs text-zinc-600">
+                  Papel no nÃƒÂºcleo
+                </p>
+                <p className="mt-0.5 text-sm text-zinc-300">
+                  {roleLabel}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Clock className="size-4 text-zinc-400" />
+
+              <div>
+                <p className="text-xs text-zinc-600">
+                  VÃƒÂ¡lido atÃƒÂ©
+                </p>
+                <p className="mt-0.5 text-sm text-zinc-300">
+                  {formatDate(invitation.expiresAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-7 flex flex-col gap-2">
+          {!invalid ? (
+            <>
+              <Link
+                href={`/cadastro?convite=${encodeURIComponent(token)}`}
+                className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+              >
+                Criar conta e participar
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
+              >
+                JÃƒÂ¡ tenho uma conta
+              </Link>
+
+              <button
+                type="button"
+                disabled={declining}
+                onClick={() => void declineInvitation()}
+                className="inline-flex h-11 items-center justify-center gap-2 text-sm text-zinc-600 hover:text-zinc-300 disabled:opacity-50"
+              >
+                {declining ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : null}
+                Recusar convite
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+            >
+              Ir para o login
+            </Link>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+============================================================
+"use client";
+
+import {
+  Clock3,
+  Crown,
+  House,
+  LoaderCircle,
+  LockKeyhole,
+  Save,
+} from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+
+import type {
+  FamilyRole,
+  FamilySettings as FamilySettingsData,
+  UpdateFamilySettingsRequest,
+} from "@/types/settings";
+
+interface FamilySettingsProps {
+  settings: FamilySettingsData | null;
+  loading?: boolean;
+  onSave: (
+    request: UpdateFamilySettingsRequest,
+  ) => Promise<void>;
+}
+
+const supportedTimeZones = [
+  {
+    value: "America/Sao_Paulo",
+    label: "BrasÃ­lia â€” SÃ£o Paulo",
+  },
+  {
+    value: "America/Manaus",
+    label: "Amazonas â€” Manaus",
+  },
+  {
+    value: "America/Cuiaba",
+    label: "Mato Grosso â€” CuiabÃ¡",
+  },
+  {
+    value: "America/Rio_Branco",
+    label: "Acre â€” Rio Branco",
+  },
+  {
+    value: "America/Fortaleza",
+    label: "Nordeste â€” Fortaleza",
+  },
+  {
+    value: "America/Recife",
+    label: "Nordeste â€” Recife",
+  },
+  {
+    value: "America/Bahia",
+    label: "Bahia â€” Salvador",
+  },
+  {
+    value: "America/Belem",
+    label: "ParÃ¡ â€” BelÃ©m",
+  },
+  {
+    value: "UTC",
+    label: "UTC â€” Tempo Universal",
+  },
+];
+
+function roleLabel(role: FamilyRole): string {
+  switch (role) {
+    case "OWNER":
+      return "ProprietÃ¡rio";
+
+    case "ADMIN":
+      return "Administrador";
+
+    case "MEMBER":
+      return "Membro";
+
+    default:
+      return role;
+  }
+}
+
+function FamilySettingsLoading() {
+  return (
+    <div
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <div className="h-6 w-52 animate-pulse rounded bg-white/[0.07]" />
+      <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-white/[0.04]" />
+
+      <div className="mt-7 space-y-5">
+        <div className="h-24 animate-pulse rounded-2xl bg-white/[0.035]" />
+        <div className="h-24 animate-pulse rounded-2xl bg-white/[0.035]" />
+      </div>
+    </div>
+  );
+}
+
+function getErrorMessage(
+  exception: unknown,
+): string {
+  if (exception instanceof Error) {
+    return exception.message;
+  }
+
+  return "NÃ£o foi possÃ­vel salvar as configuraÃ§Ãµes.";
+}
+
+export function FamilySettings({
+  settings,
+  loading = false,
+  onSave,
+}: FamilySettingsProps) {
+  const [name, setName] = useState("");
+  const [timeZone, setTimeZone] =
+    useState("America/Sao_Paulo");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [success, setSuccess] =
+    useState(false);
+
+  useEffect(() => {
+    if (!settings) {
+      return;
+    }
+
+    setName(settings.name);
+    setTimeZone(settings.timeZone);
+  }, [settings]);
+
+  const timeZoneOptions = useMemo(() => {
+    if (
+      !settings?.timeZone ||
+      supportedTimeZones.some(
+        (option) =>
+          option.value === settings.timeZone,
+      )
+    ) {
+      return supportedTimeZones;
+    }
+
+    return [
+      {
+        value: settings.timeZone,
+        label: settings.timeZone,
+      },
+      ...supportedTimeZones,
+    ];
+  }, [settings?.timeZone]);
+
+  const normalizedName =
+    name.trim().replace(/\s+/g, " ");
+
+  const unchanged =
+    settings !== null &&
+    normalizedName === settings.name &&
+    timeZone === settings.timeZone;
+
+  const validName =
+    normalizedName.length >= 2 &&
+    normalizedName.length <= 120;
+
+  const canSubmit =
+    Boolean(settings?.canManage) &&
+    validName &&
+    Boolean(timeZone) &&
+    !unchanged &&
+    !saving;
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      await onSave({
+        name: normalizedName,
+        timeZone,
+      });
+
+      setName(normalizedName);
+      setSuccess(true);
+    } catch (exception) {
+      setError(
+        getErrorMessage(exception),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <FamilySettingsLoading />;
+  }
+
+  if (!settings) {
+    return (
+      <div
+        className={[
+          "rounded-3xl border",
+          "border-white/10",
+          "bg-white/[0.025] p-6",
+          "text-center",
+        ].join(" ")}
+      >
+        <House
+          aria-hidden="true"
+          className="mx-auto size-8 text-zinc-600"
+        />
+
+        <h2 className="mt-4 font-semibold text-white">
+          NÃºcleo indisponÃ­vel
+        </h2>
+
+        <p className="mt-2 text-sm text-zinc-500">
+          NÃ£o foi possÃ­vel carregar as configuraÃ§Ãµes familiares.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-5",
+        "sm:p-6",
+      ].join(" ")}
+    >
+      <header
+        className={[
+          "flex flex-col gap-4",
+          "sm:flex-row sm:items-start",
+          "sm:justify-between",
+        ].join(" ")}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={[
+              "flex size-11 shrink-0",
+              "items-center justify-center",
+              "rounded-2xl border",
+              "border-white/10",
+              "bg-white/[0.04]",
+              "text-zinc-300",
+            ].join(" ")}
+          >
+            <House
+              aria-hidden="true"
+              className="size-5"
+            />
+          </div>
+
+          <div>
+            <h2 className="font-semibold text-white">
+              NÃºcleo familiar
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-zinc-500">
+              Nome e localizaÃ§Ã£o de referÃªncia da sua famÃ­lia.
+            </p>
+          </div>
+        </div>
+
+        <span
+          className={[
+            "inline-flex w-fit items-center gap-1.5",
+            "rounded-full border",
+            "border-white/10",
+            "bg-white/[0.035]",
+            "px-3 py-1.5",
+            "text-xs font-medium",
+            "text-zinc-400",
+          ].join(" ")}
+        >
+          <Crown
+            aria-hidden="true"
+            className="size-3.5"
+          />
+
+          {roleLabel(
+            settings.currentUserRole,
+          )}
+        </span>
+      </header>
+
+      {!settings.canManage && (
+        <div
+          className={[
+            "mt-5 flex items-start gap-3",
+            "rounded-2xl border",
+            "border-amber-400/15",
+            "bg-amber-400/[0.055]",
+            "px-4 py-3",
+          ].join(" ")}
+        >
+          <LockKeyhole
+            aria-hidden="true"
+            className={[
+              "mt-0.5 size-4 shrink-0",
+              "text-amber-300",
+            ].join(" ")}
+          />
+
+          <p className="text-sm leading-6 text-amber-100/70">
+            Somente o proprietÃ¡rio ou um administrador pode
+            alterar estas configuraÃ§Ãµes.
+          </p>
+        </div>
+      )}
+
+      <fieldset
+        disabled={
+          !settings.canManage || saving
+        }
+        className={[
+          "mt-7 space-y-5",
+          !settings.canManage
+            ? "opacity-55"
+            : "",
+        ].join(" ")}
+      >
+        <div>
+          <label
+            htmlFor="family-settings-name"
+            className="text-sm font-medium text-zinc-300"
+          >
+            Nome do nÃºcleo
+          </label>
+
+          <div className="relative mt-2">
+            <House
+              aria-hidden="true"
+              className={[
+                "pointer-events-none absolute",
+                "left-4 top-1/2 size-4",
+                "-translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <input
+              id="family-settings-name"
+              type="text"
+              value={name}
+              minLength={2}
+              maxLength={120}
+              required
+              onChange={(event) => {
+                setName(event.target.value);
+                setError(null);
+                setSuccess(false);
+              }}
+              className={[
+                "min-h-12 w-full",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-black/25",
+                "py-3 pl-11 pr-4",
+                "text-sm text-white",
+                "outline-none transition",
+                "placeholder:text-zinc-700",
+                "focus:border-white/30",
+                "focus:bg-white/[0.035]",
+                "disabled:cursor-not-allowed",
+              ].join(" ")}
+              placeholder="Nome da sua famÃ­lia"
+            />
+          </div>
+
+          <div className="mt-2 flex justify-between gap-3">
+            <p className="text-xs text-zinc-600">
+              Entre 2 e 120 caracteres.
+            </p>
+
+            <p
+              className={[
+                "text-xs",
+                name.length > 120
+                  ? "text-red-300"
+                  : "text-zinc-700",
+              ].join(" ")}
+            >
+              {name.length}/120
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="family-settings-time-zone"
+            className="text-sm font-medium text-zinc-300"
+          >
+            Fuso horÃ¡rio
+          </label>
+
+          <div className="relative mt-2">
+            <Clock3
+              aria-hidden="true"
+              className={[
+                "pointer-events-none absolute",
+                "left-4 top-1/2 size-4",
+                "-translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <select
+              id="family-settings-time-zone"
+              value={timeZone}
+              required
+              onChange={(event) => {
+                setTimeZone(
+                  event.target.value,
+                );
+
+                setError(null);
+                setSuccess(false);
+              }}
+              className={[
+                "min-h-12 w-full",
+                "appearance-none",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-black py-3",
+                "pl-11 pr-10",
+                "text-sm text-white",
+                "outline-none transition",
+                "focus:border-white/30",
+                "disabled:cursor-not-allowed",
+              ].join(" ")}
+            >
+              {timeZoneOptions.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+          <p className="mt-2 text-xs leading-5 text-zinc-600">
+            Usado nos horÃ¡rios da agenda, lembretes e vencimentos.
+          </p>
+        </div>
+      </fieldset>
+
+      {error && (
+        <div
+          role="alert"
+          className={[
+            "mt-5 rounded-2xl border",
+            "border-red-400/20",
+            "bg-red-400/[0.07]",
+            "px-4 py-3",
+            "text-sm text-red-200",
+          ].join(" ")}
+        >
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div
+          role="status"
+          className={[
+            "mt-5 rounded-2xl border",
+            "border-emerald-400/20",
+            "bg-emerald-400/[0.07]",
+            "px-4 py-3",
+            "text-sm text-emerald-200",
+          ].join(" ")}
+        >
+          ConfiguraÃ§Ãµes atualizadas com sucesso.
+        </div>
+      )}
+
+      {settings.canManage && (
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className={[
+            "mt-6 inline-flex min-h-11",
+            "w-full items-center",
+            "justify-center gap-2",
+            "rounded-2xl bg-white",
+            "px-4 py-3",
+            "text-sm font-semibold text-black",
+            "transition hover:bg-zinc-200",
+            "disabled:cursor-not-allowed",
+            "disabled:opacity-40",
+            "sm:w-auto sm:min-w-52",
+          ].join(" ")}
+        >
+          {saving ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin"
+            />
+          ) : (
+            <Save
+              aria-hidden="true"
+              className="size-4"
+            />
+          )}
+
+          {saving
+            ? "Salvando..."
+            : "Salvar alteraÃ§Ãµes"}
+        </button>
+      )}
+    </form>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\types\family.ts
+============================================================
+export type FamilyRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export type MembershipStatus = "ACTIVE" | "INACTIVE";
+
+export type InvitationStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "DECLINED"
+  | "REVOKED"
+  | "EXPIRED";
+
+export interface FamilyMember {
+  membershipId: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: FamilyRole;
+  status: MembershipStatus;
+  joinedAt: string;
+  currentUser: boolean;
+}
+
+export interface InvitationAuthor {
+  id: string;
+  name: string;
+}
+
+export interface FamilyInvitation {
+  id: string;
+  email: string;
+  role: FamilyRole;
+  status: InvitationStatus;
+  expiresAt: string;
+  respondedAt: string | null;
+  createdAt: string;
+  invitedBy: InvitationAuthor;
+}
+
+export interface CreateFamilyInvitationRequest {
+  email: string;
+  role: FamilyRole;
+}
+
+export interface FamilyInvitationCreated {
+  invitation: FamilyInvitation;
+  invitationToken: string;
+  invitationUrl: string;
+}
+
+export interface FamilyInvitationPreview {
+  invitationId: string;
+  familyName: string;
+  maskedEmail: string;
+  role: FamilyRole;
+  status: InvitationStatus;
+  invitedByName: string;
+  expiresAt: string;
+}
+
+export type FamilySection =
+  | "overview"
+  | "members"
+  | "invitations";

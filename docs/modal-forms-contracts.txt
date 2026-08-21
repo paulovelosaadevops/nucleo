@@ -1,0 +1,1353 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/api/api-client";
+import { getErrorMessage } from "@/lib/api/api-error";
+import { cn } from "@/lib/cn";
+import type {
+  AgendaCategory,
+  AgendaDayOfWeek,
+  CreateAgendaEventRequest,
+  RecurrenceFrequency,
+} from "@/types/agenda";
+import {
+  Bell,
+  CalendarDays,
+  MapPin,
+  Repeat2,
+  UserRound,
+  X,
+} from "lucide-react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+
+interface FamilyMemberOption {
+  membershipId: string;
+  name: string;
+  status: string;
+}
+
+interface AgendaEventFormProps {
+  open: boolean;
+  initialDate: string;
+  loading: boolean;
+  onClose: () => void;
+  onCreate: (
+    request: CreateAgendaEventRequest,
+  ) => Promise<unknown>;
+}
+
+const categories: Array<{
+  value: AgendaCategory;
+  label: string;
+}> = [
+  { value: "APPOINTMENT", label: "Compromisso" },
+  { value: "HEALTH", label: "SaÃºde" },
+  { value: "SCHOOL", label: "Escola" },
+  { value: "FAMILY", label: "FamÃ­lia" },
+  { value: "PERSONAL", label: "Pessoal" },
+  { value: "BIRTHDAY", label: "AniversÃ¡rio" },
+  { value: "TASK", label: "Tarefa" },
+  { value: "OTHER", label: "Outro" },
+];
+
+const recurrenceOptions: Array<{
+  value: RecurrenceFrequency;
+  label: string;
+}> = [
+  { value: "NONE", label: "NÃ£o repetir" },
+  { value: "DAILY", label: "Diariamente" },
+  { value: "WEEKLY", label: "Semanalmente" },
+  { value: "MONTHLY", label: "Mensalmente" },
+  { value: "YEARLY", label: "Anualmente" },
+];
+
+const weekDays: Array<{
+  value: AgendaDayOfWeek;
+  label: string;
+}> = [
+  { value: "MONDAY", label: "S" },
+  { value: "TUESDAY", label: "T" },
+  { value: "WEDNESDAY", label: "Q" },
+  { value: "THURSDAY", label: "Q" },
+  { value: "FRIDAY", label: "S" },
+  { value: "SATURDAY", label: "S" },
+  { value: "SUNDAY", label: "D" },
+];
+
+const reminderOptions = [
+  { value: 0, label: "No horÃ¡rio" },
+  { value: 10, label: "10 minutos antes" },
+  { value: 30, label: "30 minutos antes" },
+  { value: 60, label: "1 hora antes" },
+  { value: 1440, label: "1 dia antes" },
+];
+
+function toIsoDateTime(
+  date: string,
+  time: string,
+): string {
+  return new Date(
+    `${date}T${time}:00`,
+  ).toISOString();
+}
+
+export function AgendaEventForm({
+  open,
+  initialDate,
+  loading,
+  onClose,
+  onCreate,
+}: AgendaEventFormProps) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] =
+    useState("");
+  const [category, setCategory] =
+    useState<AgendaCategory>("APPOINTMENT");
+  const [location, setLocation] =
+    useState("");
+  const [allDay, setAllDay] =
+    useState(false);
+  const [startDate, setStartDate] =
+    useState(initialDate);
+  const [startTime, setStartTime] =
+    useState("09:00");
+  const [endDate, setEndDate] =
+    useState(initialDate);
+  const [endTime, setEndTime] =
+    useState("10:00");
+  const [assignedMembershipId, setAssignedMembershipId] =
+    useState("");
+  const [recurrence, setRecurrence] =
+    useState<RecurrenceFrequency>("NONE");
+  const [recurrenceInterval, setRecurrenceInterval] =
+    useState("1");
+  const [recurrenceCount, setRecurrenceCount] =
+    useState("");
+  const [selectedDays, setSelectedDays] =
+    useState<AgendaDayOfWeek[]>([]);
+  const [reminders, setReminders] =
+    useState<number[]>([30]);
+  const [members, setMembers] =
+    useState<FamilyMemberOption[]>([]);
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setStartDate(initialDate);
+    setEndDate(initialDate);
+
+    void apiRequest<FamilyMemberOption[]>(
+      "/api/family/members",
+    )
+      .then((response) => {
+        setMembers(
+          response.filter(
+            (member) =>
+              member.status === "ACTIVE",
+          ),
+        );
+      })
+      .catch(() => {
+        setMembers([]);
+      });
+  }, [initialDate, open]);
+
+  function reset() {
+    setTitle("");
+    setDescription("");
+    setCategory("APPOINTMENT");
+    setLocation("");
+    setAllDay(false);
+    setStartTime("09:00");
+    setEndTime("10:00");
+    setAssignedMembershipId("");
+    setRecurrence("NONE");
+    setRecurrenceInterval("1");
+    setRecurrenceCount("");
+    setSelectedDays([]);
+    setReminders([30]);
+    setFormError(null);
+  }
+
+  function handleClose() {
+    if (loading) {
+      return;
+    }
+
+    reset();
+    onClose();
+  }
+
+  function toggleDay(day: AgendaDayOfWeek) {
+    setSelectedDays((current) =>
+      current.includes(day)
+        ? current.filter(
+            (currentDay) =>
+              currentDay !== day,
+          )
+        : [...current, day],
+    );
+  }
+
+  function toggleReminder(value: number) {
+    setReminders((current) =>
+      current.includes(value)
+        ? current.filter(
+            (reminder) =>
+              reminder !== value,
+          )
+        : [...current, value].sort(
+            (left, right) => left - right,
+          ),
+    );
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setFormError(null);
+
+    const normalizedTitle =
+      title.trim().replace(/\s+/g, " ");
+
+    if (normalizedTitle.length < 2) {
+      setFormError(
+        "Informe um tÃ­tulo com pelo menos 2 caracteres.",
+      );
+      return;
+    }
+
+    const startsAt = allDay
+      ? toIsoDateTime(startDate, "00:00")
+      : toIsoDateTime(startDate, startTime);
+
+    const endsAt = allDay
+      ? toIsoDateTime(endDate, "23:59")
+      : toIsoDateTime(endDate, endTime);
+
+    if (
+      new Date(endsAt).getTime() <
+      new Date(startsAt).getTime()
+    ) {
+      setFormError(
+        "O tÃ©rmino nÃ£o pode ser anterior ao inÃ­cio.",
+      );
+      return;
+    }
+
+    if (
+      recurrence === "WEEKLY" &&
+      selectedDays.length === 0
+    ) {
+      setFormError(
+        "Selecione pelo menos um dia da semana.",
+      );
+      return;
+    }
+
+    const interval =
+      Number(recurrenceInterval);
+
+    if (
+      recurrence !== "NONE" &&
+      (
+        !Number.isInteger(interval) ||
+        interval < 1 ||
+        interval > 365
+      )
+    ) {
+      setFormError(
+        "Informe um intervalo de recorrÃªncia vÃ¡lido.",
+      );
+      return;
+    }
+
+    try {
+      await onCreate({
+        title: normalizedTitle,
+        description:
+          description.trim() || undefined,
+        category,
+        location:
+          location.trim() || undefined,
+        allDay,
+        startsAt,
+        endsAt,
+        assignedToMembershipId:
+          assignedMembershipId || undefined,
+        recurrence:
+          recurrence === "NONE"
+            ? undefined
+            : {
+                frequency: recurrence,
+                interval,
+                daysOfWeek:
+                  recurrence === "WEEKLY"
+                    ? selectedDays
+                    : undefined,
+                count: recurrenceCount
+                  ? Number(recurrenceCount)
+                  : undefined,
+              },
+        remindersInMinutes: reminders,
+      });
+
+      reset();
+      onClose();
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    }
+  }
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="agenda-form-title"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center sm:p-5"
+    >
+      <button
+        type="button"
+        aria-label="Fechar formulÃ¡rio"
+        className="absolute inset-0"
+        onClick={handleClose}
+      />
+
+      <form
+        onSubmit={handleSubmit}
+        className="relative z-10 max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[1.75rem] border border-white/10 bg-[#0b0b0c] p-5 shadow-2xl sm:rounded-[1.75rem] sm:p-7"
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-600">
+              Agenda familiar
+            </p>
+
+            <h2
+              id="agenda-form-title"
+              className="mt-1 text-xl font-semibold text-white"
+            >
+              Novo compromisso
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-sm text-red-200"
+          >
+            {formError}
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-4">
+          <Input
+            label="TÃ­tulo"
+            placeholder="Ex.: Consulta do Bernardo"
+            maxLength={160}
+            value={title}
+            onChange={(event) =>
+              setTitle(event.target.value)
+            }
+          />
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-zinc-300">
+              DescriÃ§Ã£o
+            </label>
+
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={description}
+              onChange={(event) =>
+                setDescription(
+                  event.target.value,
+                )
+              }
+              placeholder="InformaÃ§Ãµes importantes"
+              className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-white/30"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Categoria"
+              icon={<CalendarDays className="h-4 w-4" />}
+              value={category}
+              onChange={(value) =>
+                setCategory(
+                  value as AgendaCategory,
+                )
+              }
+              options={categories}
+            />
+
+            <Input
+              label="Local"
+              placeholder="Opcional"
+              maxLength={255}
+              value={location}
+              leadingIcon={
+                <MapPin className="h-4 w-4" />
+              }
+              onChange={(event) =>
+                setLocation(
+                  event.target.value,
+                )
+              }
+            />
+          </div>
+
+          <label className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">
+                Dia inteiro
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-600">
+                O compromisso ocupa todo o dia
+              </p>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(event) =>
+                setAllDay(
+                  event.target.checked,
+                )
+              }
+              className="h-5 w-5 accent-white"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                label="Data inicial"
+                type="date"
+                value={startDate}
+                onChange={(event) => {
+                  setStartDate(
+                    event.target.value,
+                  );
+
+                  if (
+                    endDate <
+                    event.target.value
+                  ) {
+                    setEndDate(
+                      event.target.value,
+                    );
+                  }
+                }}
+              />
+
+              {!allDay && (
+                <Input
+                  label="HorÃ¡rio"
+                  type="time"
+                  value={startTime}
+                  onChange={(event) =>
+                    setStartTime(
+                      event.target.value,
+                    )
+                  }
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                label="Data final"
+                type="date"
+                min={startDate}
+                value={endDate}
+                onChange={(event) =>
+                  setEndDate(
+                    event.target.value,
+                  )
+                }
+              />
+
+              {!allDay && (
+                <Input
+                  label="HorÃ¡rio"
+                  type="time"
+                  value={endTime}
+                  onChange={(event) =>
+                    setEndTime(
+                      event.target.value,
+                    )
+                  }
+                />
+              )}
+            </div>
+          </div>
+
+          {members.length > 0 && (
+            <SelectField
+              label="ResponsÃ¡vel"
+              icon={<UserRound className="h-4 w-4" />}
+              value={assignedMembershipId}
+              onChange={setAssignedMembershipId}
+              options={[
+                {
+                  value: "",
+                  label: "Sem responsÃ¡vel",
+                },
+                ...members.map((member) => ({
+                  value:
+                    member.membershipId,
+                  label: member.name,
+                })),
+              ]}
+            />
+          )}
+
+          <SelectField
+            label="RecorrÃªncia"
+            icon={<Repeat2 className="h-4 w-4" />}
+            value={recurrence}
+            onChange={(value) =>
+              setRecurrence(
+                value as RecurrenceFrequency,
+              )
+            }
+            options={recurrenceOptions}
+          />
+
+          {recurrence !== "NONE" && (
+            <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Repetir a cada"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={recurrenceInterval}
+                  onChange={(event) =>
+                    setRecurrenceInterval(
+                      event.target.value,
+                    )
+                  }
+                />
+
+                <Input
+                  label="Quantidade"
+                  type="number"
+                  min={1}
+                  max={500}
+                  placeholder="Sem limite definido"
+                  value={recurrenceCount}
+                  onChange={(event) =>
+                    setRecurrenceCount(
+                      event.target.value,
+                    )
+                  }
+                />
+              </div>
+
+              {recurrence === "WEEKLY" && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium text-zinc-300">
+                    Dias da semana
+                  </p>
+
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {weekDays.map((day) => {
+                      const active =
+                        selectedDays.includes(
+                          day.value,
+                        );
+
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() =>
+                            toggleDay(day.value)
+                          }
+                          className={cn(
+                            "h-10 rounded-xl border text-xs font-medium transition",
+                            active
+                              ? "border-white bg-white text-black"
+                              : "border-white/[0.08] bg-white/[0.03] text-zinc-500 hover:text-white",
+                          )}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300">
+              <Bell className="h-4 w-4 text-zinc-600" />
+              Lembretes
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {reminderOptions.map((option) => {
+                const active =
+                  reminders.includes(
+                    option.value,
+                  );
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      toggleReminder(
+                        option.value,
+                      )
+                    }
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs transition",
+                      active
+                        ? "border-white/30 bg-white text-black"
+                        : "border-white/[0.08] bg-white/[0.03] text-zinc-500 hover:text-white",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-7 flex gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="large"
+            className="flex-1"
+            disabled={loading}
+            onClick={handleClose}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            type="submit"
+            size="large"
+            className="flex-1"
+            loading={loading}
+          >
+            Criar compromisso
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+interface SelectFieldProps {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  options: Array<{
+    value: string;
+    label: string;
+  }>;
+  onChange: (value: string) => void;
+}
+
+function SelectField({
+  label,
+  value,
+  icon,
+  options,
+  onChange,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-zinc-300">
+        {label}
+      </label>
+
+      <div className="relative">
+        {icon && (
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-zinc-500">
+            {icon}
+          </div>
+        )}
+
+        <select
+          value={value}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+          className={cn(
+            "h-12 w-full appearance-none rounded-2xl border border-white/10 bg-[#111113] px-4 text-sm text-white outline-none transition focus:border-white/30",
+            icon && "pl-11",
+          )}
+        >
+          {options.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+============================================================
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import { LoaderCircle, X } from "lucide-react";
+
+import type {
+  CreateFinancialTransactionRequest,
+  FinancialAccount,
+  FinancialCategory,
+  FinancialPaymentMethod,
+  FinancialTransaction,
+  FinancialTransactionStatus,
+  FinancialTransactionType,
+  UpdateFinancialTransactionRequest,
+} from "@/types/finance";
+
+type TransactionFormData =
+  | CreateFinancialTransactionRequest
+  | UpdateFinancialTransactionRequest;
+
+interface FinancialTransactionFormProps {
+  accounts: FinancialAccount[];
+  categories: FinancialCategory[];
+  transaction?: FinancialTransaction | null;
+  submitting?: boolean;
+  onSubmit: (request: TransactionFormData) => Promise<void>;
+  onCancel: () => void;
+}
+
+interface FormState {
+  accountId: string;
+  categoryId: string;
+  type: FinancialTransactionType;
+  description: string;
+  amount: string;
+  transactionDate: string;
+  dueDate: string;
+  status: FinancialTransactionStatus;
+  paymentMethod: FinancialPaymentMethod | "";
+  notes: string;
+}
+
+const paymentMethods: Array<{
+  value: FinancialPaymentMethod;
+  label: string;
+}> = [
+  { value: "PIX", label: "Pix" },
+  { value: "CASH", label: "Dinheiro" },
+  { value: "DEBIT_CARD", label: "CartÃ£o de dÃ©bito" },
+  { value: "BANK_TRANSFER", label: "TransferÃªncia bancÃ¡ria" },
+  { value: "BANK_SLIP", label: "Boleto bancÃ¡rio" },
+  { value: "DIRECT_DEBIT", label: "DÃ©bito automÃ¡tico" },
+  { value: "OTHER", label: "Outro" },
+];
+
+const inputClassName = [
+  "h-12 w-full rounded-2xl border border-white/10",
+  "bg-white/[0.04] px-4 text-sm text-white outline-none",
+  "transition placeholder:text-zinc-600",
+  "focus:border-white/25 focus:bg-white/[0.065]",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+].join(" ");
+
+const labelClassName =
+  "mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-zinc-500";
+
+function todayAsInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function createInitialState(
+  transaction?: FinancialTransaction | null,
+): FormState {
+  if (transaction) {
+    return {
+      accountId: transaction.accountId,
+      categoryId: transaction.categoryId ?? "",
+      type: transaction.type,
+      description: transaction.description,
+      amount: String(transaction.amount),
+      transactionDate: transaction.transactionDate,
+      dueDate: transaction.dueDate ?? "",
+      status: transaction.status,
+      paymentMethod: transaction.paymentMethod ?? "",
+      notes: transaction.notes ?? "",
+    };
+  }
+
+  return {
+    accountId: "",
+    categoryId: "",
+    type: "EXPENSE",
+    description: "",
+    amount: "",
+    transactionDate: todayAsInputValue(),
+    dueDate: "",
+    status: "PENDING",
+    paymentMethod: "",
+    notes: "",
+  };
+}
+
+export function FinancialTransactionForm({
+  accounts,
+  categories,
+  transaction,
+  submitting = false,
+  onSubmit,
+  onCancel,
+}: FinancialTransactionFormProps) {
+  const editing = Boolean(transaction);
+
+  const [form, setForm] = useState<FormState>(() =>
+    createInitialState(transaction),
+  );
+
+  const [error, setError] = useState<string | null>(null);
+
+  const availableAccounts = useMemo(
+    () =>
+      accounts.filter(
+        (account) =>
+          account.active || account.id === form.accountId,
+      ),
+    [accounts, form.accountId],
+  );
+
+  const availableCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) =>
+          category.type === form.type &&
+          (category.active ||
+            category.id === form.categoryId),
+      ),
+    [categories, form.categoryId, form.type],
+  );
+
+  function updateField<K extends keyof FormState>(
+    field: K,
+    value: FormState[K],
+  ) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function changeType(type: FinancialTransactionType) {
+    setForm((current) => {
+      const currentCategory = categories.find(
+        (category) => category.id === current.categoryId,
+      );
+
+      return {
+        ...current,
+        type,
+        categoryId:
+          currentCategory?.type === type
+            ? current.categoryId
+            : "",
+      };
+    });
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const description = form.description.trim();
+    const amount = Number(form.amount);
+
+    if (!form.accountId) {
+      setError("Selecione uma conta.");
+      return;
+    }
+
+    if (description.length < 2) {
+      setError(
+        "A descriÃ§Ã£o deve possuir pelo menos 2 caracteres.",
+      );
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Informe um valor maior que zero.");
+      return;
+    }
+
+    if (!form.transactionDate) {
+      setError("Informe a data do lanÃ§amento.");
+      return;
+    }
+
+    const commonRequest = {
+      accountId: form.accountId,
+      categoryId: form.categoryId || null,
+      type: form.type,
+      description,
+      amount,
+      transactionDate: form.transactionDate,
+      dueDate: form.dueDate || null,
+      paymentMethod: form.paymentMethod || null,
+      notes: form.notes.trim() || null,
+    };
+
+    try {
+      if (editing) {
+        const updateRequest: UpdateFinancialTransactionRequest =
+          commonRequest;
+
+        await onSubmit(updateRequest);
+        return;
+      }
+
+      const createRequest: CreateFinancialTransactionRequest = {
+        ...commonRequest,
+        status: form.status,
+      };
+
+      await onSubmit(createRequest);
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "NÃ£o foi possÃ­vel salvar o lanÃ§amento.",
+      );
+    }
+  }
+
+  return (
+    <div
+      role="presentation"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !submitting) {
+          onCancel();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transaction-form-title"
+        className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:max-w-2xl sm:rounded-[2rem]"
+      >
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/10 bg-[#090909]/95 px-5 py-5 backdrop-blur-xl sm:px-7">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-600">
+              FinanÃ§as
+            </p>
+
+            <h2
+              id="transaction-form-title"
+              className="mt-1 text-xl font-semibold text-white"
+            >
+              {editing
+                ? "Editar lanÃ§amento"
+                : "Novo lanÃ§amento"}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={onCancel}
+            aria-label="Fechar formulÃ¡rio"
+            className="flex size-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 p-5 sm:p-7"
+        >
+          <fieldset disabled={submitting}>
+            <legend className="sr-only">
+              Tipo do lanÃ§amento
+            </legend>
+
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-1.5">
+              <button
+                type="button"
+                onClick={() => changeType("EXPENSE")}
+                className={[
+                  "h-11 rounded-xl text-sm font-semibold transition",
+                  form.type === "EXPENSE"
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:bg-white/[0.05] hover:text-white",
+                ].join(" ")}
+              >
+                Despesa
+              </button>
+
+              <button
+                type="button"
+                onClick={() => changeType("INCOME")}
+                className={[
+                  "h-11 rounded-xl text-sm font-semibold transition",
+                  form.type === "INCOME"
+                    ? "bg-white text-black"
+                    : "text-zinc-500 hover:bg-white/[0.05] hover:text-white",
+                ].join(" ")}
+              >
+                Receita
+              </button>
+            </div>
+          </fieldset>
+
+          <div>
+            <label
+              htmlFor="transaction-description"
+              className={labelClassName}
+            >
+              DescriÃ§Ã£o
+            </label>
+
+            <input
+              id="transaction-description"
+              type="text"
+              value={form.description}
+              disabled={submitting}
+              maxLength={160}
+              autoFocus
+              placeholder={
+                form.type === "EXPENSE"
+                  ? "Ex.: Supermercado"
+                  : "Ex.: SalÃ¡rio"
+              }
+              onChange={(event) =>
+                updateField("description", event.target.value)
+              }
+              className={inputClassName}
+            />
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-amount"
+                className={labelClassName}
+              >
+                Valor
+              </label>
+
+              <input
+                id="transaction-amount"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                disabled={submitting}
+                placeholder="0,00"
+                onChange={(event) =>
+                  updateField("amount", event.target.value)
+                }
+                className={inputClassName}
+              />
+            </div>
+
+            {!editing ? (
+              <div>
+                <label
+                  htmlFor="transaction-status"
+                  className={labelClassName}
+                >
+                  SituaÃ§Ã£o inicial
+                </label>
+
+                <select
+                  id="transaction-status"
+                  value={form.status}
+                  disabled={submitting}
+                  onChange={(event) =>
+                    updateField(
+                      "status",
+                      event.target
+                        .value as FinancialTransactionStatus,
+                    )
+                  }
+                  className={inputClassName}
+                >
+                  <option value="PENDING">Pendente</option>
+                  <option value="PAID">Pago</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <span className={labelClassName}>
+                  SituaÃ§Ã£o atual
+                </span>
+
+                <div className="flex h-12 items-center rounded-2xl border border-white/10 bg-white/[0.025] px-4 text-sm text-zinc-400">
+                  {form.status === "PAID"
+                    ? "Pago"
+                    : form.status === "PENDING"
+                      ? "Pendente"
+                      : "Cancelado"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-account"
+                className={labelClassName}
+              >
+                Conta
+              </label>
+
+              <select
+                id="transaction-account"
+                value={form.accountId}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField("accountId", event.target.value)
+                }
+                className={inputClassName}
+              >
+                <option value="">Selecione uma conta</option>
+
+                {availableAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                    {!account.active ? " â€” Inativa" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="transaction-category"
+                className={labelClassName}
+              >
+                Categoria
+              </label>
+
+              <select
+                id="transaction-category"
+                value={form.categoryId}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField("categoryId", event.target.value)
+                }
+                className={inputClassName}
+              >
+                <option value="">Sem categoria</option>
+
+                {availableCategories.map((category) => (
+                  <option
+                    key={category.id}
+                    value={category.id}
+                  >
+                    {category.name}
+                    {!category.active ? " â€” Inativa" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="transaction-date"
+                className={labelClassName}
+              >
+                Data do lanÃ§amento
+              </label>
+
+              <input
+                id="transaction-date"
+                type="date"
+                value={form.transactionDate}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField(
+                    "transactionDate",
+                    event.target.value,
+                  )
+                }
+                className={inputClassName}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="transaction-due-date"
+                className={labelClassName}
+              >
+                Data de vencimento
+              </label>
+
+              <input
+                id="transaction-due-date"
+                type="date"
+                value={form.dueDate}
+                disabled={submitting}
+                onChange={(event) =>
+                  updateField("dueDate", event.target.value)
+                }
+                className={inputClassName}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="transaction-payment-method"
+              className={labelClassName}
+            >
+              Forma de pagamento
+            </label>
+
+            <select
+              id="transaction-payment-method"
+              value={form.paymentMethod}
+              disabled={submitting}
+              onChange={(event) =>
+                updateField(
+                  "paymentMethod",
+                  event.target
+                    .value as FinancialPaymentMethod | "",
+                )
+              }
+              className={inputClassName}
+            >
+              <option value="">NÃ£o informada</option>
+
+              {paymentMethods.map((method) => (
+                <option
+                  key={method.value}
+                  value={method.value}
+                >
+                  {method.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="transaction-notes"
+              className={labelClassName}
+            >
+              ObservaÃ§Ãµes
+            </label>
+
+            <textarea
+              id="transaction-notes"
+              value={form.notes}
+              disabled={submitting}
+              maxLength={1000}
+              rows={4}
+              placeholder="InformaÃ§Ãµes adicionais sobre o lanÃ§amento"
+              onChange={(event) =>
+                updateField("notes", event.target.value)
+              }
+              className={[
+                "w-full resize-none rounded-2xl border border-white/10",
+                "bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white",
+                "outline-none transition placeholder:text-zinc-600",
+                "focus:border-white/25 focus:bg-white/[0.065]",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+              ].join(" ")}
+            />
+          </div>
+
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm leading-6 text-rose-200"
+            >
+              {error}
+            </div>
+          ) : null}
+
+          <footer className="flex flex-col-reverse gap-2 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onCancel}
+              className="h-11 rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-6 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : null}
+
+              {editing
+                ? "Salvar alteraÃ§Ãµes"
+                : "Criar lanÃ§amento"}
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  );
+}

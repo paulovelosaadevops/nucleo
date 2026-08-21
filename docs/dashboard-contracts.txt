@@ -1,0 +1,583 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\AgendaOccurrenceSummaryResponse.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.AgendaCategory;
+import br.com.nucleo.api.agenda.domain.OccurrenceStatus;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record AgendaOccurrenceSummaryResponse(
+        UUID occurrenceId,
+        UUID eventId,
+        String title,
+        AgendaCategory category,
+        String location,
+        boolean allDay,
+        Instant startsAt,
+        Instant endsAt,
+        OccurrenceStatus status,
+        AssignedMember assignedTo
+) {
+
+    public record AssignedMember(
+            UUID membershipId,
+            UUID userId,
+            String name
+    ) {
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\ShoppingListSummaryResponse.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItem;
+import br.com.nucleo.api.shopping.domain.ShoppingList;
+import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+public record ShoppingListSummaryResponse(
+        UUID id,
+        String name,
+        String description,
+        ShoppingListStatus status,
+        LocalDate dueDate,
+        String createdByName,
+        long totalItems,
+        long pendingItems,
+        long purchasedItems,
+        long cancelledItems,
+        BigDecimal estimatedTotal,
+        BigDecimal actualTotal,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static ShoppingListSummaryResponse from(
+            ShoppingList shoppingList,
+            List<ShoppingItem> items
+    ) {
+        long pendingItems = items.stream()
+                .filter(ShoppingItem::isPending)
+                .count();
+
+        long purchasedItems = items.stream()
+                .filter(ShoppingItem::isPurchased)
+                .count();
+
+        long cancelledItems = items.stream()
+                .filter(ShoppingItem::isCancelled)
+                .count();
+
+        BigDecimal estimatedTotal = items.stream()
+                .filter(item -> !item.isCancelled())
+                .map(ShoppingItem::getEstimatedTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal actualTotal = items.stream()
+                .filter(ShoppingItem::isPurchased)
+                .map(ShoppingItem::getActualTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new ShoppingListSummaryResponse(
+                shoppingList.getId(),
+                shoppingList.getName(),
+                shoppingList.getDescription(),
+                shoppingList.getStatus(),
+                shoppingList.getDueDate(),
+                shoppingList.getCreatedBy().getName(),
+                items.size(),
+                pendingItems,
+                purchasedItems,
+                cancelledItems,
+                estimatedTotal,
+                actualTotal,
+                shoppingList.getCreatedAt(),
+                shoppingList.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialDashboardResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+public record FinancialDashboardResponse(
+        LocalDate from,
+        LocalDate to,
+        BigDecimal totalAccountBalance,
+        BigDecimal totalIncome,
+        BigDecimal totalExpense,
+        BigDecimal periodBalance,
+        BigDecimal pendingIncome,
+        BigDecimal pendingExpense,
+        BigDecimal overdueExpense,
+        long overdueTransactionCount,
+        List<FinancialCategorySummaryResponse> incomeByCategory,
+        List<FinancialCategorySummaryResponse> expenseByCategory
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\controller\NotificationController.java
+============================================================
+package br.com.nucleo.api.notification.controller;
+
+import br.com.nucleo.api.notification.dto.NotificationResponse;
+import br.com.nucleo.api.notification.dto.NotificationSummaryResponse;
+import br.com.nucleo.api.notification.service.NotificationService;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/notifications")
+public class NotificationController {
+
+    private final NotificationService notificationService;
+
+    public NotificationController(
+            NotificationService notificationService
+    ) {
+        this.notificationService = notificationService;
+    }
+
+    @GetMapping
+    public Page<NotificationResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "false")
+            boolean unreadOnly,
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt"
+            )
+            Pageable pageable
+    ) {
+        return notificationService.list(
+                userId(jwt),
+                unreadOnly,
+                pageable
+        );
+    }
+
+    @GetMapping("/summary")
+    public NotificationSummaryResponse summary(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return notificationService.summary(
+                userId(jwt)
+        );
+    }
+
+    @PatchMapping("/{notificationId}/read")
+    public NotificationResponse markAsRead(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        return notificationService.markAsRead(
+                userId(jwt),
+                notificationId
+        );
+    }
+
+    @PatchMapping("/{notificationId}/unread")
+    public NotificationResponse markAsUnread(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        return notificationService.markAsUnread(
+                userId(jwt),
+                notificationId
+        );
+    }
+
+    @PatchMapping("/read-all")
+    public NotificationSummaryResponse markAllAsRead(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        notificationService.markAllAsRead(
+                userId(jwt)
+        );
+
+        return notificationService.summary(
+                userId(jwt)
+        );
+    }
+
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        notificationService.delete(
+                userId(jwt),
+                notificationId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\controller\ShoppingController.java
+============================================================
+package br.com.nucleo.api.shopping.controller;
+
+import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
+import br.com.nucleo.api.shopping.dto.CreateShoppingItemRequest;
+import br.com.nucleo.api.shopping.dto.CreateShoppingListRequest;
+import br.com.nucleo.api.shopping.dto.MarkShoppingItemPurchasedRequest;
+import br.com.nucleo.api.shopping.dto.ShoppingItemResponse;
+import br.com.nucleo.api.shopping.dto.ShoppingListDetailsResponse;
+import br.com.nucleo.api.shopping.dto.ShoppingListSummaryResponse;
+import br.com.nucleo.api.shopping.dto.UpdateShoppingItemRequest;
+import br.com.nucleo.api.shopping.dto.UpdateShoppingListRequest;
+import br.com.nucleo.api.shopping.service.ShoppingService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/shopping")
+public class ShoppingController {
+
+    private final ShoppingService shoppingService;
+
+    public ShoppingController(
+            ShoppingService shoppingService
+    ) {
+        this.shoppingService = shoppingService;
+    }
+
+    @PostMapping("/lists")
+    public ResponseEntity<ShoppingListDetailsResponse> createList(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateShoppingListRequest request
+    ) {
+        ShoppingListDetailsResponse response =
+                shoppingService.createList(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/shopping/lists/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping("/lists")
+    public List<ShoppingListSummaryResponse> listLists(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false)
+            ShoppingListStatus status
+    ) {
+        return shoppingService.listLists(
+                userId(jwt),
+                status
+        );
+    }
+
+    @GetMapping("/lists/{listId}")
+    public ShoppingListDetailsResponse findListById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.findListById(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PutMapping("/lists/{listId}")
+    public ShoppingListDetailsResponse updateList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @Valid @RequestBody
+            UpdateShoppingListRequest request
+    ) {
+        return shoppingService.updateList(
+                userId(jwt),
+                listId,
+                request
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/complete")
+    public ShoppingListDetailsResponse completeList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.completeList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/reopen")
+    public ShoppingListDetailsResponse reopenList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.reopenList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/archive")
+    public ShoppingListDetailsResponse archiveList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.archiveList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @DeleteMapping("/lists/{listId}")
+    public ResponseEntity<Void> deleteList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        shoppingService.deleteList(
+                userId(jwt),
+                listId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/lists/{listId}/items")
+    public ResponseEntity<ShoppingItemResponse> createItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @Valid @RequestBody
+            CreateShoppingItemRequest request
+    ) {
+        ShoppingItemResponse response =
+                shoppingService.createItem(
+                        userId(jwt),
+                        listId,
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/shopping/lists/"
+                                        + listId
+                                        + "/items/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @PutMapping("/lists/{listId}/items/{itemId}")
+    public ShoppingItemResponse updateItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody
+            UpdateShoppingItemRequest request
+    ) {
+        return shoppingService.updateItem(
+                userId(jwt),
+                listId,
+                itemId,
+                request
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/purchase"
+    )
+    public ShoppingItemResponse markItemAsPurchased(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId,
+            @Valid
+            @RequestBody(required = false)
+            MarkShoppingItemPurchasedRequest request
+    ) {
+        return shoppingService.markItemAsPurchased(
+                userId(jwt),
+                listId,
+                itemId,
+                request
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/pending"
+    )
+    public ShoppingItemResponse markItemAsPending(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.markItemAsPending(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/cancel"
+    )
+    public ShoppingItemResponse cancelItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.cancelItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/restore"
+    )
+    public ShoppingItemResponse restoreItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.restoreItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @DeleteMapping(
+            "/lists/{listId}/items/{itemId}"
+    )
+    public ResponseEntity<Void> deleteItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        shoppingService.deleteItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialDashboardController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.FinancialDashboardResponse;
+import br.com.nucleo.api.finance.service.FinancialDashboardService;
+
+import java.time.LocalDate;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/dashboard")
+public class FinancialDashboardController {
+
+    private final FinancialDashboardService dashboardService;
+
+    public FinancialDashboardController(
+            FinancialDashboardService dashboardService
+    ) {
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping
+    public FinancialDashboardResponse getDashboard(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
+    ) {
+        return dashboardService.getDashboard(
+                userId(jwt),
+                from,
+                to
+        );
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}

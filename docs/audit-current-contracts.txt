@@ -1,0 +1,2776 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+============================================================
+import {
+  Bell,
+  CalendarDays,
+  ChevronDown,
+  CircleDollarSign,
+  Cpu,
+  Globe2,
+  House,
+  ShoppingBasket,
+  UserRound,
+} from "lucide-react";
+
+import type {
+  AuditAction,
+  AuditEvent,
+  AuditResourceType,
+} from "@/types/audit";
+
+interface AuditEventCardProps {
+  event: AuditEvent;
+}
+
+const dateFormatter = new Intl.DateTimeFormat(
+  "pt-BR",
+  {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  },
+);
+
+const actionLabels: Record<
+  AuditAction,
+  string
+> = {
+  CREATE: "Criou",
+  UPDATE: "Atualizou",
+  DELETE: "Excluiu",
+  ACTIVATE: "Ativou",
+  DEACTIVATE: "Desativou",
+  COMPLETE: "Concluiu",
+  CLOSE: "Fechou",
+  REOPEN: "Reabriu",
+  CANCEL: "Cancelou",
+  RESTORE: "Restaurou",
+  MARK_AS_PAID: "Marcou como pago",
+  MARK_AS_PENDING: "Marcou como pendente",
+  REVERSE_PAYMENT: "Estornou pagamento",
+  LOGIN: "Entrou no sistema",
+  LOGOUT: "Saiu do sistema",
+  REFRESH_TOKEN: "Renovou a sessÃ£o",
+  INVITE: "Enviou convite",
+  ACCEPT_INVITATION: "Aceitou convite",
+  DECLINE_INVITATION: "Recusou convite",
+  REVOKE_INVITATION: "Revogou convite",
+  CHANGE_ROLE: "Alterou funÃ§Ã£o",
+  MARK_AS_READ: "Marcou como lida",
+  MARK_AS_UNREAD: "Marcou como nÃ£o lida",
+  MARK_ALL_AS_READ: "Marcou todas como lidas",
+  SYSTEM_GENERATION: "Gerou automaticamente",
+};
+
+const resourceLabels: Record<
+  AuditResourceType,
+  string
+> = {
+  USER: "UsuÃ¡rio",
+  FAMILY: "NÃºcleo familiar",
+  FAMILY_MEMBERSHIP: "Membro da famÃ­lia",
+  FAMILY_INVITATION: "Convite familiar",
+  AGENDA_EVENT: "Evento da agenda",
+  AGENDA_OCCURRENCE: "OcorrÃªncia da agenda",
+  SHOPPING_LIST: "Lista de compras",
+  SHOPPING_ITEM: "Item de compra",
+  FINANCIAL_ACCOUNT: "Conta financeira",
+  FINANCIAL_CATEGORY: "Categoria financeira",
+  FINANCIAL_TRANSACTION: "TransaÃ§Ã£o financeira",
+  FINANCIAL_RECURRENCE: "RecorrÃªncia financeira",
+  FINANCIAL_BUDGET: "OrÃ§amento",
+  FINANCIAL_CREDIT_CARD: "CartÃ£o de crÃ©dito",
+  FINANCIAL_CREDIT_CARD_PURCHASE:
+    "Compra no cartÃ£o",
+  FINANCIAL_CREDIT_CARD_INVOICE:
+    "Fatura do cartÃ£o",
+  NOTIFICATION: "NotificaÃ§Ã£o",
+  NOTIFICATION_PREFERENCE:
+    "PreferÃªncia de notificaÃ§Ã£o",
+  SYSTEM: "Sistema",
+};
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Data indisponÃ­vel";
+  }
+
+  return dateFormatter.format(date);
+}
+
+function formatMetadata(
+  metadataJson: string,
+): string {
+  try {
+    const parsed = JSON.parse(
+      metadataJson,
+    );
+
+    return JSON.stringify(
+      parsed,
+      null,
+      2,
+    );
+  } catch {
+    return metadataJson;
+  }
+}
+
+function resourceIcon(
+  resourceType: AuditResourceType,
+) {
+  if (
+    resourceType === "USER" ||
+    resourceType ===
+      "FAMILY_MEMBERSHIP"
+  ) {
+    return (
+      <UserRound
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  if (
+    resourceType === "FAMILY" ||
+    resourceType ===
+      "FAMILY_INVITATION"
+  ) {
+    return (
+      <House
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  if (
+    resourceType === "AGENDA_EVENT" ||
+    resourceType ===
+      "AGENDA_OCCURRENCE"
+  ) {
+    return (
+      <CalendarDays
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  if (
+    resourceType === "SHOPPING_LIST" ||
+    resourceType === "SHOPPING_ITEM"
+  ) {
+    return (
+      <ShoppingBasket
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  if (
+    resourceType.startsWith(
+      "FINANCIAL_",
+    )
+  ) {
+    return (
+      <CircleDollarSign
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  if (
+    resourceType === "NOTIFICATION" ||
+    resourceType ===
+      "NOTIFICATION_PREFERENCE"
+  ) {
+    return (
+      <Bell
+        aria-hidden="true"
+        className="size-5"
+      />
+    );
+  }
+
+  return (
+    <Cpu
+      aria-hidden="true"
+      className="size-5"
+    />
+  );
+}
+
+export function AuditEventCard({
+  event,
+}: AuditEventCardProps) {
+  const actor =
+    event.actorName ??
+    event.actorEmail ??
+    "Sistema";
+
+  return (
+    <article
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-4",
+        "transition",
+        "hover:border-white/15",
+        "hover:bg-white/[0.04]",
+        "sm:p-5",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={[
+            "flex size-11 shrink-0",
+            "items-center justify-center",
+            "rounded-2xl border",
+            "border-white/10",
+            "bg-white/[0.04]",
+            "text-zinc-400",
+          ].join(" ")}
+        >
+          {resourceIcon(
+            event.resourceType,
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div
+            className={[
+              "flex flex-col gap-2",
+              "sm:flex-row",
+              "sm:items-start",
+              "sm:justify-between",
+            ].join(" ")}
+          >
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={[
+                    "rounded-full border",
+                    "border-white/10",
+                    "bg-white/[0.035]",
+                    "px-2.5 py-1",
+                    "text-[0.65rem]",
+                    "font-semibold uppercase",
+                    "tracking-[0.13em]",
+                    "text-zinc-400",
+                  ].join(" ")}
+                >
+                  {actionLabels[event.action]}
+                </span>
+
+                <span className="text-xs text-zinc-600">
+                  {
+                    resourceLabels[
+                      event.resourceType
+                    ]
+                  }
+                </span>
+              </div>
+
+              <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
+                {event.description}
+              </h3>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                Realizado por{" "}
+                <span className="font-medium text-zinc-300">
+                  {actor}
+                </span>
+              </p>
+            </div>
+
+            <time
+              dateTime={event.occurredAt}
+              className={[
+                "shrink-0 text-xs",
+                "text-zinc-600",
+              ].join(" ")}
+            >
+              {formatDate(event.occurredAt)}
+            </time>
+          </div>
+
+          {(event.ipAddress ||
+            event.resourceId) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {event.ipAddress && (
+                <span
+                  className={[
+                    "inline-flex items-center",
+                    "gap-1.5 rounded-full",
+                    "border border-white/[0.07]",
+                    "bg-black/20 px-2.5 py-1",
+                    "text-[0.68rem]",
+                    "text-zinc-600",
+                  ].join(" ")}
+                >
+                  <Globe2
+                    aria-hidden="true"
+                    className="size-3"
+                  />
+
+                  {event.ipAddress}
+                </span>
+              )}
+
+              {event.resourceId && (
+                <span
+                  title={event.resourceId}
+                  className={[
+                    "max-w-full truncate",
+                    "rounded-full border",
+                    "border-white/[0.07]",
+                    "bg-black/20 px-2.5 py-1",
+                    "text-[0.68rem]",
+                    "text-zinc-600",
+                  ].join(" ")}
+                >
+                  ID: {event.resourceId}
+                </span>
+              )}
+            </div>
+          )}
+
+          {event.metadataJson && (
+            <details
+              className={[
+                "group mt-4 overflow-hidden",
+                "rounded-2xl border",
+                "border-white/[0.07]",
+                "bg-black/20",
+              ].join(" ")}
+            >
+              <summary
+                className={[
+                  "flex cursor-pointer",
+                  "list-none items-center",
+                  "justify-between gap-3",
+                  "px-4 py-3",
+                  "text-xs font-medium",
+                  "text-zinc-500 transition",
+                  "hover:text-zinc-300",
+                ].join(" ")}
+              >
+                Dados tÃ©cnicos
+
+                <ChevronDown
+                  aria-hidden="true"
+                  className={[
+                    "size-4 transition",
+                    "group-open:rotate-180",
+                  ].join(" ")}
+                />
+              </summary>
+
+              <pre
+                className={[
+                  "max-h-72 overflow-auto",
+                  "border-t border-white/[0.06]",
+                  "px-4 py-3",
+                  "text-[0.7rem]",
+                  "leading-5 text-zinc-500",
+                ].join(" ")}
+              >
+                {formatMetadata(
+                  event.metadataJson,
+                )}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+============================================================
+"use client";
+
+import {
+  CalendarRange,
+  Filter,
+  RotateCcw,
+} from "lucide-react";
+
+import type {
+  AuditAction,
+  AuditResourceType,
+  AuditSearchParams,
+} from "@/types/audit";
+
+interface AuditFiltersProps {
+  filters: AuditSearchParams;
+  disabled?: boolean;
+  onChange: (
+    filters: AuditSearchParams,
+  ) => void;
+  onClear: () => void;
+}
+
+const actionOptions: Array<{
+  value: AuditAction;
+  label: string;
+}> = [
+  { value: "CREATE", label: "CriaÃ§Ã£o" },
+  { value: "UPDATE", label: "AtualizaÃ§Ã£o" },
+  { value: "DELETE", label: "ExclusÃ£o" },
+  { value: "ACTIVATE", label: "AtivaÃ§Ã£o" },
+  { value: "DEACTIVATE", label: "DesativaÃ§Ã£o" },
+  { value: "COMPLETE", label: "ConclusÃ£o" },
+  { value: "CLOSE", label: "Fechamento" },
+  { value: "REOPEN", label: "Reabertura" },
+  { value: "CANCEL", label: "Cancelamento" },
+  { value: "RESTORE", label: "RestauraÃ§Ã£o" },
+  {
+    value: "MARK_AS_PAID",
+    label: "MarcaÃ§Ã£o como pago",
+  },
+  {
+    value: "MARK_AS_PENDING",
+    label: "MarcaÃ§Ã£o como pendente",
+  },
+  {
+    value: "REVERSE_PAYMENT",
+    label: "Estorno de pagamento",
+  },
+  { value: "LOGIN", label: "Login" },
+  { value: "LOGOUT", label: "Logout" },
+  {
+    value: "REFRESH_TOKEN",
+    label: "RenovaÃ§Ã£o da sessÃ£o",
+  },
+  { value: "INVITE", label: "Convite" },
+  {
+    value: "ACCEPT_INVITATION",
+    label: "Aceite de convite",
+  },
+  {
+    value: "DECLINE_INVITATION",
+    label: "Recusa de convite",
+  },
+  {
+    value: "REVOKE_INVITATION",
+    label: "RevogaÃ§Ã£o de convite",
+  },
+  {
+    value: "CHANGE_ROLE",
+    label: "AlteraÃ§Ã£o de funÃ§Ã£o",
+  },
+  {
+    value: "MARK_AS_READ",
+    label: "MarcaÃ§Ã£o como lida",
+  },
+  {
+    value: "MARK_AS_UNREAD",
+    label: "MarcaÃ§Ã£o como nÃ£o lida",
+  },
+  {
+    value: "MARK_ALL_AS_READ",
+    label: "Leitura de todas",
+  },
+  {
+    value: "SYSTEM_GENERATION",
+    label: "GeraÃ§Ã£o automÃ¡tica",
+  },
+];
+
+const resourceOptions: Array<{
+  value: AuditResourceType;
+  label: string;
+}> = [
+  { value: "USER", label: "UsuÃ¡rio" },
+  { value: "FAMILY", label: "NÃºcleo familiar" },
+  {
+    value: "FAMILY_MEMBERSHIP",
+    label: "Membro da famÃ­lia",
+  },
+  {
+    value: "FAMILY_INVITATION",
+    label: "Convite familiar",
+  },
+  {
+    value: "AGENDA_EVENT",
+    label: "Evento da agenda",
+  },
+  {
+    value: "AGENDA_OCCURRENCE",
+    label: "OcorrÃªncia da agenda",
+  },
+  {
+    value: "SHOPPING_LIST",
+    label: "Lista de compras",
+  },
+  {
+    value: "SHOPPING_ITEM",
+    label: "Item de compra",
+  },
+  {
+    value: "FINANCIAL_ACCOUNT",
+    label: "Conta financeira",
+  },
+  {
+    value: "FINANCIAL_CATEGORY",
+    label: "Categoria financeira",
+  },
+  {
+    value: "FINANCIAL_TRANSACTION",
+    label: "TransaÃ§Ã£o financeira",
+  },
+  {
+    value: "FINANCIAL_RECURRENCE",
+    label: "RecorrÃªncia financeira",
+  },
+  {
+    value: "FINANCIAL_BUDGET",
+    label: "OrÃ§amento",
+  },
+  {
+    value: "FINANCIAL_CREDIT_CARD",
+    label: "CartÃ£o de crÃ©dito",
+  },
+  {
+    value: "FINANCIAL_CREDIT_CARD_PURCHASE",
+    label: "Compra no cartÃ£o",
+  },
+  {
+    value: "FINANCIAL_CREDIT_CARD_INVOICE",
+    label: "Fatura do cartÃ£o",
+  },
+  {
+    value: "NOTIFICATION",
+    label: "NotificaÃ§Ã£o",
+  },
+  {
+    value: "NOTIFICATION_PREFERENCE",
+    label: "PreferÃªncia de notificaÃ§Ã£o",
+  },
+  {
+    value: "SYSTEM",
+    label: "Sistema",
+  },
+];
+
+function dateInputValue(
+  value: string | undefined,
+): string {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function startOfDayIso(
+  value: string,
+): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return new Date(
+    `${value}T00:00:00`,
+  ).toISOString();
+}
+
+function endOfDayIso(
+  value: string,
+): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return new Date(
+    `${value}T23:59:59.999`,
+  ).toISOString();
+}
+
+export function AuditFilters({
+  filters,
+  disabled = false,
+  onChange,
+  onClear,
+}: AuditFiltersProps) {
+  const hasFilters = Boolean(
+    filters.action ||
+      filters.resourceType ||
+      filters.from ||
+      filters.to,
+  );
+
+  return (
+    <section
+      className={[
+        "rounded-3xl border",
+        "border-white/10",
+        "bg-white/[0.025] p-4",
+        "sm:p-5",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex flex-col gap-3",
+          "sm:flex-row sm:items-center",
+          "sm:justify-between",
+        ].join(" ")}
+      >
+        <div className="flex items-center gap-2">
+          <Filter
+            aria-hidden="true"
+            className="size-4 text-zinc-500"
+          />
+
+          <h3 className="text-sm font-semibold text-zinc-300">
+            Filtrar atividades
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          disabled={disabled || !hasFilters}
+          onClick={onClear}
+          className={[
+            "inline-flex min-h-9",
+            "w-fit items-center gap-2",
+            "rounded-full border",
+            "border-white/10",
+            "bg-white/[0.025]",
+            "px-3 py-2",
+            "text-xs font-medium",
+            "text-zinc-500 transition",
+            "hover:border-white/20",
+            "hover:text-white",
+            "disabled:cursor-not-allowed",
+            "disabled:opacity-30",
+          ].join(" ")}
+        >
+          <RotateCcw
+            aria-hidden="true"
+            className="size-3.5"
+          />
+
+          Limpar filtros
+        </button>
+      </div>
+
+      <fieldset
+        disabled={disabled}
+        className={[
+          "mt-4 grid gap-3",
+          "sm:grid-cols-2",
+          "xl:grid-cols-4",
+        ].join(" ")}
+      >
+        <div>
+          <label
+            htmlFor="audit-action"
+            className="text-xs font-medium text-zinc-500"
+          >
+            AÃ§Ã£o
+          </label>
+
+          <select
+            id="audit-action"
+            value={filters.action ?? ""}
+            onChange={(event) =>
+              onChange({
+                ...filters,
+                action:
+                  (event.target.value as AuditAction) ||
+                  undefined,
+                page: 0,
+              })
+            }
+            className={[
+              "mt-2 min-h-11 w-full",
+              "rounded-xl border",
+              "border-white/10",
+              "bg-black px-3 py-2.5",
+              "text-sm text-zinc-300",
+              "outline-none transition",
+              "focus:border-white/30",
+            ].join(" ")}
+          >
+            <option value="">
+              Todas as aÃ§Ãµes
+            </option>
+
+            {actionOptions.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+              >
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="audit-resource"
+            className="text-xs font-medium text-zinc-500"
+          >
+            Recurso
+          </label>
+
+          <select
+            id="audit-resource"
+            value={
+              filters.resourceType ?? ""
+            }
+            onChange={(event) =>
+              onChange({
+                ...filters,
+                resourceType:
+                  (event.target
+                    .value as AuditResourceType) ||
+                  undefined,
+                page: 0,
+              })
+            }
+            className={[
+              "mt-2 min-h-11 w-full",
+              "rounded-xl border",
+              "border-white/10",
+              "bg-black px-3 py-2.5",
+              "text-sm text-zinc-300",
+              "outline-none transition",
+              "focus:border-white/30",
+            ].join(" ")}
+          >
+            <option value="">
+              Todos os recursos
+            </option>
+
+            {resourceOptions.map(
+              (option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="audit-from"
+            className="text-xs font-medium text-zinc-500"
+          >
+            Data inicial
+          </label>
+
+          <div className="relative mt-2">
+            <CalendarRange
+              aria-hidden="true"
+              className={[
+                "pointer-events-none",
+                "absolute left-3 top-1/2",
+                "size-4 -translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <input
+              id="audit-from"
+              type="date"
+              value={dateInputValue(
+                filters.from,
+              )}
+              max={dateInputValue(
+                filters.to,
+              )}
+              onChange={(event) =>
+                onChange({
+                  ...filters,
+                  from: startOfDayIso(
+                    event.target.value,
+                  ),
+                  page: 0,
+                })
+              }
+              className={[
+                "min-h-11 w-full",
+                "rounded-xl border",
+                "border-white/10",
+                "bg-black py-2.5",
+                "pl-10 pr-3",
+                "text-sm text-zinc-300",
+                "outline-none transition",
+                "focus:border-white/30",
+                "[color-scheme:dark]",
+              ].join(" ")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="audit-to"
+            className="text-xs font-medium text-zinc-500"
+          >
+            Data final
+          </label>
+
+          <div className="relative mt-2">
+            <CalendarRange
+              aria-hidden="true"
+              className={[
+                "pointer-events-none",
+                "absolute left-3 top-1/2",
+                "size-4 -translate-y-1/2",
+                "text-zinc-600",
+              ].join(" ")}
+            />
+
+            <input
+              id="audit-to"
+              type="date"
+              value={dateInputValue(
+                filters.to,
+              )}
+              min={dateInputValue(
+                filters.from,
+              )}
+              onChange={(event) =>
+                onChange({
+                  ...filters,
+                  to: endOfDayIso(
+                    event.target.value,
+                  ),
+                  page: 0,
+                })
+              }
+              className={[
+                "min-h-11 w-full",
+                "rounded-xl border",
+                "border-white/10",
+                "bg-black py-2.5",
+                "pl-10 pr-3",
+                "text-sm text-zinc-300",
+                "outline-none transition",
+                "focus:border-white/30",
+                "[color-scheme:dark]",
+              ].join(" ")}
+            />
+          </div>
+        </div>
+      </fieldset>
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-history.tsx
+============================================================
+"use client";
+
+import {
+  ChevronLeft,
+  ChevronRight,
+  History,
+  LoaderCircle,
+  RefreshCw,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import { AuditEventCard } from "@/features/audit/audit-event-card";
+import { AuditFilters } from "@/features/audit/audit-filters";
+import { auditService } from "@/features/audit/audit-service";
+
+import type {
+  AuditEvent,
+  AuditPageResponse,
+  AuditSearchParams,
+} from "@/types/audit";
+
+const PAGE_SIZE = 10;
+
+const initialFilters: AuditSearchParams = {
+  page: 0,
+  size: PAGE_SIZE,
+  sort: "occurredAt,desc",
+};
+
+function getErrorMessage(
+  exception: unknown,
+): string {
+  if (exception instanceof Error) {
+    return exception.message;
+  }
+
+  return "NÃ£o foi possÃ­vel carregar o histÃ³rico de atividades.";
+}
+
+function AuditHistoryLoading() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map(
+        (_, index) => (
+          <div
+            key={index}
+            className={[
+              "h-44 animate-pulse",
+              "rounded-3xl border",
+              "border-white/10",
+              "bg-white/[0.025]",
+            ].join(" ")}
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
+function EmptyAuditHistory() {
+  return (
+    <div
+      className={[
+        "flex min-h-64 flex-col",
+        "items-center justify-center",
+        "rounded-3xl border",
+        "border-dashed border-white/10",
+        "bg-white/[0.018]",
+        "px-6 py-12 text-center",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex size-14 items-center",
+          "justify-center rounded-2xl",
+          "border border-white/10",
+          "bg-white/[0.04]",
+          "text-zinc-600",
+        ].join(" ")}
+      >
+        <History
+          aria-hidden="true"
+          className="size-6"
+        />
+      </div>
+
+      <h3 className="mt-4 font-semibold text-white">
+        Nenhuma atividade encontrada
+      </h3>
+
+      <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
+        NÃ£o existem eventos correspondentes aos filtros
+        selecionados.
+      </p>
+    </div>
+  );
+}
+
+export function AuditHistory() {
+  const [filters, setFilters] =
+    useState<AuditSearchParams>(
+      initialFilters,
+    );
+
+  const [pageData, setPageData] =
+    useState<
+      AuditPageResponse<AuditEvent> | null
+    >(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const loadEvents = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      setError(null);
+
+      try {
+        const result =
+          await auditService.search(filters);
+
+        setPageData(result);
+      } catch (exception) {
+        setError(
+          getErrorMessage(exception),
+        );
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [filters],
+  );
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+
+    try {
+      await loadEvents(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function handleFiltersChange(
+    nextFilters: AuditSearchParams,
+  ) {
+    setFilters({
+      ...nextFilters,
+      size: PAGE_SIZE,
+      sort: "occurredAt,desc",
+    });
+  }
+
+  function handleClearFilters() {
+    setFilters(initialFilters);
+  }
+
+  function changePage(
+    page: number,
+  ) {
+    setFilters((current) => ({
+      ...current,
+      page,
+    }));
+  }
+
+  const events = pageData?.content ?? [];
+  const currentPage =
+    pageData?.number ?? filters.page ?? 0;
+  const totalPages =
+    pageData?.totalPages ?? 0;
+
+  return (
+    <section className="space-y-4">
+      <div
+        className={[
+          "relative overflow-hidden",
+          "rounded-3xl border",
+          "border-white/10",
+          "bg-white/[0.025] p-5",
+          "sm:p-6",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "pointer-events-none absolute",
+            "-right-10 -top-12",
+            "size-40 rounded-full",
+            "bg-white/[0.04] blur-3xl",
+          ].join(" ")}
+        />
+
+        <div
+          className={[
+            "relative flex flex-col gap-4",
+            "sm:flex-row sm:items-center",
+            "sm:justify-between",
+          ].join(" ")}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={[
+                "flex size-11 shrink-0",
+                "items-center justify-center",
+                "rounded-2xl border",
+                "border-white/10",
+                "bg-white/[0.04]",
+                "text-zinc-300",
+              ].join(" ")}
+            >
+              <History
+                aria-hidden="true"
+                className="size-5"
+              />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-white">
+                HistÃ³rico de atividades
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-zinc-500">
+                Acompanhe alteraÃ§Ãµes e operaÃ§Ãµes realizadas
+                pelos membros do nÃºcleo.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={loading || refreshing}
+            onClick={handleRefresh}
+            className={[
+              "inline-flex min-h-10",
+              "w-fit items-center gap-2",
+              "rounded-full border",
+              "border-white/10",
+              "bg-white/[0.035]",
+              "px-4 py-2",
+              "text-sm font-medium",
+              "text-zinc-300 transition",
+              "hover:border-white/20",
+              "hover:bg-white/[0.07]",
+              "hover:text-white",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-50",
+            ].join(" ")}
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={[
+                "size-4",
+                refreshing
+                  ? "animate-spin"
+                  : "",
+              ].join(" ")}
+            />
+
+            Atualizar
+          </button>
+        </div>
+
+        {!loading && pageData && (
+          <div className="relative mt-5 flex flex-wrap gap-2">
+            <span
+              className={[
+                "rounded-full border",
+                "border-white/10",
+                "bg-black/20",
+                "px-3 py-1.5",
+                "text-xs text-zinc-500",
+              ].join(" ")}
+            >
+              {pageData.totalElements.toLocaleString(
+                "pt-BR",
+              )}{" "}
+              {pageData.totalElements === 1
+                ? "atividade"
+                : "atividades"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <AuditFilters
+        filters={filters}
+        disabled={loading}
+        onChange={handleFiltersChange}
+        onClear={handleClearFilters}
+      />
+
+      {error && (
+        <div
+          role="alert"
+          className={[
+            "rounded-2xl border",
+            "border-red-400/20",
+            "bg-red-400/[0.07]",
+            "px-4 py-3",
+            "text-sm text-red-200",
+          ].join(" ")}
+        >
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <AuditHistoryLoading />
+      ) : events.length === 0 ? (
+        <EmptyAuditHistory />
+      ) : (
+        <div className="space-y-3">
+          {events.map((event) => (
+            <AuditEventCard
+              key={event.id}
+              event={event}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <nav
+          aria-label="PaginaÃ§Ã£o das atividades"
+          className={[
+            "flex items-center",
+            "justify-between gap-3",
+            "rounded-2xl border",
+            "border-white/10",
+            "bg-white/[0.025] p-2",
+          ].join(" ")}
+        >
+          <button
+            type="button"
+            disabled={pageData?.first ?? true}
+            onClick={() =>
+              changePage(
+                Math.max(currentPage - 1, 0),
+              )
+            }
+            className={[
+              "inline-flex min-h-10",
+              "items-center gap-2",
+              "rounded-xl px-3 py-2",
+              "text-sm font-medium",
+              "text-zinc-400 transition",
+              "hover:bg-white/[0.06]",
+              "hover:text-white",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-30",
+            ].join(" ")}
+          >
+            <ChevronLeft
+              aria-hidden="true"
+              className="size-4"
+            />
+
+            <span className="hidden sm:inline">
+              Anterior
+            </span>
+          </button>
+
+          <p className="text-xs text-zinc-500">
+            PÃ¡gina{" "}
+            <span className="font-medium text-zinc-300">
+              {currentPage + 1}
+            </span>{" "}
+            de{" "}
+            <span className="font-medium text-zinc-300">
+              {Math.max(totalPages, 1)}
+            </span>
+          </p>
+
+          <button
+            type="button"
+            disabled={pageData?.last ?? true}
+            onClick={() =>
+              changePage(currentPage + 1)
+            }
+            className={[
+              "inline-flex min-h-10",
+              "items-center gap-2",
+              "rounded-xl px-3 py-2",
+              "text-sm font-medium",
+              "text-zinc-400 transition",
+              "hover:bg-white/[0.06]",
+              "hover:text-white",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-30",
+            ].join(" ")}
+          >
+            <span className="hidden sm:inline">
+              PrÃ³xima
+            </span>
+
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4"
+            />
+          </button>
+        </nav>
+      )}
+
+      {refreshing && (
+        <div
+          role="status"
+          className={[
+            "fixed bottom-24 right-5",
+            "z-50 inline-flex",
+            "items-center gap-2",
+            "rounded-full border",
+            "border-white/15",
+            "bg-black/90 px-4 py-2.5",
+            "text-xs text-zinc-300",
+            "shadow-2xl backdrop-blur-xl",
+            "lg:bottom-6",
+          ].join(" ")}
+        >
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-4 animate-spin"
+          />
+
+          Atualizando atividades
+        </div>
+      )}
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-service.ts
+============================================================
+import { apiRequest } from "@/lib/api/api-client";
+
+import type {
+  AuditEvent,
+  AuditPageResponse,
+  AuditSearchParams,
+} from "@/types/audit";
+
+const AUDIT_EVENTS_PATH =
+  "/api/audit-events";
+
+function appendOptionalParameter(
+  query: URLSearchParams,
+  name: string,
+  value: string | undefined,
+) {
+  if (value && value.trim()) {
+    query.set(name, value.trim());
+  }
+}
+
+function buildAuditQuery(
+  params: AuditSearchParams = {},
+): string {
+  const query = new URLSearchParams();
+
+  appendOptionalParameter(
+    query,
+    "actorUserId",
+    params.actorUserId,
+  );
+
+  appendOptionalParameter(
+    query,
+    "action",
+    params.action,
+  );
+
+  appendOptionalParameter(
+    query,
+    "resourceType",
+    params.resourceType,
+  );
+
+  appendOptionalParameter(
+    query,
+    "resourceId",
+    params.resourceId,
+  );
+
+  appendOptionalParameter(
+    query,
+    "from",
+    params.from,
+  );
+
+  appendOptionalParameter(
+    query,
+    "to",
+    params.to,
+  );
+
+  query.set(
+    "page",
+    String(params.page ?? 0),
+  );
+
+  query.set(
+    "size",
+    String(params.size ?? 20),
+  );
+
+  query.set(
+    "sort",
+    params.sort ?? "occurredAt,desc",
+  );
+
+  return query.toString();
+}
+
+export const auditService = {
+  search(
+    params: AuditSearchParams = {},
+  ): Promise<AuditPageResponse<AuditEvent>> {
+    const query = buildAuditQuery(params);
+
+    return apiRequest<
+      AuditPageResponse<AuditEvent>
+    >(`${AUDIT_EVENTS_PATH}?${query}`);
+  },
+};
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\types\audit.ts
+============================================================
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "ACTIVATE"
+  | "DEACTIVATE"
+  | "COMPLETE"
+  | "CLOSE"
+  | "REOPEN"
+  | "CANCEL"
+  | "RESTORE"
+  | "MARK_AS_PAID"
+  | "MARK_AS_PENDING"
+  | "REVERSE_PAYMENT"
+  | "LOGIN"
+  | "LOGOUT"
+  | "REFRESH_TOKEN"
+  | "INVITE"
+  | "ACCEPT_INVITATION"
+  | "DECLINE_INVITATION"
+  | "REVOKE_INVITATION"
+  | "CHANGE_ROLE"
+  | "MARK_AS_READ"
+  | "MARK_AS_UNREAD"
+  | "MARK_ALL_AS_READ"
+  | "SYSTEM_GENERATION";
+
+export type AuditResourceType =
+  | "USER"
+  | "FAMILY"
+  | "FAMILY_MEMBERSHIP"
+  | "FAMILY_INVITATION"
+  | "AGENDA_EVENT"
+  | "AGENDA_OCCURRENCE"
+  | "SHOPPING_LIST"
+  | "SHOPPING_ITEM"
+  | "FINANCIAL_ACCOUNT"
+  | "FINANCIAL_CATEGORY"
+  | "FINANCIAL_TRANSACTION"
+  | "FINANCIAL_RECURRENCE"
+  | "FINANCIAL_BUDGET"
+  | "FINANCIAL_CREDIT_CARD"
+  | "FINANCIAL_CREDIT_CARD_PURCHASE"
+  | "FINANCIAL_CREDIT_CARD_INVOICE"
+  | "NOTIFICATION"
+  | "NOTIFICATION_PREFERENCE"
+  | "SYSTEM";
+
+export interface AuditEvent {
+  id: string;
+  action: AuditAction;
+  resourceType: AuditResourceType;
+  resourceId: string | null;
+  description: string;
+  metadataJson: string | null;
+  actorUserId: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  occurredAt: string;
+}
+
+export interface AuditSearchParams {
+  actorUserId?: string;
+  action?: AuditAction;
+  resourceType?: AuditResourceType;
+  resourceId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface AuditPageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
+  empty: boolean;
+
+  pageable?: {
+    pageNumber: number;
+    pageSize: number;
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
+  };
+
+  sort?: {
+    sorted: boolean;
+    unsorted: boolean;
+    empty: boolean;
+  };
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\controller\AuditController.java
+============================================================
+package br.com.nucleo.api.audit.controller;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.audit.dto.AuditEventResponse;
+import br.com.nucleo.api.audit.service.AuditService;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/audit-events")
+public class AuditController {
+
+    private final AuditService auditService;
+
+    public AuditController(
+            AuditService auditService
+    ) {
+        this.auditService = auditService;
+    }
+
+    @GetMapping
+    public Page<AuditEventResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false)
+            UUID actorUserId,
+            @RequestParam(required = false)
+            AuditAction action,
+            @RequestParam(required = false)
+            AuditResourceType resourceType,
+            @RequestParam(required = false)
+            UUID resourceId,
+            @RequestParam(required = false)
+            Instant from,
+            @RequestParam(required = false)
+            Instant to,
+            @PageableDefault(
+                    size = 20,
+                    sort = "occurredAt"
+            )
+            Pageable pageable
+    ) {
+        return auditService.search(
+                userId(jwt),
+                actorUserId,
+                action,
+                resourceType,
+                resourceId,
+                from,
+                to,
+                pageable
+        );
+    }
+
+    private UUID userId(
+            Jwt jwt
+    ) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditAction.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+public enum AuditAction {
+
+    CREATE,
+    UPDATE,
+    DELETE,
+
+    ACTIVATE,
+    DEACTIVATE,
+
+    COMPLETE,
+    CLOSE,
+    REOPEN,
+    CANCEL,
+    RESTORE,
+
+    MARK_AS_PAID,
+    MARK_AS_PENDING,
+    REVERSE_PAYMENT,
+
+    LOGIN,
+    LOGOUT,
+    REFRESH_TOKEN,
+
+    INVITE,
+    ACCEPT_INVITATION,
+    DECLINE_INVITATION,
+    REVOKE_INVITATION,
+    CHANGE_ROLE,
+
+    MARK_AS_READ,
+    MARK_AS_UNREAD,
+    MARK_ALL_AS_READ,
+
+    SYSTEM_GENERATION
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditEvent.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.identity.user.domain.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "audit_events")
+public class AuditEvent {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actor_user_id")
+    private User actor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 60)
+    private AuditAction action;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resource_type", nullable = false, length = 60)
+    private AuditResourceType resourceType;
+
+    @Column(name = "resource_id")
+    private UUID resourceId;
+
+    @Column(nullable = false, length = 500)
+    private String description;
+
+    @Column(name = "metadata_json", columnDefinition = "TEXT")
+    private String metadataJson;
+
+    @Column(name = "ip_address", length = 64)
+    private String ipAddress;
+
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
+    @Column(
+            name = "occurred_at",
+            nullable = false,
+            updatable = false
+    )
+    private Instant occurredAt;
+
+    protected AuditEvent() {
+    }
+
+    private AuditEvent(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            String metadataJson,
+            String ipAddress,
+            String userAgent
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Audit family cannot be null"
+        );
+        this.actor = actor;
+        this.action = Objects.requireNonNull(
+                action,
+                "Audit action cannot be null"
+        );
+        this.resourceType = Objects.requireNonNull(
+                resourceType,
+                "Audit resource type cannot be null"
+        );
+        this.resourceId = resourceId;
+        this.description = normalizeRequiredText(
+                description,
+                "Audit description",
+                500
+        );
+        this.metadataJson = normalizeOptionalText(
+                metadataJson,
+                "Audit metadata",
+                10000
+        );
+        this.ipAddress = normalizeOptionalText(
+                ipAddress,
+                "Audit IP address",
+                64
+        );
+        this.userAgent = normalizeOptionalText(
+                userAgent,
+                "Audit user agent",
+                500
+        );
+    }
+
+    public static AuditEvent create(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            String metadataJson,
+            String ipAddress,
+            String userAgent
+    ) {
+        return new AuditEvent(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                metadataJson,
+                ipAddress,
+                userAgent
+        );
+    }
+
+    @PrePersist
+    private void onCreate() {
+        if (occurredAt == null) {
+            occurredAt = Instant.now();
+        }
+    }
+
+    private static String normalizeRequiredText(
+            String value,
+            String fieldName,
+            int maximumLength
+    ) {
+        String normalized = Objects.requireNonNull(
+                value,
+                fieldName + " cannot be null"
+        ).trim().replaceAll("\\s+", " ");
+
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException(
+                    fieldName + " cannot be blank"
+            );
+        }
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeOptionalText(
+            String value,
+            String fieldName,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public User getActor() {
+        return actor;
+    }
+
+    public AuditAction getAction() {
+        return action;
+    }
+
+    public AuditResourceType getResourceType() {
+        return resourceType;
+    }
+
+    public UUID getResourceId() {
+        return resourceId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getMetadataJson() {
+        return metadataJson;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditResourceType.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+public enum AuditResourceType {
+
+    USER,
+    FAMILY,
+    FAMILY_MEMBERSHIP,
+    FAMILY_INVITATION,
+
+    AGENDA_EVENT,
+    AGENDA_OCCURRENCE,
+
+    SHOPPING_LIST,
+    SHOPPING_ITEM,
+
+    FINANCIAL_ACCOUNT,
+    FINANCIAL_CATEGORY,
+    FINANCIAL_TRANSACTION,
+    FINANCIAL_RECURRENCE,
+    FINANCIAL_BUDGET,
+    FINANCIAL_CREDIT_CARD,
+    FINANCIAL_CREDIT_CARD_PURCHASE,
+    FINANCIAL_CREDIT_CARD_INVOICE,
+
+    NOTIFICATION,
+    NOTIFICATION_PREFERENCE,
+
+    SYSTEM
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\dto\AuditEventResponse.java
+============================================================
+package br.com.nucleo.api.audit.dto;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import java.time.Instant;
+import java.util.UUID;
+
+public record AuditEventResponse(
+        UUID id,
+        AuditAction action,
+        AuditResourceType resourceType,
+        UUID resourceId,
+        String description,
+        String metadataJson,
+        UUID actorUserId,
+        String actorName,
+        String actorEmail,
+        String ipAddress,
+        String userAgent,
+        Instant occurredAt
+) {
+
+    public static AuditEventResponse from(
+            AuditEvent event
+    ) {
+        UUID actorUserId = null;
+        String actorName = null;
+        String actorEmail = null;
+
+        if (event.getActor() != null) {
+            actorUserId = event.getActor().getId();
+            actorName = event.getActor().getName();
+            actorEmail = event.getActor().getEmail();
+        }
+
+        return new AuditEventResponse(
+                event.getId(),
+                event.getAction(),
+                event.getResourceType(),
+                event.getResourceId(),
+                event.getDescription(),
+                event.getMetadataJson(),
+                actorUserId,
+                actorName,
+                actorEmail,
+                event.getIpAddress(),
+                event.getUserAgent(),
+                event.getOccurredAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\repository\AuditEventRepository.java
+============================================================
+package br.com.nucleo.api.audit.repository;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface AuditEventRepository
+        extends JpaRepository<AuditEvent, UUID> {
+
+    @EntityGraph(attributePaths = {
+            "family",
+            "actor"
+    })
+    @Query(
+            value = """
+                    select event
+                      from AuditEvent event
+                     where event.family.id = :familyId
+                       and (
+                            :actorUserId is null
+                            or event.actor.id = :actorUserId
+                       )
+                       and (
+                            :action is null
+                            or event.action = :action
+                       )
+                       and (
+                            :resourceType is null
+                            or event.resourceType = :resourceType
+                       )
+                       and (
+                            :resourceId is null
+                            or event.resourceId = :resourceId
+                       )
+                       and (
+                            :from is null
+                            or event.occurredAt >= :from
+                       )
+                       and (
+                            :to is null
+                            or event.occurredAt <= :to
+                       )
+                     order by event.occurredAt desc
+                    """,
+            countQuery = """
+                    select count(event)
+                      from AuditEvent event
+                     where event.family.id = :familyId
+                       and (
+                            :actorUserId is null
+                            or event.actor.id = :actorUserId
+                       )
+                       and (
+                            :action is null
+                            or event.action = :action
+                       )
+                       and (
+                            :resourceType is null
+                            or event.resourceType = :resourceType
+                       )
+                       and (
+                            :resourceId is null
+                            or event.resourceId = :resourceId
+                       )
+                       and (
+                            :from is null
+                            or event.occurredAt >= :from
+                       )
+                       and (
+                            :to is null
+                            or event.occurredAt <= :to
+                       )
+                    """
+    )
+    Page<AuditEvent> search(
+            @Param("familyId") UUID familyId,
+            @Param("actorUserId") UUID actorUserId,
+            @Param("action") AuditAction action,
+            @Param("resourceType")
+            AuditResourceType resourceType,
+            @Param("resourceId") UUID resourceId,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            Pageable pageable
+    );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\service\AuditRequestInterceptor.java
+============================================================
+package br.com.nucleo.api.audit.service;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+@Component
+public class AuditRequestInterceptor
+        implements HandlerInterceptor {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(
+                    AuditRequestInterceptor.class
+            );
+
+    private final FamilyAccessService familyAccessService;
+    private final AuditService auditService;
+
+    public AuditRequestInterceptor(
+            FamilyAccessService familyAccessService,
+            AuditService auditService
+    ) {
+        this.familyAccessService = familyAccessService;
+        this.auditService = auditService;
+    }
+
+    @Override
+    public void afterCompletion(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            Exception exception
+    ) {
+        if (!shouldAudit(request, response, exception)) {
+            return;
+        }
+
+        UUID currentUserId = authenticatedUserId();
+
+        if (currentUserId == null) {
+            return;
+        }
+
+        try {
+            FamilyMembership membership =
+                    familyAccessService
+                            .requireActiveMembership(
+                                    currentUserId
+                            );
+
+            String path = request.getRequestURI();
+            AuditAction action = resolveAction(
+                    request.getMethod(),
+                    path
+            );
+
+            AuditResourceType resourceType =
+                    resolveResourceType(path);
+
+            UUID resourceId =
+                    extractLastUuid(path);
+
+            auditService.record(
+                    membership.getFamily(),
+                    membership.getUser(),
+                    action,
+                    resourceType,
+                    resourceId,
+                    buildDescription(
+                            action,
+                            resourceType
+                    ),
+                    Map.of(
+                            "httpMethod",
+                            request.getMethod(),
+                            "requestPath",
+                            path,
+                            "responseStatus",
+                            response.getStatus()
+                    )
+            );
+        } catch (RuntimeException auditException) {
+            LOGGER.error(
+                    "NÃ£o foi possÃ­vel registrar o evento de auditoria para {} {}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    auditException
+            );
+        }
+    }
+
+    private boolean shouldAudit(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Exception exception
+    ) {
+        if (exception != null) {
+            return false;
+        }
+
+        if (response.getStatus() >= 400) {
+            return false;
+        }
+
+        String method = request
+                .getMethod()
+                .toUpperCase(Locale.ROOT);
+
+        if (
+                method.equals("GET")
+                        || method.equals("HEAD")
+                        || method.equals("OPTIONS")
+        ) {
+            return false;
+        }
+
+        String path = request.getRequestURI();
+
+        return path.startsWith("/api/")
+                && !path.startsWith("/api/auth/")
+                && !path.startsWith("/api/audit-events");
+    }
+
+    private UUID authenticatedUserId() {
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (
+                !(authentication
+                        instanceof JwtAuthenticationToken jwt)
+        ) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(
+                    jwt.getToken().getSubject()
+            );
+        } catch (IllegalArgumentException exception) {
+            LOGGER.warn(
+                    "JWT autenticado possui subject invÃ¡lido"
+            );
+
+            return null;
+        }
+    }
+
+    private AuditAction resolveAction(
+            String httpMethod,
+            String path
+    ) {
+        String normalizedPath =
+                path.toLowerCase(Locale.ROOT);
+
+        if (
+                httpMethod.equalsIgnoreCase("DELETE")
+                        && normalizedPath.endsWith(
+                        "/payment"
+                )
+        ) {
+            return AuditAction.REVERSE_PAYMENT;
+        }
+
+        if (normalizedPath.contains("/read-all")) {
+            return AuditAction.MARK_ALL_AS_READ;
+        }
+
+        if (normalizedPath.endsWith("/unread")) {
+            return AuditAction.MARK_AS_UNREAD;
+        }
+
+        if (normalizedPath.endsWith("/read")) {
+            return AuditAction.MARK_AS_READ;
+        }
+
+        if (
+                normalizedPath.endsWith("/pay")
+                        || normalizedPath.endsWith(
+                        "/paid"
+                )
+        ) {
+            return AuditAction.MARK_AS_PAID;
+        }
+
+        if (normalizedPath.endsWith("/pending")) {
+            return AuditAction.MARK_AS_PENDING;
+        }
+
+        if (normalizedPath.endsWith("/complete")) {
+            return AuditAction.COMPLETE;
+        }
+
+        if (normalizedPath.endsWith("/close")) {
+            return AuditAction.CLOSE;
+        }
+
+        if (normalizedPath.endsWith("/reopen")) {
+            return AuditAction.REOPEN;
+        }
+
+        if (normalizedPath.endsWith("/cancel")) {
+            return AuditAction.CANCEL;
+        }
+
+        if (normalizedPath.endsWith("/restore")) {
+            return AuditAction.RESTORE;
+        }
+
+        if (normalizedPath.endsWith("/activate")) {
+            return AuditAction.ACTIVATE;
+        }
+
+        if (
+                normalizedPath.endsWith("/deactivate")
+                        || normalizedPath.endsWith(
+                        "/archive"
+                )
+        ) {
+            return AuditAction.DEACTIVATE;
+        }
+
+        if (
+                normalizedPath.contains("/invitations")
+                        && httpMethod.equalsIgnoreCase("POST")
+        ) {
+            return AuditAction.INVITE;
+        }
+
+        if (normalizedPath.endsWith("/revoke")) {
+            return AuditAction.REVOKE_INVITATION;
+        }
+
+        if (normalizedPath.endsWith("/accept")) {
+            return AuditAction.ACCEPT_INVITATION;
+        }
+
+        if (normalizedPath.endsWith("/decline")) {
+            return AuditAction.DECLINE_INVITATION;
+        }
+
+        if (httpMethod.equalsIgnoreCase("POST")) {
+            return AuditAction.CREATE;
+        }
+
+        if (
+                httpMethod.equalsIgnoreCase("PUT")
+                        || httpMethod.equalsIgnoreCase("PATCH")
+        ) {
+            return AuditAction.UPDATE;
+        }
+
+        if (httpMethod.equalsIgnoreCase("DELETE")) {
+            return AuditAction.DELETE;
+        }
+
+        return AuditAction.UPDATE;
+    }
+
+    private AuditResourceType resolveResourceType(
+            String path
+    ) {
+        String normalized =
+                path.toLowerCase(Locale.ROOT);
+
+        if (normalized.contains("/notifications")) {
+            if (
+                    normalized.contains(
+                            "notification-preferences"
+                    )
+            ) {
+                return AuditResourceType
+                        .NOTIFICATION_PREFERENCE;
+            }
+
+            return AuditResourceType.NOTIFICATION;
+        }
+
+        if (normalized.contains("/agenda/occurrences")) {
+            return AuditResourceType.AGENDA_OCCURRENCE;
+        }
+
+        if (normalized.contains("/agenda")) {
+            return AuditResourceType.AGENDA_EVENT;
+        }
+
+        if (
+                normalized.contains("/shopping")
+                        && normalized.contains("/items")
+        ) {
+            return AuditResourceType.SHOPPING_ITEM;
+        }
+
+        if (normalized.contains("/shopping")) {
+            return AuditResourceType.SHOPPING_LIST;
+        }
+
+        if (
+                normalized.contains(
+                        "/credit-card-invoices"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD_INVOICE;
+        }
+
+        if (
+                normalized.contains(
+                        "/credit-card-purchases"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD_PURCHASE;
+        }
+
+        if (
+                normalized.contains("/credit-cards")
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD;
+        }
+
+        if (normalized.contains("/budgets")) {
+            return AuditResourceType.FINANCIAL_BUDGET;
+        }
+
+        if (normalized.contains("/recurrences")) {
+            return AuditResourceType
+                    .FINANCIAL_RECURRENCE;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/transactions"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_TRANSACTION;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/categories"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CATEGORY;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/accounts"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_ACCOUNT;
+        }
+
+        if (normalized.contains("/invitations")) {
+            return AuditResourceType.FAMILY_INVITATION;
+        }
+
+        if (
+                normalized.contains("/family/members")
+                        || normalized.contains(
+                        "/family-members"
+                )
+        ) {
+            return AuditResourceType
+                    .FAMILY_MEMBERSHIP;
+        }
+
+        if (normalized.contains("/family")) {
+            return AuditResourceType.FAMILY;
+        }
+
+        if (normalized.contains("/users")) {
+            return AuditResourceType.USER;
+        }
+
+        return AuditResourceType.SYSTEM;
+    }
+
+    private UUID extractLastUuid(
+            String path
+    ) {
+        UUID result = null;
+
+        for (String segment : path.split("/")) {
+            try {
+                result = UUID.fromString(segment);
+            } catch (IllegalArgumentException ignored) {
+                // O segmento nÃ£o Ã© um UUID.
+            }
+        }
+
+        return result;
+    }
+
+    private String buildDescription(
+            AuditAction action,
+            AuditResourceType resourceType
+    ) {
+        return "AÃ§Ã£o "
+                + action.name()
+                + " realizada sobre "
+                + resourceType.name();
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\service\AuditService.java
+============================================================
+package br.com.nucleo.api.audit.service;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.audit.dto.AuditEventResponse;
+import br.com.nucleo.api.audit.repository.AuditEventRepository;
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.identity.user.domain.User;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+@Service
+public class AuditService {
+
+    private static final int MAXIMUM_PAGE_SIZE = 100;
+
+    private final FamilyAccessService familyAccessService;
+    private final AuditEventRepository auditEventRepository;
+    private final JsonMapper objectMapper;
+
+    public AuditService(
+            FamilyAccessService familyAccessService,
+            AuditEventRepository auditEventRepository,
+            JsonMapper objectMapper
+    ) {
+        this.familyAccessService = familyAccessService;
+        this.auditEventRepository = auditEventRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditEventResponse> search(
+            UUID currentUserId,
+            UUID actorUserId,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            Instant from,
+            Instant to,
+            Pageable pageable
+    ) {
+        FamilyMembership administrator =
+                familyAccessService.requireAdministrator(
+                        currentUserId
+                );
+
+        validatePeriod(from, to);
+        validatePageable(pageable);
+
+        return auditEventRepository.search(
+                administrator.getFamily().getId(),
+                actorUserId,
+                action,
+                resourceType,
+                resourceId,
+                from,
+                to,
+                pageable
+        ).map(AuditEventResponse::from);
+    }
+
+    @Transactional
+    public AuditEvent record(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description
+    ) {
+        return record(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                null
+        );
+    }
+
+    @Transactional
+    public AuditEvent record(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            Map<String, ?> metadata
+    ) {
+        RequestInformation requestInformation =
+                resolveRequestInformation();
+
+        AuditEvent event = AuditEvent.create(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                serializeMetadata(metadata),
+                requestInformation.ipAddress(),
+                requestInformation.userAgent()
+        );
+
+        return auditEventRepository.save(event);
+    }
+
+    private String serializeMetadata(
+            Map<String, ?> metadata
+    ) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (JacksonException exception) {
+            throw new IllegalArgumentException(
+                    "NÃ£o foi possÃ­vel serializar os dados da auditoria",
+                    exception
+            );
+        }
+    }
+
+    private RequestInformation resolveRequestInformation() {
+        if (
+                !(RequestContextHolder.getRequestAttributes()
+                        instanceof ServletRequestAttributes attributes)
+        ) {
+            return new RequestInformation(null, null);
+        }
+
+        HttpServletRequest request = attributes.getRequest();
+
+        return new RequestInformation(
+                normalizeOptional(
+                        request.getRemoteAddr(),
+                        64
+                ),
+                normalizeOptional(
+                        request.getHeader("User-Agent"),
+                        500
+                )
+        );
+    }
+
+    private String normalizeOptional(
+            String value,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.length() > maximumLength) {
+            return normalized.substring(
+                    0,
+                    maximumLength
+            );
+        }
+
+        return normalized;
+    }
+
+    private void validatePeriod(
+            Instant from,
+            Instant to
+    ) {
+        if (
+                from != null
+                        && to != null
+                        && to.isBefore(from)
+        ) {
+            throw new IllegalArgumentException(
+                    "O final do perÃ­odo nÃ£o pode ser anterior ao inÃ­cio"
+            );
+        }
+    }
+
+    private void validatePageable(
+            Pageable pageable
+    ) {
+        if (pageable.getPageNumber() < 0) {
+            throw new IllegalArgumentException(
+                    "A pÃ¡gina nÃ£o pode ser negativa"
+            );
+        }
+
+        if (
+                pageable.getPageSize() < 1
+                        || pageable.getPageSize()
+                        > MAXIMUM_PAGE_SIZE
+        ) {
+            throw new IllegalArgumentException(
+                    "A quantidade por pÃ¡gina deve ficar entre 1 e 100"
+            );
+        }
+    }
+
+    private record RequestInformation(
+            String ipAddress,
+            String userAgent
+    ) {
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\config\AuditWebConfig.java
+============================================================
+package br.com.nucleo.api.config;
+
+import br.com.nucleo.api.audit.service.AuditRequestInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class AuditWebConfig
+        implements WebMvcConfigurer {
+
+    private final AuditRequestInterceptor auditRequestInterceptor;
+
+    public AuditWebConfig(
+            AuditRequestInterceptor auditRequestInterceptor
+    ) {
+        this.auditRequestInterceptor =
+                auditRequestInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(
+            InterceptorRegistry registry
+    ) {
+        registry.addInterceptor(
+                auditRequestInterceptor
+        ).addPathPatterns("/api/**");
+    }
+}

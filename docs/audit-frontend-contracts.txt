@@ -1,0 +1,1199 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\controller\AuditController.java
+============================================================
+package br.com.nucleo.api.audit.controller;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.audit.dto.AuditEventResponse;
+import br.com.nucleo.api.audit.service.AuditService;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/audit-events")
+public class AuditController {
+
+    private final AuditService auditService;
+
+    public AuditController(
+            AuditService auditService
+    ) {
+        this.auditService = auditService;
+    }
+
+    @GetMapping
+    public Page<AuditEventResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false)
+            UUID actorUserId,
+            @RequestParam(required = false)
+            AuditAction action,
+            @RequestParam(required = false)
+            AuditResourceType resourceType,
+            @RequestParam(required = false)
+            UUID resourceId,
+            @RequestParam(required = false)
+            Instant from,
+            @RequestParam(required = false)
+            Instant to,
+            @PageableDefault(
+                    size = 20,
+                    sort = "occurredAt"
+            )
+            Pageable pageable
+    ) {
+        return auditService.search(
+                userId(jwt),
+                actorUserId,
+                action,
+                resourceType,
+                resourceId,
+                from,
+                to,
+                pageable
+        );
+    }
+
+    private UUID userId(
+            Jwt jwt
+    ) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditAction.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+public enum AuditAction {
+
+    CREATE,
+    UPDATE,
+    DELETE,
+
+    ACTIVATE,
+    DEACTIVATE,
+
+    COMPLETE,
+    CLOSE,
+    REOPEN,
+    CANCEL,
+    RESTORE,
+
+    MARK_AS_PAID,
+    MARK_AS_PENDING,
+    REVERSE_PAYMENT,
+
+    LOGIN,
+    LOGOUT,
+    REFRESH_TOKEN,
+
+    INVITE,
+    ACCEPT_INVITATION,
+    DECLINE_INVITATION,
+    REVOKE_INVITATION,
+    CHANGE_ROLE,
+
+    MARK_AS_READ,
+    MARK_AS_UNREAD,
+    MARK_ALL_AS_READ,
+
+    SYSTEM_GENERATION
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditEvent.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.identity.user.domain.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "audit_events")
+public class AuditEvent {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actor_user_id")
+    private User actor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 60)
+    private AuditAction action;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resource_type", nullable = false, length = 60)
+    private AuditResourceType resourceType;
+
+    @Column(name = "resource_id")
+    private UUID resourceId;
+
+    @Column(nullable = false, length = 500)
+    private String description;
+
+    @Column(name = "metadata_json", columnDefinition = "TEXT")
+    private String metadataJson;
+
+    @Column(name = "ip_address", length = 64)
+    private String ipAddress;
+
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
+    @Column(
+            name = "occurred_at",
+            nullable = false,
+            updatable = false
+    )
+    private Instant occurredAt;
+
+    protected AuditEvent() {
+    }
+
+    private AuditEvent(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            String metadataJson,
+            String ipAddress,
+            String userAgent
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Audit family cannot be null"
+        );
+        this.actor = actor;
+        this.action = Objects.requireNonNull(
+                action,
+                "Audit action cannot be null"
+        );
+        this.resourceType = Objects.requireNonNull(
+                resourceType,
+                "Audit resource type cannot be null"
+        );
+        this.resourceId = resourceId;
+        this.description = normalizeRequiredText(
+                description,
+                "Audit description",
+                500
+        );
+        this.metadataJson = normalizeOptionalText(
+                metadataJson,
+                "Audit metadata",
+                10000
+        );
+        this.ipAddress = normalizeOptionalText(
+                ipAddress,
+                "Audit IP address",
+                64
+        );
+        this.userAgent = normalizeOptionalText(
+                userAgent,
+                "Audit user agent",
+                500
+        );
+    }
+
+    public static AuditEvent create(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            String metadataJson,
+            String ipAddress,
+            String userAgent
+    ) {
+        return new AuditEvent(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                metadataJson,
+                ipAddress,
+                userAgent
+        );
+    }
+
+    @PrePersist
+    private void onCreate() {
+        if (occurredAt == null) {
+            occurredAt = Instant.now();
+        }
+    }
+
+    private static String normalizeRequiredText(
+            String value,
+            String fieldName,
+            int maximumLength
+    ) {
+        String normalized = Objects.requireNonNull(
+                value,
+                fieldName + " cannot be null"
+        ).trim().replaceAll("\\s+", " ");
+
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException(
+                    fieldName + " cannot be blank"
+            );
+        }
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeOptionalText(
+            String value,
+            String fieldName,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    fieldName
+                            + " cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public User getActor() {
+        return actor;
+    }
+
+    public AuditAction getAction() {
+        return action;
+    }
+
+    public AuditResourceType getResourceType() {
+        return resourceType;
+    }
+
+    public UUID getResourceId() {
+        return resourceId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getMetadataJson() {
+        return metadataJson;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\domain\AuditResourceType.java
+============================================================
+package br.com.nucleo.api.audit.domain;
+
+public enum AuditResourceType {
+
+    USER,
+    FAMILY,
+    FAMILY_MEMBERSHIP,
+    FAMILY_INVITATION,
+
+    AGENDA_EVENT,
+    AGENDA_OCCURRENCE,
+
+    SHOPPING_LIST,
+    SHOPPING_ITEM,
+
+    FINANCIAL_ACCOUNT,
+    FINANCIAL_CATEGORY,
+    FINANCIAL_TRANSACTION,
+    FINANCIAL_RECURRENCE,
+    FINANCIAL_BUDGET,
+    FINANCIAL_CREDIT_CARD,
+    FINANCIAL_CREDIT_CARD_PURCHASE,
+    FINANCIAL_CREDIT_CARD_INVOICE,
+
+    NOTIFICATION,
+    NOTIFICATION_PREFERENCE,
+
+    SYSTEM
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\dto\AuditEventResponse.java
+============================================================
+package br.com.nucleo.api.audit.dto;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import java.time.Instant;
+import java.util.UUID;
+
+public record AuditEventResponse(
+        UUID id,
+        AuditAction action,
+        AuditResourceType resourceType,
+        UUID resourceId,
+        String description,
+        String metadataJson,
+        UUID actorUserId,
+        String actorName,
+        String actorEmail,
+        String ipAddress,
+        String userAgent,
+        Instant occurredAt
+) {
+
+    public static AuditEventResponse from(
+            AuditEvent event
+    ) {
+        UUID actorUserId = null;
+        String actorName = null;
+        String actorEmail = null;
+
+        if (event.getActor() != null) {
+            actorUserId = event.getActor().getId();
+            actorName = event.getActor().getName();
+            actorEmail = event.getActor().getEmail();
+        }
+
+        return new AuditEventResponse(
+                event.getId(),
+                event.getAction(),
+                event.getResourceType(),
+                event.getResourceId(),
+                event.getDescription(),
+                event.getMetadataJson(),
+                actorUserId,
+                actorName,
+                actorEmail,
+                event.getIpAddress(),
+                event.getUserAgent(),
+                event.getOccurredAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\repository\AuditEventRepository.java
+============================================================
+package br.com.nucleo.api.audit.repository;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface AuditEventRepository
+        extends JpaRepository<AuditEvent, UUID> {
+
+    @EntityGraph(attributePaths = {
+            "family",
+            "actor"
+    })
+    @Query(
+            value = """
+                    select event
+                      from AuditEvent event
+                     where event.family.id = :familyId
+                       and (
+                            :actorUserId is null
+                            or event.actor.id = :actorUserId
+                       )
+                       and (
+                            :action is null
+                            or event.action = :action
+                       )
+                       and (
+                            :resourceType is null
+                            or event.resourceType = :resourceType
+                       )
+                       and (
+                            :resourceId is null
+                            or event.resourceId = :resourceId
+                       )
+                       and (
+                            :from is null
+                            or event.occurredAt >= :from
+                       )
+                       and (
+                            :to is null
+                            or event.occurredAt <= :to
+                       )
+                     order by event.occurredAt desc
+                    """,
+            countQuery = """
+                    select count(event)
+                      from AuditEvent event
+                     where event.family.id = :familyId
+                       and (
+                            :actorUserId is null
+                            or event.actor.id = :actorUserId
+                       )
+                       and (
+                            :action is null
+                            or event.action = :action
+                       )
+                       and (
+                            :resourceType is null
+                            or event.resourceType = :resourceType
+                       )
+                       and (
+                            :resourceId is null
+                            or event.resourceId = :resourceId
+                       )
+                       and (
+                            :from is null
+                            or event.occurredAt >= :from
+                       )
+                       and (
+                            :to is null
+                            or event.occurredAt <= :to
+                       )
+                    """
+    )
+    Page<AuditEvent> search(
+            @Param("familyId") UUID familyId,
+            @Param("actorUserId") UUID actorUserId,
+            @Param("action") AuditAction action,
+            @Param("resourceType")
+            AuditResourceType resourceType,
+            @Param("resourceId") UUID resourceId,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            Pageable pageable
+    );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\service\AuditRequestInterceptor.java
+============================================================
+package br.com.nucleo.api.audit.service;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+@Component
+public class AuditRequestInterceptor
+        implements HandlerInterceptor {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(
+                    AuditRequestInterceptor.class
+            );
+
+    private final FamilyAccessService familyAccessService;
+    private final AuditService auditService;
+
+    public AuditRequestInterceptor(
+            FamilyAccessService familyAccessService,
+            AuditService auditService
+    ) {
+        this.familyAccessService = familyAccessService;
+        this.auditService = auditService;
+    }
+
+    @Override
+    public void afterCompletion(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            Exception exception
+    ) {
+        if (!shouldAudit(request, response, exception)) {
+            return;
+        }
+
+        UUID currentUserId = authenticatedUserId();
+
+        if (currentUserId == null) {
+            return;
+        }
+
+        try {
+            FamilyMembership membership =
+                    familyAccessService
+                            .requireActiveMembership(
+                                    currentUserId
+                            );
+
+            String path = request.getRequestURI();
+            AuditAction action = resolveAction(
+                    request.getMethod(),
+                    path
+            );
+
+            AuditResourceType resourceType =
+                    resolveResourceType(path);
+
+            UUID resourceId =
+                    extractLastUuid(path);
+
+            auditService.record(
+                    membership.getFamily(),
+                    membership.getUser(),
+                    action,
+                    resourceType,
+                    resourceId,
+                    buildDescription(
+                            action,
+                            resourceType
+                    ),
+                    Map.of(
+                            "httpMethod",
+                            request.getMethod(),
+                            "requestPath",
+                            path,
+                            "responseStatus",
+                            response.getStatus()
+                    )
+            );
+        } catch (RuntimeException auditException) {
+            LOGGER.error(
+                    "NÃ£o foi possÃ­vel registrar o evento de auditoria para {} {}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    auditException
+            );
+        }
+    }
+
+    private boolean shouldAudit(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Exception exception
+    ) {
+        if (exception != null) {
+            return false;
+        }
+
+        if (response.getStatus() >= 400) {
+            return false;
+        }
+
+        String method = request
+                .getMethod()
+                .toUpperCase(Locale.ROOT);
+
+        if (
+                method.equals("GET")
+                        || method.equals("HEAD")
+                        || method.equals("OPTIONS")
+        ) {
+            return false;
+        }
+
+        String path = request.getRequestURI();
+
+        return path.startsWith("/api/")
+                && !path.startsWith("/api/auth/")
+                && !path.startsWith("/api/audit-events");
+    }
+
+    private UUID authenticatedUserId() {
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (
+                !(authentication
+                        instanceof JwtAuthenticationToken jwt)
+        ) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(
+                    jwt.getToken().getSubject()
+            );
+        } catch (IllegalArgumentException exception) {
+            LOGGER.warn(
+                    "JWT autenticado possui subject invÃ¡lido"
+            );
+
+            return null;
+        }
+    }
+
+    private AuditAction resolveAction(
+            String httpMethod,
+            String path
+    ) {
+        String normalizedPath =
+                path.toLowerCase(Locale.ROOT);
+
+        if (
+                httpMethod.equalsIgnoreCase("DELETE")
+                        && normalizedPath.endsWith(
+                        "/payment"
+                )
+        ) {
+            return AuditAction.REVERSE_PAYMENT;
+        }
+
+        if (normalizedPath.contains("/read-all")) {
+            return AuditAction.MARK_ALL_AS_READ;
+        }
+
+        if (normalizedPath.endsWith("/unread")) {
+            return AuditAction.MARK_AS_UNREAD;
+        }
+
+        if (normalizedPath.endsWith("/read")) {
+            return AuditAction.MARK_AS_READ;
+        }
+
+        if (
+                normalizedPath.endsWith("/pay")
+                        || normalizedPath.endsWith(
+                        "/paid"
+                )
+        ) {
+            return AuditAction.MARK_AS_PAID;
+        }
+
+        if (normalizedPath.endsWith("/pending")) {
+            return AuditAction.MARK_AS_PENDING;
+        }
+
+        if (normalizedPath.endsWith("/complete")) {
+            return AuditAction.COMPLETE;
+        }
+
+        if (normalizedPath.endsWith("/close")) {
+            return AuditAction.CLOSE;
+        }
+
+        if (normalizedPath.endsWith("/reopen")) {
+            return AuditAction.REOPEN;
+        }
+
+        if (normalizedPath.endsWith("/cancel")) {
+            return AuditAction.CANCEL;
+        }
+
+        if (normalizedPath.endsWith("/restore")) {
+            return AuditAction.RESTORE;
+        }
+
+        if (normalizedPath.endsWith("/activate")) {
+            return AuditAction.ACTIVATE;
+        }
+
+        if (
+                normalizedPath.endsWith("/deactivate")
+                        || normalizedPath.endsWith(
+                        "/archive"
+                )
+        ) {
+            return AuditAction.DEACTIVATE;
+        }
+
+        if (
+                normalizedPath.contains("/invitations")
+                        && httpMethod.equalsIgnoreCase("POST")
+        ) {
+            return AuditAction.INVITE;
+        }
+
+        if (normalizedPath.endsWith("/revoke")) {
+            return AuditAction.REVOKE_INVITATION;
+        }
+
+        if (normalizedPath.endsWith("/accept")) {
+            return AuditAction.ACCEPT_INVITATION;
+        }
+
+        if (normalizedPath.endsWith("/decline")) {
+            return AuditAction.DECLINE_INVITATION;
+        }
+
+        if (httpMethod.equalsIgnoreCase("POST")) {
+            return AuditAction.CREATE;
+        }
+
+        if (
+                httpMethod.equalsIgnoreCase("PUT")
+                        || httpMethod.equalsIgnoreCase("PATCH")
+        ) {
+            return AuditAction.UPDATE;
+        }
+
+        if (httpMethod.equalsIgnoreCase("DELETE")) {
+            return AuditAction.DELETE;
+        }
+
+        return AuditAction.UPDATE;
+    }
+
+    private AuditResourceType resolveResourceType(
+            String path
+    ) {
+        String normalized =
+                path.toLowerCase(Locale.ROOT);
+
+        if (normalized.contains("/notifications")) {
+            if (
+                    normalized.contains(
+                            "notification-preferences"
+                    )
+            ) {
+                return AuditResourceType
+                        .NOTIFICATION_PREFERENCE;
+            }
+
+            return AuditResourceType.NOTIFICATION;
+        }
+
+        if (normalized.contains("/agenda/occurrences")) {
+            return AuditResourceType.AGENDA_OCCURRENCE;
+        }
+
+        if (normalized.contains("/agenda")) {
+            return AuditResourceType.AGENDA_EVENT;
+        }
+
+        if (
+                normalized.contains("/shopping")
+                        && normalized.contains("/items")
+        ) {
+            return AuditResourceType.SHOPPING_ITEM;
+        }
+
+        if (normalized.contains("/shopping")) {
+            return AuditResourceType.SHOPPING_LIST;
+        }
+
+        if (
+                normalized.contains(
+                        "/credit-card-invoices"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD_INVOICE;
+        }
+
+        if (
+                normalized.contains(
+                        "/credit-card-purchases"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD_PURCHASE;
+        }
+
+        if (
+                normalized.contains("/credit-cards")
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CREDIT_CARD;
+        }
+
+        if (normalized.contains("/budgets")) {
+            return AuditResourceType.FINANCIAL_BUDGET;
+        }
+
+        if (normalized.contains("/recurrences")) {
+            return AuditResourceType
+                    .FINANCIAL_RECURRENCE;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/transactions"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_TRANSACTION;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/categories"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_CATEGORY;
+        }
+
+        if (
+                normalized.contains(
+                        "/finance/accounts"
+                )
+        ) {
+            return AuditResourceType
+                    .FINANCIAL_ACCOUNT;
+        }
+
+        if (normalized.contains("/invitations")) {
+            return AuditResourceType.FAMILY_INVITATION;
+        }
+
+        if (
+                normalized.contains("/family/members")
+                        || normalized.contains(
+                        "/family-members"
+                )
+        ) {
+            return AuditResourceType
+                    .FAMILY_MEMBERSHIP;
+        }
+
+        if (normalized.contains("/family")) {
+            return AuditResourceType.FAMILY;
+        }
+
+        if (normalized.contains("/users")) {
+            return AuditResourceType.USER;
+        }
+
+        return AuditResourceType.SYSTEM;
+    }
+
+    private UUID extractLastUuid(
+            String path
+    ) {
+        UUID result = null;
+
+        for (String segment : path.split("/")) {
+            try {
+                result = UUID.fromString(segment);
+            } catch (IllegalArgumentException ignored) {
+                // O segmento nÃ£o Ã© um UUID.
+            }
+        }
+
+        return result;
+    }
+
+    private String buildDescription(
+            AuditAction action,
+            AuditResourceType resourceType
+    ) {
+        return "AÃ§Ã£o "
+                + action.name()
+                + " realizada sobre "
+                + resourceType.name();
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\audit\service\AuditService.java
+============================================================
+package br.com.nucleo.api.audit.service;
+
+import br.com.nucleo.api.audit.domain.AuditAction;
+import br.com.nucleo.api.audit.domain.AuditEvent;
+import br.com.nucleo.api.audit.domain.AuditResourceType;
+import br.com.nucleo.api.audit.dto.AuditEventResponse;
+import br.com.nucleo.api.audit.repository.AuditEventRepository;
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.identity.user.domain.User;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+@Service
+public class AuditService {
+
+    private static final int MAXIMUM_PAGE_SIZE = 100;
+
+    private final FamilyAccessService familyAccessService;
+    private final AuditEventRepository auditEventRepository;
+    private final JsonMapper objectMapper;
+
+    public AuditService(
+            FamilyAccessService familyAccessService,
+            AuditEventRepository auditEventRepository,
+            JsonMapper objectMapper
+    ) {
+        this.familyAccessService = familyAccessService;
+        this.auditEventRepository = auditEventRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditEventResponse> search(
+            UUID currentUserId,
+            UUID actorUserId,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            Instant from,
+            Instant to,
+            Pageable pageable
+    ) {
+        FamilyMembership administrator =
+                familyAccessService.requireAdministrator(
+                        currentUserId
+                );
+
+        validatePeriod(from, to);
+        validatePageable(pageable);
+
+        return auditEventRepository.search(
+                administrator.getFamily().getId(),
+                actorUserId,
+                action,
+                resourceType,
+                resourceId,
+                from,
+                to,
+                pageable
+        ).map(AuditEventResponse::from);
+    }
+
+    @Transactional
+    public AuditEvent record(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description
+    ) {
+        return record(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                null
+        );
+    }
+
+    @Transactional
+    public AuditEvent record(
+            Family family,
+            User actor,
+            AuditAction action,
+            AuditResourceType resourceType,
+            UUID resourceId,
+            String description,
+            Map<String, ?> metadata
+    ) {
+        RequestInformation requestInformation =
+                resolveRequestInformation();
+
+        AuditEvent event = AuditEvent.create(
+                family,
+                actor,
+                action,
+                resourceType,
+                resourceId,
+                description,
+                serializeMetadata(metadata),
+                requestInformation.ipAddress(),
+                requestInformation.userAgent()
+        );
+
+        return auditEventRepository.save(event);
+    }
+
+    private String serializeMetadata(
+            Map<String, ?> metadata
+    ) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (JacksonException exception) {
+            throw new IllegalArgumentException(
+                    "NÃ£o foi possÃ­vel serializar os dados da auditoria",
+                    exception
+            );
+        }
+    }
+
+    private RequestInformation resolveRequestInformation() {
+        if (
+                !(RequestContextHolder.getRequestAttributes()
+                        instanceof ServletRequestAttributes attributes)
+        ) {
+            return new RequestInformation(null, null);
+        }
+
+        HttpServletRequest request = attributes.getRequest();
+
+        return new RequestInformation(
+                normalizeOptional(
+                        request.getRemoteAddr(),
+                        64
+                ),
+                normalizeOptional(
+                        request.getHeader("User-Agent"),
+                        500
+                )
+        );
+    }
+
+    private String normalizeOptional(
+            String value,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.length() > maximumLength) {
+            return normalized.substring(
+                    0,
+                    maximumLength
+            );
+        }
+
+        return normalized;
+    }
+
+    private void validatePeriod(
+            Instant from,
+            Instant to
+    ) {
+        if (
+                from != null
+                        && to != null
+                        && to.isBefore(from)
+        ) {
+            throw new IllegalArgumentException(
+                    "O final do perÃ­odo nÃ£o pode ser anterior ao inÃ­cio"
+            );
+        }
+    }
+
+    private void validatePageable(
+            Pageable pageable
+    ) {
+        if (pageable.getPageNumber() < 0) {
+            throw new IllegalArgumentException(
+                    "A pÃ¡gina nÃ£o pode ser negativa"
+            );
+        }
+
+        if (
+                pageable.getPageSize() < 1
+                        || pageable.getPageSize()
+                        > MAXIMUM_PAGE_SIZE
+        ) {
+            throw new IllegalArgumentException(
+                    "A quantidade por pÃ¡gina deve ficar entre 1 e 100"
+            );
+        }
+    }
+
+    private record RequestInformation(
+            String ipAddress,
+            String userAgent
+    ) {
+    }
+}

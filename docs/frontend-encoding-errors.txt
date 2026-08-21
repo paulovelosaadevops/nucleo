@@ -1,0 +1,691 @@
+ARQUIVO: C:\nucleo\apps\web\src\app\(auth)\login\page.tsx
+LINHA: 17
+CONTEUDO: Ainda não possui uma conta?{" "}
+
+ARQUIVO: C:\nucleo\apps\web\src\components\layout\desktop-sidebar.tsx
+LINHA: 210
+CONTEUDO: Gestão familiar
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-action-menu.tsx
+LINHA: 52
+CONTEUDO: "Não foi possível concluir esta ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-action-menu.tsx
+LINHA: 72
+CONTEUDO: "Excluir toda a série recorrente? Esta ação não poderá ser desfeita.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-action-menu.tsx
+LINHA: 86
+CONTEUDO: Observação da conclusão ou cancelamento
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+LINHA: 94
+CONTEUDO: label: "Não repetir",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+LINHA: 399
+CONTEUDO: "O término não pode ser anterior ao início.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+LINHA: 644
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-occurrence-details.tsx
+LINHA: 50
+CONTEUDO: NONE: "Não se repete",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 50
+CONTEUDO: REFRESH_TOKEN: "Renovou a sessão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 55
+CONTEUDO: CHANGE_ROLE: "Alterou função",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 57
+CONTEUDO: MARK_AS_UNREAD: "Marcou como não lida",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 76
+CONTEUDO: FINANCIAL_TRANSACTION: "Transação financeira",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 79
+CONTEUDO: FINANCIAL_CREDIT_CARD: "Cartão de crédito",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 81
+CONTEUDO: "Compra no cartão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 83
+CONTEUDO: "Fatura do cartão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 84
+CONTEUDO: NOTIFICATION: "Notificação",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-event-card.tsx
+LINHA: 86
+CONTEUDO: "Preferência de notificação",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 28
+CONTEUDO: { value: "CREATE", label: "Criação" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 29
+CONTEUDO: { value: "UPDATE", label: "Atualização" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 30
+CONTEUDO: { value: "DELETE", label: "Exclusão" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 31
+CONTEUDO: { value: "ACTIVATE", label: "Ativação" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 32
+CONTEUDO: { value: "DEACTIVATE", label: "Desativação" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 33
+CONTEUDO: { value: "COMPLETE", label: "Conclusão" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 37
+CONTEUDO: { value: "RESTORE", label: "Restauração" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 40
+CONTEUDO: label: "Marcação como pago",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 44
+CONTEUDO: label: "Marcação como pendente",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 54
+CONTEUDO: label: "Renovação da sessão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 67
+CONTEUDO: label: "Revogação de convite",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 71
+CONTEUDO: label: "Alteração de função",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 75
+CONTEUDO: label: "Marcação como lida",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 79
+CONTEUDO: label: "Marcação como não lida",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 87
+CONTEUDO: label: "Geração automática",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 131
+CONTEUDO: label: "Transação financeira",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 143
+CONTEUDO: label: "Cartão de crédito",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 147
+CONTEUDO: label: "Compra no cartão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 151
+CONTEUDO: label: "Fatura do cartão",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 155
+CONTEUDO: label: "Notificação",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 159
+CONTEUDO: label: "Preferência de notificação",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-filters.tsx
+LINHA: 298
+CONTEUDO: Ação
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-history.tsx
+LINHA: 41
+CONTEUDO: return "Não foi possível carregar o histórico de atividades.";
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-history.tsx
+LINHA: 96
+CONTEUDO: Não existem eventos correspondentes aos filtros
+
+ARQUIVO: C:\nucleo\apps\web\src\features\audit\audit-history.tsx
+LINHA: 343
+CONTEUDO: aria-label="Paginação das atividades"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\auth\register-form.tsx
+LINHA: 128
+CONTEUDO: "As senhas não são iguais";
+
+ARQUIVO: C:\nucleo\apps\web\src\features\auth\register-form.tsx
+LINHA: 277
+CONTEUDO: placeholder="Ex.: Família Bertão"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\auth\register-form.tsx
+LINHA: 376
+CONTEUDO: dados informados são verdadeiros.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-agenda-calendar.tsx
+LINHA: 145
+CONTEUDO: Não foi possível carregar a agenda.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-overview.tsx
+LINHA: 75
+CONTEUDO: Não foi possível carregar sua central
+
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-overview.tsx
+LINHA: 132
+CONTEUDO: label="Nova movimentação"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-overview.tsx
+LINHA: 162
+CONTEUDO: detail="Posição financeira atual"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\dashboard\dashboard-overview.tsx
+LINHA: 173
+CONTEUDO: detail="Ainda não visualizadas"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-invitation-form.tsx
+LINHA: 72
+CONTEUDO: : "Não foi possível criar o convite.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-invitation-form.tsx
+LINHA: 231
+CONTEUDO: participam da Agenda, Compras e Finanças, mas não
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-navigation.tsx
+LINHA: 24
+CONTEUDO: label: "Visão geral",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-navigation.tsx
+LINHA: 46
+CONTEUDO: aria-label="Navegação do núcleo familiar"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+LINHA: 83
+CONTEUDO: ProprietÃ¡rio
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+LINHA: 86
+CONTEUDO: {owner?.name ?? "NÃ£o identificado"}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+LINHA: 104
+CONTEUDO: ? "ProprietÃ¡rio"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+LINHA: 127
+CONTEUDO: Pessoas da famÃ­lia
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-overview.tsx
+LINHA: 131
+CONTEUDO: Veja quem participa do nÃºcleo e o nÃ­vel de acesso
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-page.tsx
+LINHA: 76
+CONTEUDO: : "Não foi possível carregar o núcleo familiar.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-page.tsx
+LINHA: 122
+CONTEUDO: : "Não foi possível revogar o convite.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-page.tsx
+LINHA: 187
+CONTEUDO: Não foi possível identificar sua participação
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\family-page.tsx
+LINHA: 191
+CONTEUDO: Atualize a página ou entre novamente na aplicação.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 63
+CONTEUDO: : "NÃ£o foi possÃ­vel carregar o convite.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 99
+CONTEUDO: : "NÃ£o foi possÃ­vel recusar o convite.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 121
+CONTEUDO: Convite indisponÃ­vel
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 126
+CONTEUDO: "Este convite nÃ£o pÃ´de ser encontrado."}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 167
+CONTEUDO: Convite para o NÃºcleo
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 172
+CONTEUDO: ? "Este convite nÃ£o estÃ¡ mais disponÃ­vel"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 173
+CONTEUDO: : `VocÃª foi convidado para ${invitation.familyName}`}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 189
+CONTEUDO: Papel no nÃºcleo
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 202
+CONTEUDO: VÃ¡lido atÃ©
+
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+LINHA: 232
+CONTEUDO: JÃ¡ tenho uma conta
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-accounts.tsx
+LINHA: 77
+CONTEUDO: : "Não foi possível carregar as contas.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-accounts.tsx
+LINHA: 129
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-accounts.tsx
+LINHA: 373
+CONTEUDO: Esta conta não participa do saldo consolidado.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-budgets.tsx
+LINHA: 99
+CONTEUDO: : "Não foi possível carregar os orçamentos.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-budgets.tsx
+LINHA: 111
+CONTEUDO: : "Não foi possível carregar as categorias.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-budgets.tsx
+LINHA: 180
+CONTEUDO: : "Não foi possível excluir o orçamento.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-categories.tsx
+LINHA: 61
+CONTEUDO: : "Não foi possível carregar as categorias.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-categories.tsx
+LINHA: 113
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+LINHA: 118
+CONTEUDO: : "Não foi possível carregar os cartões.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+LINHA: 197
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+LINHA: 258
+CONTEUDO: Novo cartão
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+LINHA: 280
+CONTEUDO: Nenhum cartão cadastrado
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+LINHA: 362
+CONTEUDO: `Deseja excluir o cartão "${card.name}"?`,
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-navigation.tsx
+LINHA: 27
+CONTEUDO: label: "Visão geral",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-navigation.tsx
+LINHA: 68
+CONTEUDO: aria-label="Navegação financeira"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-overview.tsx
+LINHA: 190
+CONTEUDO: aria-label="Atualizar visão geral"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-overview.tsx
+LINHA: 210
+CONTEUDO: Não foi possível carregar as finanças
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 106
+CONTEUDO: : "Não foi possível carregar as recorrências.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 118
+CONTEUDO: : "Não foi possível carregar contas e categorias.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 169
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 205
+CONTEUDO: : "Não foi possível gerar os lançamentos.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 214
+CONTEUDO: `Deseja excluir a recorrência "${recurrence.description}"? Os lançamentos já gerados serão preservados.`,
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-recurrences.tsx
+LINHA: 432
+CONTEUDO: Próxima geração
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-transactions.tsx
+LINHA: 138
+CONTEUDO: : "Não foi possível carregar os lançamentos.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-transactions.tsx
+LINHA: 150
+CONTEUDO: : "Não foi possível carregar contas e categorias.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-transactions.tsx
+LINHA: 249
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-transactions.tsx
+LINHA: 325
+CONTEUDO: aria-label="Situação"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-account-form.tsx
+LINHA: 113
+CONTEUDO: : "Não foi possível salvar a conta.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-account-form.tsx
+LINHA: 209
+CONTEUDO: Cor de identificação
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-budget-form.tsx
+LINHA: 126
+CONTEUDO: : "Não foi possível salvar o orçamento.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-card-purchase-form.tsx
+LINHA: 97
+CONTEUDO: setError("Informe uma descrição válida.");
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-card-purchase-form.tsx
+LINHA: 117
+CONTEUDO: setError("Selecione um cartão.");
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-card-purchase-form.tsx
+LINHA: 150
+CONTEUDO: : "Não foi possível salvar a compra.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-card-purchase-form.tsx
+LINHA: 182
+CONTEUDO: Cartão
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-card-purchase-form.tsx
+LINHA: 208
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-category-form.tsx
+LINHA: 85
+CONTEUDO: : "Não foi possível salvar a categoria.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-credit-card-form.tsx
+LINHA: 89
+CONTEUDO: setError("Informe um nome válido para o cartão.");
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-credit-card-form.tsx
+LINHA: 111
+CONTEUDO: setError("Os dias de fechamento e vencimento são inválidos.");
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-credit-card-form.tsx
+LINHA: 137
+CONTEUDO: : "Não foi possível salvar o cartão.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-credit-card-form.tsx
+LINHA: 151
+CONTEUDO: {card ? "Editar cartão" : "Novo cartão"}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-credit-card-form.tsx
+LINHA: 360
+CONTEUDO: {card ? "Salvar alterações" : "Criar cartão"}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-invoice-panel.tsx
+LINHA: 90
+CONTEUDO: : "Não foi possível carregar as faturas.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-invoice-panel.tsx
+LINHA: 116
+CONTEUDO: : "Não foi possível realizar a ação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-invoice-panel.tsx
+LINHA: 178
+CONTEUDO: Nenhuma fatura encontrada para este cartão.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 61
+CONTEUDO: { value: "DEBIT_CARD", label: "Cartão de débito" },
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 196
+CONTEUDO: setError("Informe uma descrição válida.");
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 243
+CONTEUDO: "A data final não pode ser anterior à data inicial.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 277
+CONTEUDO: : "Não foi possível salvar a recorrência.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 351
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 413
+CONTEUDO: <option value="">Não informada</option>
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 491
+CONTEUDO: Repetição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 495
+CONTEUDO: Defina quando os lançamentos serão gerados.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 631
+CONTEUDO: Regra de repetição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 642
+CONTEUDO: A regra temporal não pode ser alterada depois da
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-recurrence-form.tsx
+LINHA: 643
+CONTEUDO: criação.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 68
+CONTEUDO: label: "Cartão de débito",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 272
+CONTEUDO: "A descrição deve possuir pelo menos 2 caracteres.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 339
+CONTEUDO: : "Não foi possível salvar o lançamento.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 419
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 478
+CONTEUDO: Situação inicial
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 506
+CONTEUDO: Situação atual
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\financial-transaction-form.tsx
+LINHA: 677
+CONTEUDO: Não informada
+
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\use-finance-dashboard.ts
+LINHA: 88
+CONTEUDO: : "Não foi possível carregar o resumo financeiro.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-card.tsx
+LINHA: 153
+CONTEUDO: label: "Notificação",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-card.tsx
+LINHA: 369
+CONTEUDO: ? "Marcar como não lida"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-filters.tsx
+LINHA: 92
+CONTEUDO: label="Não lidas"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-preferences.tsx
+LINHA: 47
+CONTEUDO: "Convites, entrada de membros e alterações de função.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-preferences.tsx
+LINHA: 250
+CONTEUDO: : "Não foi possível salvar as preferências.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-preferences.tsx
+LINHA: 292
+CONTEUDO: Não foi possível carregar suas configurações.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notification-summary.tsx
+LINHA: 138
+CONTEUDO: label="Não lidas"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 105
+CONTEUDO: : "Nenhuma notificação"}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 110
+CONTEUDO: ? "Você não possui notificações pendentes de leitura."
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 111
+CONTEUDO: : "As atualizações importantes da sua família aparecerão aqui."}
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 215
+CONTEUDO: "Não foi possível carregar as notificações.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 237
+CONTEUDO: "Não foi possível carregar as preferências.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 299
+CONTEUDO: "Não foi possível atualizar a notificação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 329
+CONTEUDO: "Não foi possível abrir esta notificação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 341
+CONTEUDO: `Deseja excluir a notificação “${notification.title}”?`,
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 370
+CONTEUDO: "Não foi possível excluir a notificação.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 401
+CONTEUDO: "Não foi possível marcar todas como lidas.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 424
+CONTEUDO: "Não foi possível salvar as preferências.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 606
+CONTEUDO: ? "notificação"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\notifications\notifications-page.tsx
+LINHA: 669
+CONTEUDO: aria-label="Paginação das notificações"
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+LINHA: 35
+CONTEUDO: label: "Brasília — São Paulo",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+LINHA: 115
+CONTEUDO: return "Não foi possível salvar as configurações.";
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+LINHA: 238
+CONTEUDO: Não foi possível carregar as configurações familiares.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\family-settings.tsx
+LINHA: 284
+CONTEUDO: Nome e localização de referência da sua família.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\profile-settings.tsx
+LINHA: 204
+CONTEUDO: Não foi possível carregar os dados da sua conta.
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\profile-settings.tsx
+LINHA: 312
+CONTEUDO: : "Verificação de e-mail pendente."
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\profile-settings.tsx
+LINHA: 352
+CONTEUDO: Neste momento, os dados do perfil são apenas
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\profile-settings.tsx
+LINHA: 353
+CONTEUDO: informativos. A alteração de nome, e-mail e senha será
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-page.tsx
+LINHA: 105
+CONTEUDO: "Não foi possível carregar o perfil.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-page.tsx
+LINHA: 120
+CONTEUDO: "Não foi possível carregar o núcleo familiar.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\settings\settings-page.tsx
+LINHA: 136
+CONTEUDO: "Não foi possível carregar as preferências.",
+
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-item-form.tsx
+LINHA: 454
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-list-form.tsx
+LINHA: 194
+CONTEUDO: Descrição
+
+ARQUIVO: C:\nucleo\apps\web\src\features\shopping\shopping-page.tsx
+LINHA: 99
+CONTEUDO: eyebrow="Organização familiar"
+
+ARQUIVO: C:\nucleo\apps\web\src\lib\api\api-client.ts
+LINHA: 118
+CONTEUDO: "Sua sessão expirou. Entre novamente.",
+
+ARQUIVO: C:\nucleo\apps\web\src\lib\api\api-error.ts
+LINHA: 39
+CONTEUDO: "Não foi possível concluir a operação";

@@ -1,0 +1,37 @@
+package br.com.nucleo.api.audit.domain;
+
+public enum AuditAction {
+
+    CREATE,
+    UPDATE,
+    DELETE,
+
+    ACTIVATE,
+    DEACTIVATE,
+
+    COMPLETE,
+    CLOSE,
+    REOPEN,
+    CANCEL,
+    RESTORE,
+
+    MARK_AS_PAID,
+    MARK_AS_PENDING,
+    REVERSE_PAYMENT,
+
+    LOGIN,
+    LOGOUT,
+    REFRESH_TOKEN,
+
+    INVITE,
+    ACCEPT_INVITATION,
+    DECLINE_INVITATION,
+    REVOKE_INVITATION,
+    CHANGE_ROLE,
+
+    MARK_AS_READ,
+    MARK_AS_UNREAD,
+    MARK_ALL_AS_READ,
+
+    SYSTEM_GENERATION
+}

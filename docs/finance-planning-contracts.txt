@@ -1,0 +1,1440 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialBudgetController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.CreateFinancialBudgetRequest;
+import br.com.nucleo.api.finance.dto.FinancialBudgetResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialBudgetRequest;
+import br.com.nucleo.api.finance.service.FinancialBudgetService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/budgets")
+public class FinancialBudgetController {
+
+    private final FinancialBudgetService budgetService;
+
+    public FinancialBudgetController(
+            FinancialBudgetService budgetService
+    ) {
+        this.budgetService = budgetService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialBudgetResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialBudgetRequest request
+    ) {
+        FinancialBudgetResponse response =
+                budgetService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/budgets/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialBudgetResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate referenceMonth
+    ) {
+        return budgetService.list(
+                userId(jwt),
+                referenceMonth
+        );
+    }
+
+    @PutMapping("/{budgetId}")
+    public FinancialBudgetResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID budgetId,
+            @Valid @RequestBody
+            UpdateFinancialBudgetRequest request
+    ) {
+        return budgetService.update(
+                userId(jwt),
+                budgetId,
+                request
+        );
+    }
+
+    @DeleteMapping("/{budgetId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID budgetId
+    ) {
+        budgetService.delete(
+                userId(jwt),
+                budgetId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialRecurrenceController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.CreateFinancialRecurrenceRequest;
+import br.com.nucleo.api.finance.dto.FinancialRecurrenceResponse;
+import br.com.nucleo.api.finance.dto.GenerateFinancialRecurrencesResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialRecurrenceRequest;
+import br.com.nucleo.api.finance.service.FinancialRecurrenceService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/recurrences")
+public class FinancialRecurrenceController {
+
+    private final FinancialRecurrenceService recurrenceService;
+
+    public FinancialRecurrenceController(
+            FinancialRecurrenceService recurrenceService
+    ) {
+        this.recurrenceService = recurrenceService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialRecurrenceResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialRecurrenceRequest request
+    ) {
+        FinancialRecurrenceResponse response =
+                recurrenceService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/recurrences/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialRecurrenceResponse> list(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return recurrenceService.list(userId(jwt));
+    }
+
+    @PutMapping("/{recurrenceId}")
+    public FinancialRecurrenceResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID recurrenceId,
+            @Valid @RequestBody
+            UpdateFinancialRecurrenceRequest request
+    ) {
+        return recurrenceService.update(
+                userId(jwt),
+                recurrenceId,
+                request
+        );
+    }
+
+    @PatchMapping("/{recurrenceId}/pause")
+    public FinancialRecurrenceResponse pause(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID recurrenceId
+    ) {
+        return recurrenceService.pause(
+                userId(jwt),
+                recurrenceId
+        );
+    }
+
+    @PatchMapping("/{recurrenceId}/resume")
+    public FinancialRecurrenceResponse resume(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID recurrenceId
+    ) {
+        return recurrenceService.resume(
+                userId(jwt),
+                recurrenceId
+        );
+    }
+
+    @PostMapping("/generate")
+    public GenerateFinancialRecurrencesResponse generate(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate until
+    ) {
+        return recurrenceService.generate(
+                userId(jwt),
+                until
+        );
+    }
+
+    @DeleteMapping("/{recurrenceId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID recurrenceId
+    ) {
+        recurrenceService.delete(
+                userId(jwt),
+                recurrenceId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialBudgetRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record CreateFinancialBudgetRequest(
+
+        @NotNull(message = "Informe a categoria")
+        UUID categoryId,
+
+        @NotNull(message = "Informe o mÃªs de referÃªncia")
+        LocalDate referenceMonth,
+
+        @NotNull(message = "Informe o limite do orÃ§amento")
+        @DecimalMin(
+                value = "0.01",
+                message = "O limite deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O limite deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal limitAmount,
+
+        @DecimalMin(
+                value = "1.00",
+                message = "O percentual de alerta mÃ­nimo Ã© 1"
+        )
+        @DecimalMax(
+                value = "100.00",
+                message = "O percentual de alerta mÃ¡ximo Ã© 100"
+        )
+        @Digits(
+                integer = 3,
+                fraction = 2,
+                message = "O percentual deve ter atÃ© 2 casas decimais"
+        )
+        BigDecimal alertPercentage
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialRecurrenceRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialRecurrenceFrequency;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record CreateFinancialRecurrenceRequest(
+
+        @NotNull(message = "Informe a conta")
+        UUID accountId,
+
+        UUID categoryId,
+
+        @NotNull(message = "Informe o tipo do lanÃ§amento")
+        FinancialTransactionType type,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(
+                max = 160,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String description,
+
+        @NotNull(message = "Informe o valor")
+        @DecimalMin(
+                value = "0.01",
+                message = "O valor deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O valor deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal amount,
+
+        @NotNull(message = "Informe a frequÃªncia")
+        FinancialRecurrenceFrequency frequency,
+
+        @Min(
+                value = 1,
+                message = "O intervalo mÃ­nimo Ã© 1"
+        )
+        @Max(
+                value = 365,
+                message = "O intervalo mÃ¡ximo Ã© 365"
+        )
+        Integer interval,
+
+        @NotNull(message = "Informe a data inicial")
+        LocalDate startDate,
+
+        LocalDate endDate,
+
+        @Min(
+                value = 1,
+                message = "A quantidade de ocorrÃªncias deve ser maior que zero"
+        )
+        @Max(
+                value = 600,
+                message = "A quantidade mÃ¡xima Ã© de 600 ocorrÃªncias"
+        )
+        Integer occurrenceCount,
+
+        FinancialPaymentMethod paymentMethod,
+
+        @Size(
+                max = 1000,
+                message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 1000 caracteres"
+        )
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialBudgetResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialBudget;
+import br.com.nucleo.api.finance.domain.FinancialBudgetStatus;
+import br.com.nucleo.api.finance.domain.FinancialCategory;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record FinancialBudgetResponse(
+        UUID id,
+        UUID categoryId,
+        String categoryName,
+        String categoryColor,
+        String categoryIcon,
+        LocalDate referenceMonth,
+        BigDecimal limitAmount,
+        BigDecimal paidAmount,
+        BigDecimal pendingAmount,
+        BigDecimal committedAmount,
+        BigDecimal remainingAmount,
+        BigDecimal consumptionPercentage,
+        BigDecimal alertPercentage,
+        FinancialBudgetStatus status,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialBudgetResponse from(
+            FinancialBudget budget,
+            BigDecimal paidAmount,
+            BigDecimal pendingAmount
+    ) {
+        BigDecimal paid = paidAmount == null
+                ? BigDecimal.ZERO
+                : paidAmount;
+
+        BigDecimal pending = pendingAmount == null
+                ? BigDecimal.ZERO
+                : pendingAmount;
+
+        BigDecimal committed = paid.add(pending);
+
+        BigDecimal remaining = budget
+                .getLimitAmount()
+                .subtract(committed);
+
+        BigDecimal percentage = committed
+                .multiply(BigDecimal.valueOf(100))
+                .divide(
+                        budget.getLimitAmount(),
+                        2,
+                        RoundingMode.HALF_UP
+                );
+
+        FinancialBudgetStatus status;
+
+        if (
+                committed.compareTo(
+                        budget.getLimitAmount()
+                ) > 0
+        ) {
+            status = FinancialBudgetStatus.EXCEEDED;
+        } else if (
+                percentage.compareTo(
+                        budget.getAlertPercentage()
+                ) >= 0
+        ) {
+            status = FinancialBudgetStatus.ALERT;
+        } else {
+            status = FinancialBudgetStatus.SAFE;
+        }
+
+        FinancialCategory category = budget.getCategory();
+
+        return new FinancialBudgetResponse(
+                budget.getId(),
+                category.getId(),
+                category.getName(),
+                category.getColor(),
+                category.getIcon(),
+                budget.getReferenceMonth(),
+                budget.getLimitAmount(),
+                paid,
+                pending,
+                committed,
+                remaining,
+                percentage,
+                budget.getAlertPercentage(),
+                status,
+                budget.getCreatedAt(),
+                budget.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialRecurrenceResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialRecurrence;
+import br.com.nucleo.api.finance.domain.FinancialRecurrenceFrequency;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record FinancialRecurrenceResponse(
+        UUID id,
+        UUID accountId,
+        String accountName,
+        UUID categoryId,
+        String categoryName,
+        FinancialTransactionType type,
+        String description,
+        BigDecimal amount,
+        FinancialRecurrenceFrequency frequency,
+        int interval,
+        LocalDate startDate,
+        LocalDate endDate,
+        LocalDate nextGenerationDate,
+        Integer remainingOccurrences,
+        FinancialPaymentMethod paymentMethod,
+        String notes,
+        boolean active,
+        UUID createdByUserId,
+        String createdByName,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialRecurrenceResponse from(
+            FinancialRecurrence recurrence
+    ) {
+        UUID categoryId = null;
+        String categoryName = null;
+
+        if (recurrence.getCategory() != null) {
+            categoryId = recurrence.getCategory().getId();
+            categoryName = recurrence.getCategory().getName();
+        }
+
+        return new FinancialRecurrenceResponse(
+                recurrence.getId(),
+                recurrence.getAccount().getId(),
+                recurrence.getAccount().getName(),
+                categoryId,
+                categoryName,
+                recurrence.getType(),
+                recurrence.getDescription(),
+                recurrence.getAmount(),
+                recurrence.getFrequency(),
+                recurrence.getInterval(),
+                recurrence.getStartDate(),
+                recurrence.getEndDate(),
+                recurrence.getNextGenerationDate(),
+                recurrence.getRemainingOccurrences(),
+                recurrence.getPaymentMethod(),
+                recurrence.getNotes(),
+                recurrence.isActive(),
+                recurrence.getCreatedBy().getId(),
+                recurrence.getCreatedBy().getName(),
+                recurrence.getCreatedAt(),
+                recurrence.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\GenerateFinancialRecurrencesResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import java.time.LocalDate;
+
+public record GenerateFinancialRecurrencesResponse(
+        LocalDate generatedUntil,
+        int processedRecurrences,
+        int createdTransactions
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialBudgetRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
+
+public record UpdateFinancialBudgetRequest(
+
+        @NotNull(message = "Informe o limite do orÃ§amento")
+        @DecimalMin(
+                value = "0.01",
+                message = "O limite deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O limite deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal limitAmount,
+
+        @NotNull(message = "Informe o percentual de alerta")
+        @DecimalMin(
+                value = "1.00",
+                message = "O percentual de alerta mÃ­nimo Ã© 1"
+        )
+        @DecimalMax(
+                value = "100.00",
+                message = "O percentual de alerta mÃ¡ximo Ã© 100"
+        )
+        @Digits(
+                integer = 3,
+                fraction = 2,
+                message = "O percentual deve ter atÃ© 2 casas decimais"
+        )
+        BigDecimal alertPercentage
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialRecurrenceRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record UpdateFinancialRecurrenceRequest(
+
+        @NotNull(message = "Informe a conta")
+        UUID accountId,
+
+        UUID categoryId,
+
+        @NotNull(message = "Informe o tipo do lanÃ§amento")
+        FinancialTransactionType type,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(
+                max = 160,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String description,
+
+        @NotNull(message = "Informe o valor")
+        @DecimalMin(
+                value = "0.01",
+                message = "O valor deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O valor deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal amount,
+
+        FinancialPaymentMethod paymentMethod,
+
+        @Size(
+                max = 1000,
+                message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 1000 caracteres"
+        )
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialBudget.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_budgets")
+public class FinancialBudget {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private FinancialCategory category;
+
+    @Column(name = "reference_month", nullable = false)
+    private LocalDate referenceMonth;
+
+    @Column(
+            name = "limit_amount",
+            nullable = false,
+            precision = 18,
+            scale = 2
+    )
+    private BigDecimal limitAmount;
+
+    @Column(
+            name = "alert_percentage",
+            nullable = false,
+            precision = 5,
+            scale = 2
+    )
+    private BigDecimal alertPercentage;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialBudget() {
+    }
+
+    private FinancialBudget(
+            Family family,
+            FinancialCategory category,
+            LocalDate referenceMonth,
+            BigDecimal limitAmount,
+            BigDecimal alertPercentage
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Family cannot be null"
+        );
+        this.category = Objects.requireNonNull(
+                category,
+                "Category cannot be null"
+        );
+        this.referenceMonth = normalizeReferenceMonth(
+                referenceMonth
+        );
+        this.limitAmount = validatePositiveMoney(limitAmount);
+        this.alertPercentage = validateAlertPercentage(
+                alertPercentage == null
+                        ? BigDecimal.valueOf(80)
+                        : alertPercentage
+        );
+    }
+
+    public static FinancialBudget create(
+            Family family,
+            FinancialCategory category,
+            LocalDate referenceMonth,
+            BigDecimal limitAmount,
+            BigDecimal alertPercentage
+    ) {
+        return new FinancialBudget(
+                family,
+                category,
+                referenceMonth,
+                limitAmount,
+                alertPercentage
+        );
+    }
+
+    public void update(
+            BigDecimal limitAmount,
+            BigDecimal alertPercentage
+    ) {
+        this.limitAmount = validatePositiveMoney(limitAmount);
+        this.alertPercentage = validateAlertPercentage(
+                alertPercentage
+        );
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static LocalDate normalizeReferenceMonth(
+            LocalDate value
+    ) {
+        return Objects.requireNonNull(
+                value,
+                "Reference month cannot be null"
+        ).withDayOfMonth(1);
+    }
+
+    private static BigDecimal validatePositiveMoney(
+            BigDecimal value
+    ) {
+        BigDecimal money = Objects.requireNonNull(
+                value,
+                "Budget limit cannot be null"
+        );
+
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Budget limit must be greater than zero"
+            );
+        }
+
+        if (normalizedScale(money) > 2) {
+            throw new IllegalArgumentException(
+                    "Budget limit can contain at most 2 decimal places"
+            );
+        }
+
+        if (money.precision() > 18) {
+            throw new IllegalArgumentException(
+                    "Budget limit is too large"
+            );
+        }
+
+        return money;
+    }
+
+    private static BigDecimal validateAlertPercentage(
+            BigDecimal value
+    ) {
+        BigDecimal percentage = Objects.requireNonNull(
+                value,
+                "Alert percentage cannot be null"
+        );
+
+        if (
+                percentage.compareTo(BigDecimal.ONE) < 0
+                        || percentage.compareTo(
+                        BigDecimal.valueOf(100)
+                ) > 0
+        ) {
+            throw new IllegalArgumentException(
+                    "Alert percentage must be between 1 and 100"
+            );
+        }
+
+        if (normalizedScale(percentage) > 2) {
+            throw new IllegalArgumentException(
+                    "Alert percentage can contain at most 2 decimal places"
+            );
+        }
+
+        return percentage;
+    }
+
+    private static int normalizedScale(BigDecimal value) {
+        return Math.max(value.stripTrailingZeros().scale(), 0);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public FinancialCategory getCategory() {
+        return category;
+    }
+
+    public LocalDate getReferenceMonth() {
+        return referenceMonth;
+    }
+
+    public BigDecimal getLimitAmount() {
+        return limitAmount;
+    }
+
+    public BigDecimal getAlertPercentage() {
+        return alertPercentage;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialBudgetStatus.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialBudgetStatus {
+    SAFE,
+    ALERT,
+    EXCEEDED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialRecurrence.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.identity.user.domain.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_recurrences")
+public class FinancialRecurrence {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "account_id", nullable = false)
+    private FinancialAccount account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private FinancialCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FinancialTransactionType type;
+
+    @Column(nullable = false, length = 160)
+    private String description;
+
+    @Column(nullable = false, precision = 18, scale = 2)
+    private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FinancialRecurrenceFrequency frequency;
+
+    @Column(name = "recurrence_interval", nullable = false)
+    private int interval;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "next_generation_date", nullable = false)
+    private LocalDate nextGenerationDate;
+
+    @Column(name = "remaining_occurrences")
+    private Integer remainingOccurrences;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 30)
+    private FinancialPaymentMethod paymentMethod;
+
+    @Column(length = 1000)
+    private String notes;
+
+    @Column(nullable = false)
+    private boolean active;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialRecurrence() {
+    }
+
+    private FinancialRecurrence(
+            Family family,
+            FinancialAccount account,
+            FinancialCategory category,
+            FinancialTransactionType type,
+            String description,
+            BigDecimal amount,
+            FinancialRecurrenceFrequency frequency,
+            int interval,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer occurrenceCount,
+            FinancialPaymentMethod paymentMethod,
+            String notes,
+            User createdBy
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Family cannot be null"
+        );
+        this.account = Objects.requireNonNull(
+                account,
+                "Financial account cannot be null"
+        );
+        this.category = category;
+        this.type = Objects.requireNonNull(
+                type,
+                "Transaction type cannot be null"
+        );
+        this.description = normalizeDescription(description);
+        this.amount = validatePositiveMoney(amount);
+        this.frequency = Objects.requireNonNull(
+                frequency,
+                "Recurrence frequency cannot be null"
+        );
+        this.interval = validateInterval(interval);
+        this.startDate = Objects.requireNonNull(
+                startDate,
+                "Start date cannot be null"
+        );
+        this.endDate = endDate;
+        this.remainingOccurrences =
+                validateOccurrenceCount(occurrenceCount);
+        this.paymentMethod = paymentMethod;
+        this.notes = normalizeOptionalText(notes, 1000);
+        this.createdBy = Objects.requireNonNull(
+                createdBy,
+                "Recurrence creator cannot be null"
+        );
+        this.nextGenerationDate = startDate;
+        this.active = true;
+
+        validatePeriod(startDate, endDate);
+    }
+
+    public static FinancialRecurrence create(
+            Family family,
+            FinancialAccount account,
+            FinancialCategory category,
+            FinancialTransactionType type,
+            String description,
+            BigDecimal amount,
+            FinancialRecurrenceFrequency frequency,
+            int interval,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer occurrenceCount,
+            FinancialPaymentMethod paymentMethod,
+            String notes,
+            User createdBy
+    ) {
+        return new FinancialRecurrence(
+                family,
+                account,
+                category,
+                type,
+                description,
+                amount,
+                frequency,
+                interval,
+                startDate,
+                endDate,
+                occurrenceCount,
+                paymentMethod,
+                notes,
+                createdBy
+        );
+    }
+
+    public void update(
+            FinancialAccount account,
+            FinancialCategory category,
+            FinancialTransactionType type,
+            String description,
+            BigDecimal amount,
+            FinancialPaymentMethod paymentMethod,
+            String notes
+    ) {
+        this.account = Objects.requireNonNull(
+                account,
+                "Financial account cannot be null"
+        );
+        this.category = category;
+        this.type = Objects.requireNonNull(
+                type,
+                "Transaction type cannot be null"
+        );
+        this.description = normalizeDescription(description);
+        this.amount = validatePositiveMoney(amount);
+        this.paymentMethod = paymentMethod;
+        this.notes = normalizeOptionalText(notes, 1000);
+    }
+
+    public void pause() {
+        active = false;
+    }
+
+    public void resume() {
+        if (
+                remainingOccurrences != null
+                        && remainingOccurrences == 0
+        ) {
+            throw new IllegalStateException(
+                    "Finished recurrence cannot be resumed"
+            );
+        }
+
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
+            throw new IllegalStateException(
+                    "Expired recurrence cannot be resumed"
+            );
+        }
+
+        active = true;
+    }
+
+    public boolean canGenerateOnOrBefore(LocalDate limitDate) {
+        if (!active) {
+            return false;
+        }
+
+        if (nextGenerationDate.isAfter(limitDate)) {
+            return false;
+        }
+
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
+            return false;
+        }
+
+        return remainingOccurrences == null
+                || remainingOccurrences > 0;
+    }
+
+    public void advanceAfterGeneration() {
+        if (!active) {
+            throw new IllegalStateException(
+                    "Inactive recurrence cannot be advanced"
+            );
+        }
+
+        if (remainingOccurrences != null) {
+            remainingOccurrences--;
+
+            if (remainingOccurrences == 0) {
+                active = false;
+                return;
+            }
+        }
+
+        nextGenerationDate = calculateNextDate(
+                nextGenerationDate
+        );
+
+        if (
+                endDate != null
+                        && nextGenerationDate.isAfter(endDate)
+        ) {
+            active = false;
+        }
+    }
+
+    private LocalDate calculateNextDate(LocalDate currentDate) {
+        return switch (frequency) {
+            case DAILY -> currentDate.plusDays(interval);
+            case WEEKLY -> currentDate.plusWeeks(interval);
+            case MONTHLY -> currentDate.plusMonths(interval);
+            case YEARLY -> currentDate.plusYears(interval);
+        };
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static void validatePeriod(
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        if (
+                endDate != null
+                        && endDate.isBefore(startDate)
+        ) {
+            throw new IllegalArgumentException(
+                    "End date cannot be before start date"
+            );
+        }
+    }
+
+    private static int validateInterval(int value) {
+        if (value < 1 || value > 365) {
+            throw new IllegalArgumentException(
+                    "Recurrence interval must be between 1 and 365"
+            );
+        }
+
+        return value;
+    }
+
+    private static Integer validateOccurrenceCount(
+            Integer value
+    ) {
+        if (value != null && value < 1) {
+            throw new IllegalArgumentException(
+                    "Occurrence count must be greater than zero"
+            );
+        }
+
+        return value;
+    }
+
+    private static String normalizeDescription(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Description cannot be null"
+        ).trim().replaceAll("\\s+", " ");
+
+        if (normalized.isEmpty() || normalized.length() > 160) {
+            throw new IllegalArgumentException(
+                    "Description must contain between 1 and 160 characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeOptionalText(
+            String value,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim().replaceAll("\\s+", " ");
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    "Text cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static BigDecimal validatePositiveMoney(
+            BigDecimal value
+    ) {
+        BigDecimal money = Objects.requireNonNull(
+                value,
+                "Amount cannot be null"
+        );
+
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Amount must be greater than zero"
+            );
+        }
+
+        if (normalizedScale(money) > 2) {
+            throw new IllegalArgumentException(
+                    "Amount can contain at most 2 decimal places"
+            );
+        }
+
+        if (money.precision() > 18) {
+            throw new IllegalArgumentException(
+                    "Amount is too large"
+            );
+        }
+
+        return money;
+    }
+
+    private static int normalizedScale(BigDecimal value) {
+        return Math.max(value.stripTrailingZeros().scale(), 0);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public FinancialAccount getAccount() {
+        return account;
+    }
+
+    public FinancialCategory getCategory() {
+        return category;
+    }
+
+    public FinancialTransactionType getType() {
+        return type;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public FinancialRecurrenceFrequency getFrequency() {
+        return frequency;
+    }
+
+    public int getInterval() {
+        return interval;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public LocalDate getNextGenerationDate() {
+        return nextGenerationDate;
+    }
+
+    public Integer getRemainingOccurrences() {
+        return remainingOccurrences;
+    }
+
+    public FinancialPaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialRecurrenceFrequency.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialRecurrenceFrequency {
+    DAILY,
+    WEEKLY,
+    MONTHLY,
+    YEARLY
+}

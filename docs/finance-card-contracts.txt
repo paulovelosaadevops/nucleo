@@ -1,0 +1,2052 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialCreditCardController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.CreateFinancialCreditCardRequest;
+import br.com.nucleo.api.finance.dto.FinancialCreditCardResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialCreditCardRequest;
+import br.com.nucleo.api.finance.service.FinancialCreditCardService;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/finance/credit-cards")
+public class FinancialCreditCardController {
+
+    private final FinancialCreditCardService cardService;
+
+    public FinancialCreditCardController(
+            FinancialCreditCardService cardService
+    ) {
+        this.cardService = cardService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialCreditCardResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialCreditCardRequest request
+    ) {
+        FinancialCreditCardResponse response =
+                cardService.create(userId(jwt), request);
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/credit-cards/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialCreditCardResponse> list(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return cardService.list(userId(jwt));
+    }
+
+    @GetMapping("/{cardId}")
+    public FinancialCreditCardResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID cardId
+    ) {
+        return cardService.findById(userId(jwt), cardId);
+    }
+
+    @PutMapping("/{cardId}")
+    public FinancialCreditCardResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID cardId,
+            @Valid @RequestBody
+            UpdateFinancialCreditCardRequest request
+    ) {
+        return cardService.update(
+                userId(jwt),
+                cardId,
+                request
+        );
+    }
+
+    @PatchMapping("/{cardId}/activate")
+    public FinancialCreditCardResponse activate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID cardId
+    ) {
+        return cardService.activate(userId(jwt), cardId);
+    }
+
+    @PatchMapping("/{cardId}/deactivate")
+    public FinancialCreditCardResponse deactivate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID cardId
+    ) {
+        return cardService.deactivate(userId(jwt), cardId);
+    }
+
+    @DeleteMapping("/{cardId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID cardId
+    ) {
+        cardService.delete(userId(jwt), cardId);
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialCreditCardInvoiceController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.FinancialCreditCardInvoiceResponse;
+import br.com.nucleo.api.finance.dto.PayFinancialCreditCardInvoiceRequest;
+import br.com.nucleo.api.finance.service.FinancialCreditCardInvoiceService;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/credit-card-invoices")
+public class FinancialCreditCardInvoiceController {
+
+    private final FinancialCreditCardInvoiceService invoiceService;
+
+    public FinancialCreditCardInvoiceController(
+            FinancialCreditCardInvoiceService invoiceService
+    ) {
+        this.invoiceService = invoiceService;
+    }
+
+    @GetMapping
+    public List<FinancialCreditCardInvoiceResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam UUID creditCardId
+    ) {
+        return invoiceService.list(
+                userId(jwt),
+                creditCardId
+        );
+    }
+
+    @GetMapping("/{invoiceId}")
+    public FinancialCreditCardInvoiceResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        return invoiceService.findById(
+                userId(jwt),
+                invoiceId
+        );
+    }
+
+    @PatchMapping("/{invoiceId}/close")
+    public FinancialCreditCardInvoiceResponse close(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        return invoiceService.close(
+                userId(jwt),
+                invoiceId
+        );
+    }
+
+    @PatchMapping("/{invoiceId}/reopen")
+    public FinancialCreditCardInvoiceResponse reopen(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        return invoiceService.reopen(
+                userId(jwt),
+                invoiceId
+        );
+    }
+
+    @PostMapping("/{invoiceId}/pay")
+    public FinancialCreditCardInvoiceResponse pay(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId,
+            @Valid @RequestBody
+            PayFinancialCreditCardInvoiceRequest request
+    ) {
+        return invoiceService.pay(
+                userId(jwt),
+                invoiceId,
+                request
+        );
+    }
+
+    @DeleteMapping("/{invoiceId}/payment")
+    public FinancialCreditCardInvoiceResponse reversePayment(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        return invoiceService.reversePayment(
+                userId(jwt),
+                invoiceId
+        );
+    }
+
+    @DeleteMapping("/{invoiceId}")
+    public ResponseEntity<Void> deleteEmptyInvoice(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        invoiceService.deleteEmptyInvoice(
+                userId(jwt),
+                invoiceId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialCreditCardPurchaseController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.CreateFinancialCreditCardPurchaseRequest;
+import br.com.nucleo.api.finance.dto.FinancialCreditCardPurchaseResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialCreditCardPurchaseRequest;
+import br.com.nucleo.api.finance.service.FinancialCreditCardPurchaseService;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/finance/credit-card-purchases")
+public class FinancialCreditCardPurchaseController {
+
+    private final FinancialCreditCardPurchaseService purchaseService;
+
+    public FinancialCreditCardPurchaseController(
+            FinancialCreditCardPurchaseService purchaseService
+    ) {
+        this.purchaseService = purchaseService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialCreditCardPurchaseResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialCreditCardPurchaseRequest request
+    ) {
+        FinancialCreditCardPurchaseResponse response =
+                purchaseService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/credit-card-purchases/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialCreditCardPurchaseResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
+    ) {
+        return purchaseService.search(
+                userId(jwt),
+                from,
+                to
+        );
+    }
+
+    @GetMapping("/{purchaseId}")
+    public FinancialCreditCardPurchaseResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID purchaseId
+    ) {
+        return purchaseService.findById(
+                userId(jwt),
+                purchaseId
+        );
+    }
+
+    @PutMapping("/{purchaseId}")
+    public FinancialCreditCardPurchaseResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID purchaseId,
+            @Valid @RequestBody
+            UpdateFinancialCreditCardPurchaseRequest request
+    ) {
+        return purchaseService.update(
+                userId(jwt),
+                purchaseId,
+                request
+        );
+    }
+
+    @PatchMapping("/{purchaseId}/cancel")
+    public FinancialCreditCardPurchaseResponse cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID purchaseId
+    ) {
+        return purchaseService.cancel(
+                userId(jwt),
+                purchaseId
+        );
+    }
+
+    @PatchMapping("/{purchaseId}/restore")
+    public FinancialCreditCardPurchaseResponse restore(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID purchaseId
+    ) {
+        return purchaseService.restore(
+                userId(jwt),
+                purchaseId
+        );
+    }
+
+    @DeleteMapping("/{purchaseId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID purchaseId
+    ) {
+        purchaseService.delete(
+                userId(jwt),
+                purchaseId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialCreditCardPurchaseRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record CreateFinancialCreditCardPurchaseRequest(
+
+        @NotNull(message = "Informe o cartÃ£o")
+        UUID creditCardId,
+
+        UUID categoryId,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(max = 160)
+        String description,
+
+        @NotNull(message = "Informe o valor total")
+        @DecimalMin(value = "0.01")
+        @Digits(integer = 16, fraction = 2)
+        BigDecimal totalAmount,
+
+        @NotNull(message = "Informe a data da compra")
+        LocalDate purchaseDate,
+
+        @Min(value = 1, message = "A compra deve ter ao menos uma parcela")
+        @Max(value = 120, message = "O mÃ¡ximo Ã© de 120 parcelas")
+        int totalInstallments,
+
+        @Size(max = 1000)
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialCreditCardRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardBrand;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record CreateFinancialCreditCardRequest(
+
+        @NotBlank(message = "Informe o nome do cartÃ£o")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome deve ter entre 2 e 120 caracteres"
+        )
+        String name,
+
+        @NotNull(message = "Informe a bandeira")
+        FinancialCreditCardBrand brand,
+
+        @Pattern(
+                regexp = "^$|^[0-9]{4}$",
+                message = "Informe exatamente os quatro Ãºltimos dÃ­gitos"
+        )
+        String lastFour,
+
+        @NotNull(message = "Informe o limite")
+        @DecimalMin(
+                value = "0.01",
+                message = "O limite deve ser maior que zero"
+        )
+        @Digits(integer = 16, fraction = 2)
+        BigDecimal creditLimit,
+
+        @Min(value = 1, message = "O dia de fechamento mÃ­nimo Ã© 1")
+        @Max(value = 28, message = "O dia de fechamento mÃ¡ximo Ã© 28")
+        int closingDay,
+
+        @Min(value = 1, message = "O dia de vencimento mÃ­nimo Ã© 1")
+        @Max(value = 28, message = "O dia de vencimento mÃ¡ximo Ã© 28")
+        int dueDay,
+
+        UUID paymentAccountId,
+
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCreditCardInstallmentResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInstallment;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInstallmentStatus;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record FinancialCreditCardInstallmentResponse(
+        UUID id,
+        UUID purchaseId,
+        String purchaseDescription,
+        UUID categoryId,
+        String categoryName,
+        int installmentNumber,
+        int totalInstallments,
+        BigDecimal amount,
+        FinancialCreditCardInstallmentStatus status,
+        boolean paid,
+        UUID invoiceId,
+        LocalDate invoiceReferenceMonth,
+        LocalDate invoiceDueDate
+) {
+
+    public static FinancialCreditCardInstallmentResponse from(
+            FinancialCreditCardInstallment installment
+    ) {
+        UUID categoryId = null;
+        String categoryName = null;
+
+        if (installment.getPurchase().getCategory() != null) {
+            categoryId = installment
+                    .getPurchase()
+                    .getCategory()
+                    .getId();
+
+            categoryName = installment
+                    .getPurchase()
+                    .getCategory()
+                    .getName();
+        }
+
+        return new FinancialCreditCardInstallmentResponse(
+                installment.getId(),
+                installment.getPurchase().getId(),
+                installment.getPurchase().getDescription(),
+                categoryId,
+                categoryName,
+                installment.getInstallmentNumber(),
+                installment.getPurchase().getTotalInstallments(),
+                installment.getAmount(),
+                installment.getStatus(),
+                installment.isPaid(),
+                installment.getInvoice().getId(),
+                installment.getInvoice().getReferenceMonth(),
+                installment.getInvoice().getDueDate()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCreditCardInvoiceResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoice;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoiceStatus;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+public record FinancialCreditCardInvoiceResponse(
+        UUID id,
+        UUID creditCardId,
+        String creditCardName,
+        LocalDate referenceMonth,
+        LocalDate closingDate,
+        LocalDate dueDate,
+        FinancialCreditCardInvoiceStatus status,
+        BigDecimal totalAmount,
+        Instant paidAt,
+        List<FinancialCreditCardInstallmentResponse> installments,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialCreditCardInvoiceResponse from(
+            FinancialCreditCardInvoice invoice,
+            BigDecimal totalAmount,
+            List<FinancialCreditCardInstallmentResponse> installments
+    ) {
+        return new FinancialCreditCardInvoiceResponse(
+                invoice.getId(),
+                invoice.getCreditCard().getId(),
+                invoice.getCreditCard().getName(),
+                invoice.getReferenceMonth(),
+                invoice.getClosingDate(),
+                invoice.getDueDate(),
+                invoice.getStatus(),
+                totalAmount == null
+                        ? BigDecimal.ZERO
+                        : totalAmount,
+                invoice.getPaidAt(),
+                installments,
+                invoice.getCreatedAt(),
+                invoice.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCreditCardPurchaseResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseStatus;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+public record FinancialCreditCardPurchaseResponse(
+        UUID id,
+        UUID creditCardId,
+        String creditCardName,
+        UUID categoryId,
+        String categoryName,
+        String description,
+        BigDecimal totalAmount,
+        LocalDate purchaseDate,
+        int totalInstallments,
+        FinancialCreditCardPurchaseStatus status,
+        String notes,
+        String createdByName,
+        List<FinancialCreditCardInstallmentResponse> installments,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialCreditCardPurchaseResponse from(
+            FinancialCreditCardPurchase purchase,
+            List<FinancialCreditCardInstallmentResponse> installments
+    ) {
+        UUID categoryId = null;
+        String categoryName = null;
+
+        if (purchase.getCategory() != null) {
+            categoryId = purchase.getCategory().getId();
+            categoryName = purchase.getCategory().getName();
+        }
+
+        return new FinancialCreditCardPurchaseResponse(
+                purchase.getId(),
+                purchase.getCreditCard().getId(),
+                purchase.getCreditCard().getName(),
+                categoryId,
+                categoryName,
+                purchase.getDescription(),
+                purchase.getTotalAmount(),
+                purchase.getPurchaseDate(),
+                purchase.getTotalInstallments(),
+                purchase.getStatus(),
+                purchase.getNotes(),
+                purchase.getCreatedBy().getName(),
+                installments,
+                purchase.getCreatedAt(),
+                purchase.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCreditCardResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCard;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardBrand;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record FinancialCreditCardResponse(
+        UUID id,
+        String name,
+        FinancialCreditCardBrand brand,
+        String lastFour,
+        BigDecimal creditLimit,
+        BigDecimal outstandingAmount,
+        BigDecimal availableLimit,
+        int closingDay,
+        int dueDay,
+        UUID paymentAccountId,
+        String paymentAccountName,
+        String color,
+        boolean active,
+        String createdByName,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialCreditCardResponse from(
+            FinancialCreditCard card,
+            BigDecimal outstandingAmount
+    ) {
+        BigDecimal outstanding = outstandingAmount == null
+                ? BigDecimal.ZERO
+                : outstandingAmount;
+
+        UUID paymentAccountId = null;
+        String paymentAccountName = null;
+
+        if (card.getPaymentAccount() != null) {
+            paymentAccountId = card.getPaymentAccount().getId();
+            paymentAccountName = card.getPaymentAccount().getName();
+        }
+
+        return new FinancialCreditCardResponse(
+                card.getId(),
+                card.getName(),
+                card.getBrand(),
+                card.getLastFour(),
+                card.getCreditLimit(),
+                outstanding,
+                card.getCreditLimit().subtract(outstanding),
+                card.getClosingDay(),
+                card.getDueDay(),
+                paymentAccountId,
+                paymentAccountName,
+                card.getColor(),
+                card.isActive(),
+                card.getCreatedBy().getName(),
+                card.getCreatedAt(),
+                card.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\PayFinancialCreditCardInvoiceRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record PayFinancialCreditCardInvoiceRequest(
+
+        UUID accountId,
+
+        @NotNull(message = "Informe a data do pagamento")
+        LocalDate paymentDate,
+
+        @NotNull(message = "Informe a forma de pagamento")
+        FinancialPaymentMethod paymentMethod
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialCreditCardPurchaseRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.UUID;
+
+public record UpdateFinancialCreditCardPurchaseRequest(
+
+        UUID categoryId,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(max = 160)
+        String description,
+
+        @Size(max = 1000)
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialCreditCardRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardBrand;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record UpdateFinancialCreditCardRequest(
+
+        @NotBlank(message = "Informe o nome do cartÃ£o")
+        @Size(min = 2, max = 120)
+        String name,
+
+        @NotNull(message = "Informe a bandeira")
+        FinancialCreditCardBrand brand,
+
+        @Pattern(
+                regexp = "^$|^[0-9]{4}$",
+                message = "Informe exatamente os quatro Ãºltimos dÃ­gitos"
+        )
+        String lastFour,
+
+        @NotNull(message = "Informe o limite")
+        @DecimalMin(value = "0.01")
+        @Digits(integer = 16, fraction = 2)
+        BigDecimal creditLimit,
+
+        @Min(1)
+        @Max(28)
+        int closingDay,
+
+        @Min(1)
+        @Max(28)
+        int dueDay,
+
+        UUID paymentAccountId,
+
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCard.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.identity.user.domain.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_credit_cards")
+public class FinancialCreditCard {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @Column(nullable = false, length = 120)
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private FinancialCreditCardBrand brand;
+
+    @Column(name = "last_four", length = 4)
+    private String lastFour;
+
+    @Column(
+            name = "credit_limit",
+            nullable = false,
+            precision = 18,
+            scale = 2
+    )
+    private BigDecimal creditLimit;
+
+    @Column(name = "closing_day", nullable = false)
+    private int closingDay;
+
+    @Column(name = "due_day", nullable = false)
+    private int dueDay;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_account_id")
+    private FinancialAccount paymentAccount;
+
+    @Column(length = 20)
+    private String color;
+
+    @Column(nullable = false)
+    private boolean active;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialCreditCard() {
+    }
+
+    private FinancialCreditCard(
+            Family family,
+            String name,
+            FinancialCreditCardBrand brand,
+            String lastFour,
+            BigDecimal creditLimit,
+            int closingDay,
+            int dueDay,
+            FinancialAccount paymentAccount,
+            String color,
+            User createdBy
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Family cannot be null"
+        );
+        this.name = normalizeName(name);
+        this.brand = Objects.requireNonNull(
+                brand,
+                "Credit card brand cannot be null"
+        );
+        this.lastFour = normalizeLastFour(lastFour);
+        this.creditLimit = validatePositiveMoney(
+                creditLimit
+        );
+        this.closingDay = validateDay(
+                closingDay,
+                "Closing day"
+        );
+        this.dueDay = validateDay(
+                dueDay,
+                "Due day"
+        );
+        this.paymentAccount = paymentAccount;
+        this.color = normalizeOptionalText(color, 20);
+        this.createdBy = Objects.requireNonNull(
+                createdBy,
+                "Credit card creator cannot be null"
+        );
+        this.active = true;
+    }
+
+    public static FinancialCreditCard create(
+            Family family,
+            String name,
+            FinancialCreditCardBrand brand,
+            String lastFour,
+            BigDecimal creditLimit,
+            int closingDay,
+            int dueDay,
+            FinancialAccount paymentAccount,
+            String color,
+            User createdBy
+    ) {
+        return new FinancialCreditCard(
+                family,
+                name,
+                brand,
+                lastFour,
+                creditLimit,
+                closingDay,
+                dueDay,
+                paymentAccount,
+                color,
+                createdBy
+        );
+    }
+
+    public void update(
+            String name,
+            FinancialCreditCardBrand brand,
+            String lastFour,
+            BigDecimal creditLimit,
+            int closingDay,
+            int dueDay,
+            FinancialAccount paymentAccount,
+            String color
+    ) {
+        this.name = normalizeName(name);
+        this.brand = Objects.requireNonNull(
+                brand,
+                "Credit card brand cannot be null"
+        );
+        this.lastFour = normalizeLastFour(lastFour);
+        this.creditLimit = validatePositiveMoney(
+                creditLimit
+        );
+        this.closingDay = validateDay(
+                closingDay,
+                "Closing day"
+        );
+        this.dueDay = validateDay(
+                dueDay,
+                "Due day"
+        );
+        this.paymentAccount = paymentAccount;
+        this.color = normalizeOptionalText(color, 20);
+    }
+
+    public void activate() {
+        active = true;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static String normalizeName(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Credit card name cannot be null"
+        ).trim().replaceAll("\\s+", " ");
+
+        if (normalized.length() < 2 || normalized.length() > 120) {
+            throw new IllegalArgumentException(
+                    "Credit card name must contain between 2 and 120 characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static String normalizeLastFour(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (!normalized.matches("\\d{4}")) {
+            throw new IllegalArgumentException(
+                    "Last four digits must contain exactly 4 numbers"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static int validateDay(
+            int value,
+            String fieldName
+    ) {
+        if (value < 1 || value > 28) {
+            throw new IllegalArgumentException(
+                    fieldName + " must be between 1 and 28"
+            );
+        }
+
+        return value;
+    }
+
+    private static BigDecimal validatePositiveMoney(
+            BigDecimal value
+    ) {
+        BigDecimal money = Objects.requireNonNull(
+                value,
+                "Credit limit cannot be null"
+        );
+
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Credit limit must be greater than zero"
+            );
+        }
+
+        if (normalizedScale(money) > 2) {
+            throw new IllegalArgumentException(
+                    "Credit limit can contain at most 2 decimal places"
+            );
+        }
+
+        if (money.precision() > 18) {
+            throw new IllegalArgumentException(
+                    "Credit limit is too large"
+            );
+        }
+
+        return money;
+    }
+
+    private static String normalizeOptionalText(
+            String value,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    "Text cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static int normalizedScale(BigDecimal value) {
+        return Math.max(value.stripTrailingZeros().scale(), 0);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public FinancialCreditCardBrand getBrand() {
+        return brand;
+    }
+
+    public String getLastFour() {
+        return lastFour;
+    }
+
+    public BigDecimal getCreditLimit() {
+        return creditLimit;
+    }
+
+    public int getClosingDay() {
+        return closingDay;
+    }
+
+    public int getDueDay() {
+        return dueDay;
+    }
+
+    public FinancialAccount getPaymentAccount() {
+        return paymentAccount;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardBrand.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialCreditCardBrand {
+    VISA,
+    MASTERCARD,
+    ELO,
+    AMERICAN_EXPRESS,
+    HIPERCARD,
+    OTHER
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardInstallment.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_credit_card_installments")
+public class FinancialCreditCardInstallment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "purchase_id", nullable = false)
+    private FinancialCreditCardPurchase purchase;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "invoice_id", nullable = false)
+    private FinancialCreditCardInvoice invoice;
+
+    @Column(name = "installment_number", nullable = false)
+    private int installmentNumber;
+
+    @Column(nullable = false, precision = 18, scale = 2)
+    private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FinancialCreditCardInstallmentStatus status;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialCreditCardInstallment() {
+    }
+
+    private FinancialCreditCardInstallment(
+            FinancialCreditCardPurchase purchase,
+            FinancialCreditCardInvoice invoice,
+            int installmentNumber,
+            BigDecimal amount
+    ) {
+        this.purchase = Objects.requireNonNull(
+                purchase,
+                "Purchase cannot be null"
+        );
+        this.invoice = Objects.requireNonNull(
+                invoice,
+                "Invoice cannot be null"
+        );
+        this.installmentNumber =
+                validateInstallmentNumber(installmentNumber);
+        this.amount = validatePositiveMoney(amount);
+        this.status = FinancialCreditCardInstallmentStatus.OPEN;
+    }
+
+    public static FinancialCreditCardInstallment create(
+            FinancialCreditCardPurchase purchase,
+            FinancialCreditCardInvoice invoice,
+            int installmentNumber,
+            BigDecimal amount
+    ) {
+        return new FinancialCreditCardInstallment(
+                purchase,
+                invoice,
+                installmentNumber,
+                amount
+        );
+    }
+
+    public void cancel() {
+        if (status == FinancialCreditCardInstallmentStatus.CANCELLED) {
+            return;
+        }
+
+        status = FinancialCreditCardInstallmentStatus.CANCELLED;
+    }
+
+    public void restore() {
+        if (status != FinancialCreditCardInstallmentStatus.CANCELLED) {
+            return;
+        }
+
+        status = FinancialCreditCardInstallmentStatus.OPEN;
+    }
+
+    public boolean isOpen() {
+        return status == FinancialCreditCardInstallmentStatus.OPEN;
+    }
+
+    public boolean isCancelled() {
+        return status == FinancialCreditCardInstallmentStatus.CANCELLED;
+    }
+
+    public boolean isPaid() {
+        return isOpen() && invoice.isPaid();
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+
+        if (status == null) {
+            status = FinancialCreditCardInstallmentStatus.OPEN;
+        }
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static int validateInstallmentNumber(int value) {
+        if (value < 1) {
+            throw new IllegalArgumentException(
+                    "Installment number must be greater than zero"
+            );
+        }
+
+        return value;
+    }
+
+    private static BigDecimal validatePositiveMoney(
+            BigDecimal value
+    ) {
+        BigDecimal money = Objects.requireNonNull(
+                value,
+                "Installment amount cannot be null"
+        );
+
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Installment amount must be greater than zero"
+            );
+        }
+
+        if (normalizedScale(money) > 2) {
+            throw new IllegalArgumentException(
+                    "Installment amount can contain at most 2 decimal places"
+            );
+        }
+
+        if (money.precision() > 18) {
+            throw new IllegalArgumentException(
+                    "Installment amount is too large"
+            );
+        }
+
+        return money;
+    }
+
+    private static int normalizedScale(BigDecimal value) {
+        return Math.max(value.stripTrailingZeros().scale(), 0);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public FinancialCreditCardPurchase getPurchase() {
+        return purchase;
+    }
+
+    public FinancialCreditCardInvoice getInvoice() {
+        return invoice;
+    }
+
+    public int getInstallmentNumber() {
+        return installmentNumber;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public FinancialCreditCardInstallmentStatus getStatus() {
+        return status;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardInstallmentStatus.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialCreditCardInstallmentStatus {
+    OPEN,
+    CANCELLED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardInvoice.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_credit_card_invoices")
+public class FinancialCreditCardInvoice {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "credit_card_id", nullable = false)
+    private FinancialCreditCard creditCard;
+
+    @Column(name = "reference_month", nullable = false)
+    private LocalDate referenceMonth;
+
+    @Column(name = "closing_date", nullable = false)
+    private LocalDate closingDate;
+
+    @Column(name = "due_date", nullable = false)
+    private LocalDate dueDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FinancialCreditCardInvoiceStatus status;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialCreditCardInvoice() {
+    }
+
+    private FinancialCreditCardInvoice(
+            FinancialCreditCard creditCard,
+            LocalDate referenceMonth,
+            LocalDate closingDate,
+            LocalDate dueDate
+    ) {
+        this.creditCard = Objects.requireNonNull(
+                creditCard,
+                "Credit card cannot be null"
+        );
+        this.referenceMonth = normalizeMonth(referenceMonth);
+        this.closingDate = Objects.requireNonNull(
+                closingDate,
+                "Closing date cannot be null"
+        );
+        this.dueDate = Objects.requireNonNull(
+                dueDate,
+                "Due date cannot be null"
+        );
+        this.status = FinancialCreditCardInvoiceStatus.OPEN;
+
+        validateDates(closingDate, dueDate);
+    }
+
+    public static FinancialCreditCardInvoice create(
+            FinancialCreditCard creditCard,
+            LocalDate referenceMonth,
+            LocalDate closingDate,
+            LocalDate dueDate
+    ) {
+        return new FinancialCreditCardInvoice(
+                creditCard,
+                referenceMonth,
+                closingDate,
+                dueDate
+        );
+    }
+
+    public void close() {
+        if (!isOpen()) {
+            throw new IllegalStateException(
+                    "Only an open invoice can be closed"
+            );
+        }
+
+        status = FinancialCreditCardInvoiceStatus.CLOSED;
+    }
+
+    public void reopen() {
+        if (!isClosed()) {
+            throw new IllegalStateException(
+                    "Only a closed invoice can be reopened"
+            );
+        }
+
+        status = FinancialCreditCardInvoiceStatus.OPEN;
+    }
+
+    public void markAsPaid() {
+        if (!isClosed()) {
+            throw new IllegalStateException(
+                    "Only a closed invoice can be paid"
+            );
+        }
+
+        status = FinancialCreditCardInvoiceStatus.PAID;
+        paidAt = Instant.now();
+    }
+
+    public void reversePayment() {
+        if (!isPaid()) {
+            throw new IllegalStateException(
+                    "Only a paid invoice can have its payment reversed"
+            );
+        }
+
+        status = FinancialCreditCardInvoiceStatus.CLOSED;
+        paidAt = null;
+    }
+
+    public void cancel() {
+        if (isPaid()) {
+            throw new IllegalStateException(
+                    "Paid invoice cannot be cancelled"
+            );
+        }
+
+        status = FinancialCreditCardInvoiceStatus.CANCELLED;
+        paidAt = null;
+    }
+
+    public boolean isOpen() {
+        return status == FinancialCreditCardInvoiceStatus.OPEN;
+    }
+
+    public boolean isClosed() {
+        return status == FinancialCreditCardInvoiceStatus.CLOSED;
+    }
+
+    public boolean isPaid() {
+        return status == FinancialCreditCardInvoiceStatus.PAID;
+    }
+
+    public boolean isCancelled() {
+        return status
+                == FinancialCreditCardInvoiceStatus.CANCELLED;
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+
+        if (status == null) {
+            status = FinancialCreditCardInvoiceStatus.OPEN;
+        }
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static LocalDate normalizeMonth(LocalDate value) {
+        return Objects.requireNonNull(
+                value,
+                "Reference month cannot be null"
+        ).withDayOfMonth(1);
+    }
+
+    private static void validateDates(
+            LocalDate closingDate,
+            LocalDate dueDate
+    ) {
+        if (dueDate.isBefore(closingDate)) {
+            throw new IllegalArgumentException(
+                    "Due date cannot be before closing date"
+            );
+        }
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public FinancialCreditCard getCreditCard() {
+        return creditCard;
+    }
+
+    public LocalDate getReferenceMonth() {
+        return referenceMonth;
+    }
+
+    public LocalDate getClosingDate() {
+        return closingDate;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public FinancialCreditCardInvoiceStatus getStatus() {
+        return status;
+    }
+
+    public Instant getPaidAt() {
+        return paidAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardInvoiceStatus.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialCreditCardInvoiceStatus {
+    OPEN,
+    CLOSED,
+    PAID,
+    CANCELLED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardPurchase.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.identity.user.domain.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(name = "financial_credit_card_purchases")
+public class FinancialCreditCardPurchase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "family_id", nullable = false)
+    private Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "credit_card_id", nullable = false)
+    private FinancialCreditCard creditCard;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private FinancialCategory category;
+
+    @Column(nullable = false, length = 160)
+    private String description;
+
+    @Column(
+            name = "total_amount",
+            nullable = false,
+            precision = 18,
+            scale = 2
+    )
+    private BigDecimal totalAmount;
+
+    @Column(name = "purchase_date", nullable = false)
+    private LocalDate purchaseDate;
+
+    @Column(name = "total_installments", nullable = false)
+    private int totalInstallments;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private FinancialCreditCardPurchaseStatus status;
+
+    @Column(length = 1000)
+    private String notes;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    protected FinancialCreditCardPurchase() {
+    }
+
+    private FinancialCreditCardPurchase(
+            Family family,
+            FinancialCreditCard creditCard,
+            FinancialCategory category,
+            String description,
+            BigDecimal totalAmount,
+            LocalDate purchaseDate,
+            int totalInstallments,
+            String notes,
+            User createdBy
+    ) {
+        this.family = Objects.requireNonNull(
+                family,
+                "Family cannot be null"
+        );
+        this.creditCard = Objects.requireNonNull(
+                creditCard,
+                "Credit card cannot be null"
+        );
+        this.category = category;
+        this.description = normalizeDescription(description);
+        this.totalAmount = validatePositiveMoney(totalAmount);
+        this.purchaseDate = Objects.requireNonNull(
+                purchaseDate,
+                "Purchase date cannot be null"
+        );
+        this.totalInstallments =
+                validateInstallmentCount(totalInstallments);
+        this.notes = normalizeOptionalText(notes, 1000);
+        this.createdBy = Objects.requireNonNull(
+                createdBy,
+                "Purchase creator cannot be null"
+        );
+        this.status = FinancialCreditCardPurchaseStatus.ACTIVE;
+    }
+
+    public static FinancialCreditCardPurchase create(
+            Family family,
+            FinancialCreditCard creditCard,
+            FinancialCategory category,
+            String description,
+            BigDecimal totalAmount,
+            LocalDate purchaseDate,
+            int totalInstallments,
+            String notes,
+            User createdBy
+    ) {
+        return new FinancialCreditCardPurchase(
+                family,
+                creditCard,
+                category,
+                description,
+                totalAmount,
+                purchaseDate,
+                totalInstallments,
+                notes,
+                createdBy
+        );
+    }
+
+    public void updateDetails(
+            FinancialCategory category,
+            String description,
+            String notes
+    ) {
+        ensureActive();
+
+        this.category = category;
+        this.description = normalizeDescription(description);
+        this.notes = normalizeOptionalText(notes, 1000);
+    }
+
+    public void cancel() {
+        if (status == FinancialCreditCardPurchaseStatus.CANCELLED) {
+            throw new IllegalStateException(
+                    "Credit card purchase is already cancelled"
+            );
+        }
+
+        status = FinancialCreditCardPurchaseStatus.CANCELLED;
+    }
+
+    public void restore() {
+        if (status != FinancialCreditCardPurchaseStatus.CANCELLED) {
+            throw new IllegalStateException(
+                    "Only a cancelled purchase can be restored"
+            );
+        }
+
+        status = FinancialCreditCardPurchaseStatus.ACTIVE;
+    }
+
+    public boolean isActive() {
+        return status == FinancialCreditCardPurchaseStatus.ACTIVE;
+    }
+
+    public boolean isCancelled() {
+        return status == FinancialCreditCardPurchaseStatus.CANCELLED;
+    }
+
+    private void ensureActive() {
+        if (!isActive()) {
+            throw new IllegalStateException(
+                    "Cancelled purchase cannot be changed"
+            );
+        }
+    }
+
+    @PrePersist
+    private void onCreate() {
+        Instant now = Instant.now();
+
+        createdAt = now;
+        updatedAt = now;
+
+        if (status == null) {
+            status = FinancialCreditCardPurchaseStatus.ACTIVE;
+        }
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = Instant.now();
+    }
+
+    private static String normalizeDescription(String value) {
+        String normalized = Objects.requireNonNull(
+                value,
+                "Purchase description cannot be null"
+        ).trim().replaceAll("\\s+", " ");
+
+        if (normalized.isEmpty() || normalized.length() > 160) {
+            throw new IllegalArgumentException(
+                    "Purchase description must contain between 1 and 160 characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static int validateInstallmentCount(int value) {
+        if (value < 1 || value > 120) {
+            throw new IllegalArgumentException(
+                    "Installment count must be between 1 and 120"
+            );
+        }
+
+        return value;
+    }
+
+    private static BigDecimal validatePositiveMoney(
+            BigDecimal value
+    ) {
+        BigDecimal money = Objects.requireNonNull(
+                value,
+                "Purchase amount cannot be null"
+        );
+
+        if (money.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Purchase amount must be greater than zero"
+            );
+        }
+
+        if (normalizedScale(money) > 2) {
+            throw new IllegalArgumentException(
+                    "Purchase amount can contain at most 2 decimal places"
+            );
+        }
+
+        if (money.precision() > 18) {
+            throw new IllegalArgumentException(
+                    "Purchase amount is too large"
+            );
+        }
+
+        return money;
+    }
+
+    private static String normalizeOptionalText(
+            String value,
+            int maximumLength
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim().replaceAll("\\s+", " ");
+
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(
+                    "Text cannot contain more than "
+                            + maximumLength
+                            + " characters"
+            );
+        }
+
+        return normalized;
+    }
+
+    private static int normalizedScale(BigDecimal value) {
+        return Math.max(value.stripTrailingZeros().scale(), 0);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public Family getFamily() {
+        return family;
+    }
+
+    public FinancialCreditCard getCreditCard() {
+        return creditCard;
+    }
+
+    public FinancialCategory getCategory() {
+        return category;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public LocalDate getPurchaseDate() {
+        return purchaseDate;
+    }
+
+    public int getTotalInstallments() {
+        return totalInstallments;
+    }
+
+    public FinancialCreditCardPurchaseStatus getStatus() {
+        return status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialCreditCardPurchaseStatus.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialCreditCardPurchaseStatus {
+    ACTIVE,
+    CANCELLED
+}

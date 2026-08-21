@@ -1,0 +1,310 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\controller\NotificationController.java
+============================================================
+package br.com.nucleo.api.notification.controller;
+
+import br.com.nucleo.api.notification.dto.NotificationResponse;
+import br.com.nucleo.api.notification.dto.NotificationSummaryResponse;
+import br.com.nucleo.api.notification.service.NotificationService;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/notifications")
+public class NotificationController {
+
+    private final NotificationService notificationService;
+
+    public NotificationController(
+            NotificationService notificationService
+    ) {
+        this.notificationService = notificationService;
+    }
+
+    @GetMapping
+    public Page<NotificationResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "false")
+            boolean unreadOnly,
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt"
+            )
+            Pageable pageable
+    ) {
+        return notificationService.list(
+                userId(jwt),
+                unreadOnly,
+                pageable
+        );
+    }
+
+    @GetMapping("/summary")
+    public NotificationSummaryResponse summary(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return notificationService.summary(
+                userId(jwt)
+        );
+    }
+
+    @PatchMapping("/{notificationId}/read")
+    public NotificationResponse markAsRead(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        return notificationService.markAsRead(
+                userId(jwt),
+                notificationId
+        );
+    }
+
+    @PatchMapping("/{notificationId}/unread")
+    public NotificationResponse markAsUnread(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        return notificationService.markAsUnread(
+                userId(jwt),
+                notificationId
+        );
+    }
+
+    @PatchMapping("/read-all")
+    public NotificationSummaryResponse markAllAsRead(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        notificationService.markAllAsRead(
+                userId(jwt)
+        );
+
+        return notificationService.summary(
+                userId(jwt)
+        );
+    }
+
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID notificationId
+    ) {
+        notificationService.delete(
+                userId(jwt),
+                notificationId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\controller\NotificationPreferenceController.java
+============================================================
+package br.com.nucleo.api.notification.controller;
+
+import br.com.nucleo.api.notification.dto.NotificationPreferenceResponse;
+import br.com.nucleo.api.notification.dto.UpdateNotificationPreferenceRequest;
+import br.com.nucleo.api.notification.service.NotificationPreferenceService;
+import jakarta.validation.Valid;
+import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/notification-preferences")
+public class NotificationPreferenceController {
+
+    private final NotificationPreferenceService preferenceService;
+
+    public NotificationPreferenceController(
+            NotificationPreferenceService preferenceService
+    ) {
+        this.preferenceService = preferenceService;
+    }
+
+    @GetMapping
+    public NotificationPreferenceResponse get(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return preferenceService.get(
+                userId(jwt)
+        );
+    }
+
+    @PutMapping
+    public NotificationPreferenceResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            UpdateNotificationPreferenceRequest request
+    ) {
+        return preferenceService.update(
+                userId(jwt),
+                request
+        );
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\domain\NotificationType.java
+============================================================
+package br.com.nucleo.api.notification.domain;
+
+public enum NotificationType {
+
+    FAMILY_INVITATION,
+    FAMILY_MEMBER_JOINED,
+    FAMILY_ROLE_CHANGED,
+
+    AGENDA_EVENT_CREATED,
+    AGENDA_EVENT_UPDATED,
+    AGENDA_REMINDER,
+
+    SHOPPING_LIST_UPDATED,
+    SHOPPING_ITEM_ADDED,
+
+    FINANCIAL_BUDGET_ALERT,
+    FINANCIAL_TRANSACTION_DUE,
+    CREDIT_CARD_INVOICE_DUE,
+
+    SYSTEM
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\dto\NotificationPreferenceResponse.java
+============================================================
+package br.com.nucleo.api.notification.dto;
+
+import br.com.nucleo.api.notification.domain.NotificationPreference;
+import java.time.Instant;
+import java.util.UUID;
+
+public record NotificationPreferenceResponse(
+        UUID id,
+        UUID familyId,
+        UUID userId,
+        boolean inAppEnabled,
+        boolean familyEnabled,
+        boolean agendaEnabled,
+        boolean shoppingEnabled,
+        boolean financeEnabled,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static NotificationPreferenceResponse from(
+            NotificationPreference preference
+    ) {
+        return new NotificationPreferenceResponse(
+                preference.getId(),
+                preference.getFamily().getId(),
+                preference.getUser().getId(),
+                preference.isInAppEnabled(),
+                preference.isFamilyEnabled(),
+                preference.isAgendaEnabled(),
+                preference.isShoppingEnabled(),
+                preference.isFinanceEnabled(),
+                preference.getCreatedAt(),
+                preference.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\dto\NotificationResponse.java
+============================================================
+package br.com.nucleo.api.notification.dto;
+
+import br.com.nucleo.api.notification.domain.Notification;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import java.time.Instant;
+import java.util.UUID;
+
+public record NotificationResponse(
+        UUID id,
+        NotificationType type,
+        String title,
+        String message,
+        String actionPath,
+        UUID referenceId,
+        boolean read,
+        Instant readAt,
+        Instant createdAt
+) {
+
+    public static NotificationResponse from(
+            Notification notification
+    ) {
+        return new NotificationResponse(
+                notification.getId(),
+                notification.getType(),
+                notification.getTitle(),
+                notification.getMessage(),
+                notification.getActionPath(),
+                notification.getReferenceId(),
+                notification.isRead(),
+                notification.getReadAt(),
+                notification.getCreatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\dto\NotificationSummaryResponse.java
+============================================================
+package br.com.nucleo.api.notification.dto;
+
+public record NotificationSummaryResponse(
+        long unreadCount
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\notification\dto\UpdateNotificationPreferenceRequest.java
+============================================================
+package br.com.nucleo.api.notification.dto;
+
+import jakarta.validation.constraints.NotNull;
+
+public record UpdateNotificationPreferenceRequest(
+
+        @NotNull(message = "Informe se as notificaÃ§Ãµes internas estÃ£o ativas")
+        Boolean inAppEnabled,
+
+        @NotNull(message = "Informe a preferÃªncia de notificaÃ§Ãµes familiares")
+        Boolean familyEnabled,
+
+        @NotNull(message = "Informe a preferÃªncia de notificaÃ§Ãµes da agenda")
+        Boolean agendaEnabled,
+
+        @NotNull(message = "Informe a preferÃªncia de notificaÃ§Ãµes de compras")
+        Boolean shoppingEnabled,
+
+        @NotNull(message = "Informe a preferÃªncia de notificaÃ§Ãµes financeiras")
+        Boolean financeEnabled
+) {
+}

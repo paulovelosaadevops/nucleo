@@ -1,0 +1,496 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\controller\AgendaController.java
+============================================================
+package br.com.nucleo.api.agenda.controller;
+
+import br.com.nucleo.api.agenda.domain.OccurrenceStatus;
+import br.com.nucleo.api.agenda.dto.AgendaOccurrenceActionRequest;
+import br.com.nucleo.api.agenda.dto.AgendaOccurrenceDetailsResponse;
+import br.com.nucleo.api.agenda.dto.AgendaOccurrenceSummaryResponse;
+import br.com.nucleo.api.agenda.dto.CreateAgendaEventRequest;
+import br.com.nucleo.api.agenda.dto.CreateAgendaEventResponse;
+import br.com.nucleo.api.agenda.dto.DuplicateAgendaEventRequest;
+import br.com.nucleo.api.agenda.service.AgendaEventManagementService;
+import br.com.nucleo.api.agenda.service.AgendaOccurrenceActionService;
+import br.com.nucleo.api.agenda.service.AgendaReadService;
+import br.com.nucleo.api.agenda.service.AgendaService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/agenda")
+public class AgendaController {
+
+    private final AgendaService agendaService;
+    private final AgendaReadService agendaReadService;
+    private final AgendaOccurrenceActionService actionService;
+    private final AgendaEventManagementService managementService;
+
+    public AgendaController(
+            AgendaService agendaService,
+            AgendaReadService agendaReadService,
+            AgendaOccurrenceActionService actionService,
+            AgendaEventManagementService managementService
+    ) {
+        this.agendaService = agendaService;
+        this.agendaReadService = agendaReadService;
+        this.actionService = actionService;
+        this.managementService = managementService;
+    }
+
+    @PostMapping("/events")
+    public ResponseEntity<CreateAgendaEventResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateAgendaEventRequest request
+    ) {
+        CreateAgendaEventResponse response =
+                agendaService.createEvent(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/agenda/events/"
+                                        + response.eventId()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping("/occurrences")
+    public List<AgendaOccurrenceSummaryResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            OffsetDateTime from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            OffsetDateTime to,
+
+            @RequestParam(required = false)
+            OccurrenceStatus status,
+
+            @RequestParam(required = false)
+            UUID assignedToMembershipId
+    ) {
+        return agendaReadService.list(
+                userId(jwt),
+                from.toInstant(),
+                to.toInstant(),
+                status,
+                assignedToMembershipId
+        );
+    }
+
+    @GetMapping("/occurrences/{occurrenceId}")
+    public AgendaOccurrenceDetailsResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId
+    ) {
+        return agendaReadService.findById(
+                userId(jwt),
+                occurrenceId
+        );
+    }
+
+    @PatchMapping("/occurrences/{occurrenceId}/complete")
+    public ResponseEntity<Void> complete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid @RequestBody
+            AgendaOccurrenceActionRequest request
+    ) {
+        actionService.complete(
+                userId(jwt),
+                occurrenceId,
+                request
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/occurrences/{occurrenceId}/cancel")
+    public ResponseEntity<Void> cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid @RequestBody
+            AgendaOccurrenceActionRequest request
+    ) {
+        actionService.cancel(
+                userId(jwt),
+                occurrenceId,
+                request
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/occurrences/{occurrenceId}/duplicate")
+    public ResponseEntity<CreateAgendaEventResponse> duplicate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid
+            @RequestBody(required = false)
+            DuplicateAgendaEventRequest request
+    ) {
+        CreateAgendaEventResponse response =
+                managementService.duplicateOccurrence(
+                        userId(jwt),
+                        occurrenceId,
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/agenda/events/"
+                                        + response.eventId()
+                        )
+                )
+                .body(response);
+    }
+
+    @DeleteMapping("/occurrences/{occurrenceId}")
+    public ResponseEntity<Void> deleteOccurrence(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId
+    ) {
+        managementService.deleteOccurrence(
+                userId(jwt),
+                occurrenceId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/events/{eventId}")
+    public ResponseEntity<Void> deleteEventSeries(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId
+    ) {
+        managementService.deleteEventSeries(
+                userId(jwt),
+                eventId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\CreateAgendaEventRequest.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.AgendaCategory;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public record CreateAgendaEventRequest(
+
+        @NotBlank(message = "Informe o tÃ­tulo")
+        @Size(
+                min = 2,
+                max = 160,
+                message = "O tÃ­tulo deve ter entre 2 e 160 caracteres"
+        )
+        String title,
+
+        @Size(
+                max = 2000,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 2000 caracteres"
+        )
+        String description,
+
+        @NotNull(message = "Informe a categoria")
+        AgendaCategory category,
+
+        @Size(
+                max = 255,
+                message = "O local deve ter no mÃ¡ximo 255 caracteres"
+        )
+        String location,
+
+        boolean allDay,
+
+        @NotNull(message = "Informe a data inicial")
+        OffsetDateTime startsAt,
+
+        OffsetDateTime endsAt,
+
+        UUID assignedToMembershipId,
+
+        @Valid
+        RecurrenceRequest recurrence,
+
+        List<
+                @Min(
+                        value = 0,
+                        message = "O lembrete nÃ£o pode ser negativo"
+                )
+                @Max(
+                        value = 10080,
+                        message = "O lembrete mÃ¡ximo Ã© de sete dias"
+                )
+                Integer
+        > remindersInMinutes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\CreateAgendaEventResponse.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.RecurrenceFrequency;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record CreateAgendaEventResponse(
+        UUID eventId,
+        RecurrenceFrequency recurrenceFrequency,
+        int occurrencesCreated,
+        Instant firstOccurrenceStartsAt,
+        Instant lastOccurrenceStartsAt
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\AgendaOccurrenceSummaryResponse.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.AgendaCategory;
+import br.com.nucleo.api.agenda.domain.OccurrenceStatus;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record AgendaOccurrenceSummaryResponse(
+        UUID occurrenceId,
+        UUID eventId,
+        String title,
+        AgendaCategory category,
+        String location,
+        boolean allDay,
+        Instant startsAt,
+        Instant endsAt,
+        OccurrenceStatus status,
+        AssignedMember assignedTo
+) {
+
+    public record AssignedMember(
+            UUID membershipId,
+            UUID userId,
+            String name
+    ) {
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\AgendaOccurrenceDetailsResponse.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.AgendaCategory;
+import br.com.nucleo.api.agenda.domain.OccurrenceStatus;
+import br.com.nucleo.api.agenda.domain.RecurrenceFrequency;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+public record AgendaOccurrenceDetailsResponse(
+        UUID occurrenceId,
+        UUID eventId,
+        String title,
+        String description,
+        AgendaCategory category,
+        String location,
+        boolean allDay,
+        Instant startsAt,
+        Instant endsAt,
+        OccurrenceStatus status,
+        AgendaOccurrenceSummaryResponse.AssignedMember assignedTo,
+        CreatedBy createdBy,
+        Recurrence recurrence,
+        List<Integer> remindersInMinutes,
+        Instant completedAt,
+        Instant cancelledAt,
+        String notes
+) {
+
+    public record CreatedBy(
+            UUID userId,
+            String name
+    ) {
+    }
+
+    public record Recurrence(
+            RecurrenceFrequency frequency,
+            int interval,
+            String daysOfWeek,
+            Instant until,
+            Integer count
+    ) {
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\AgendaOccurrenceActionRequest.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import jakarta.validation.constraints.Size;
+
+public record AgendaOccurrenceActionRequest(
+
+        @Size(
+                max = 1000,
+                message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 1000 caracteres"
+        )
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\DuplicateAgendaEventRequest.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import jakarta.validation.constraints.Size;
+import java.time.OffsetDateTime;
+
+public record DuplicateAgendaEventRequest(
+
+        @Size(
+                min = 2,
+                max = 160,
+                message = "O tÃ­tulo deve ter entre 2 e 160 caracteres"
+        )
+        String title,
+
+        OffsetDateTime startsAt,
+
+        OffsetDateTime endsAt
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\dto\RecurrenceRequest.java
+============================================================
+package br.com.nucleo.api.agenda.dto;
+
+import br.com.nucleo.api.agenda.domain.RecurrenceFrequency;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import java.time.DayOfWeek;
+import java.time.OffsetDateTime;
+import java.util.Set;
+
+public record RecurrenceRequest(
+
+        @NotNull(message = "Informe a frequÃªncia da recorrÃªncia")
+        RecurrenceFrequency frequency,
+
+        @Min(
+                value = 1,
+                message = "O intervalo mÃ­nimo da recorrÃªncia Ã© 1"
+        )
+        @Max(
+                value = 365,
+                message = "O intervalo mÃ¡ximo da recorrÃªncia Ã© 365"
+        )
+        Integer interval,
+
+        Set<DayOfWeek> daysOfWeek,
+
+        OffsetDateTime until,
+
+        @Min(
+                value = 1,
+                message = "A recorrÃªncia deve gerar ao menos uma ocorrÃªncia"
+        )
+        @Max(
+                value = 500,
+                message = "A recorrÃªncia deve gerar no mÃ¡ximo 500 ocorrÃªncias"
+        )
+        Integer count
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\domain\AgendaCategory.java
+============================================================
+package br.com.nucleo.api.agenda.domain;
+
+public enum AgendaCategory {
+    APPOINTMENT,
+    HEALTH,
+    SCHOOL,
+    FAMILY,
+    PERSONAL,
+    BIRTHDAY,
+    TASK,
+    OTHER
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\domain\OccurrenceStatus.java
+============================================================
+package br.com.nucleo.api.agenda.domain;
+
+public enum OccurrenceStatus {
+    SCHEDULED,
+    COMPLETED,
+    CANCELLED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\agenda\domain\RecurrenceFrequency.java
+============================================================
+package br.com.nucleo.api.agenda.domain;
+
+public enum RecurrenceFrequency {
+    NONE,
+    DAILY,
+    WEEKLY,
+    MONTHLY,
+    YEARLY
+}

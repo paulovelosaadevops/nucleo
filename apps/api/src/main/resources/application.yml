@@ -64,10 +64,10 @@ security:
     refresh-token-ttl: 30d
 
 app:
-  web-url: ${APP_WEB_URL:http://localhost:3000}
+  web-url: ${APP_WEB_URL:http://localhost:3001}
 
   invitations:
     ttl: 7d
 
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3001}

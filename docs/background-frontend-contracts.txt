@@ -1,0 +1,1298 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\(app)\layout.tsx
+============================================================
+import { AppShell } from "@/components/layout/app-shell";
+import type { ReactNode } from "react";
+
+interface PrivateLayoutProps {
+  children: ReactNode;
+}
+
+export default function PrivateLayout({
+  children,
+}: PrivateLayoutProps) {
+  return (
+    <AppShell>
+      {children}
+    </AppShell>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\(auth)\layout.tsx
+============================================================
+import type { ReactNode } from "react";
+
+interface AuthLayoutProps {
+  children: ReactNode;
+}
+
+export default function AuthLayout({
+  children,
+}: AuthLayoutProps) {
+  return (
+    <main className="nucleo-grid min-h-screen">
+      {children}
+    </main>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\globals.css
+============================================================
+@import "tailwindcss";
+
+:root {
+  --background: #050505;
+  --background-soft: #0a0a0b;
+  --surface: rgba(20, 20, 22, 0.78);
+  --surface-strong: rgba(29, 29, 32, 0.92);
+  --surface-muted: rgba(255, 255, 255, 0.045);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --foreground: #f7f7f7;
+  --foreground-muted: #a5a5aa;
+  --foreground-subtle: #707076;
+  --silver: #c9c9ce;
+  --silver-bright: #f1f1f3;
+  --danger: #ff6467;
+  --success: #5dd69b;
+  --warning: #f0bd64;
+  --radius-small: 0.875rem;
+  --radius-medium: 1.25rem;
+  --radius-large: 1.75rem;
+  --shadow-floating:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at 12% -10%,
+      rgba(255, 255, 255, 0.1),
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 95% 15%,
+      rgba(124, 124, 135, 0.08),
+      transparent 25rem
+    ),
+    linear-gradient(
+      180deg,
+      #080809 0%,
+      #050505 45%,
+      #030303 100%
+    );
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(230, 230, 235, 0.25);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 0.125rem solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+  background-clip: padding-box;
+}
+
+.nucleo-grid {
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    );
+  background-size: 2rem 2rem;
+}
+
+.nucleo-glass {
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.025)
+    );
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(1.5rem);
+  -webkit-backdrop-filter: blur(1.5rem);
+}
+
+.nucleo-noise {
+  position: relative;
+}
+
+.nucleo-noise::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  content: "";
+  background-image: url(
+    "data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='.7'/%3E%3C/svg%3E"
+  );
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@keyframes nucleo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nucleo-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: nucleo-fade-up 420ms ease-out both;
+}
+
+.animate-nucleo-pulse {
+  animation: nucleo-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\layout.tsx
+============================================================
+import type {
+  Metadata,
+  Viewport,
+} from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { AppProviders } from "@/providers/app-providers";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: "NÃºcleo",
+    template: "%s | NÃºcleo",
+  },
+  description:
+    "A central operacional da sua famÃ­lia.",
+  applicationName: "NÃºcleo",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "NÃºcleo",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#050505",
+};
+
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function RootLayout({
+  children,
+}: RootLayoutProps) {
+  return (
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+    >
+      <body
+        className={`
+          ${geistSans.variable}
+          ${geistMono.variable}
+          nucleo-noise
+          min-h-screen
+          antialiased
+        `}
+      >
+        <AppProviders>
+          {children}
+        </AppProviders>
+      </body>
+    </html>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\components\auth\auth-shell.tsx
+============================================================
+import { BrandMark } from "@/components/ui/brand-mark";
+import {
+  CalendarDays,
+  ChartNoAxesCombined,
+  HeartHandshake,
+  ShoppingBasket,
+} from "lucide-react";
+import type { ReactNode } from "react";
+
+interface AuthShellProps {
+  title: string;
+  description: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}
+
+const features = [
+  {
+    icon: CalendarDays,
+    title: "Rotina organizada",
+    description:
+      "Compromissos e lembretes da famÃ­lia em um sÃ³ lugar.",
+  },
+  {
+    icon: ShoppingBasket,
+    title: "Compras compartilhadas",
+    description:
+      "Listas colaborativas sempre atualizadas.",
+  },
+  {
+    icon: ChartNoAxesCombined,
+    title: "FinanÃ§as transparentes",
+    description:
+      "Contas, cartÃµes e orÃ§amento sob controle.",
+  },
+];
+
+export function AuthShell({
+  title,
+  description,
+  children,
+  footer,
+}: AuthShellProps) {
+  return (
+    <div className="min-h-screen lg:grid lg:grid-cols-[1.08fr_0.92fr]">
+      <section className="relative hidden min-h-screen overflow-hidden border-r border-white/[0.07] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <div
+          aria-hidden="true"
+          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white/[0.07] blur-3xl"
+        />
+
+        <div
+          aria-hidden="true"
+          className="absolute -bottom-48 right-0 h-[30rem] w-[30rem] rounded-full bg-zinc-500/[0.08] blur-3xl"
+        />
+
+        <div className="relative z-10">
+          <BrandMark />
+        </div>
+
+        <div className="relative z-10 max-w-xl">
+          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3.5 py-2 text-xs font-medium tracking-wide text-zinc-300">
+            <HeartHandshake className="h-3.5 w-3.5" />
+            A vida da famÃ­lia em sintonia
+          </div>
+
+          <h2 className="max-w-lg text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-white xl:text-5xl">
+            Menos coisas para lembrar.
+            <span className="block bg-gradient-to-r from-white via-zinc-300 to-zinc-600 bg-clip-text text-transparent">
+              Mais tempo para viver.
+            </span>
+          </h2>
+
+          <div className="mt-10 grid gap-3">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+
+              return (
+                <div
+                  key={feature.title}
+                  className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4 backdrop-blur-xl"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-zinc-300">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-zinc-100">
+                      {feature.title}
+                    </p>
+
+                    <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="relative z-10 text-xs text-zinc-600">
+          NÃºcleo â€” Central Familiar
+        </p>
+      </section>
+
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 sm:px-8 lg:px-12">
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-white/[0.055] blur-3xl lg:hidden"
+        />
+
+        <div className="relative z-10 w-full max-w-md animate-fade-up">
+          <div className="mb-10 flex justify-center lg:hidden">
+            <BrandMark />
+          </div>
+
+          <div className="nucleo-glass rounded-[1.75rem] p-5 sm:p-8">
+            <div className="mb-7">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Bem-vindo ao NÃºcleo
+              </p>
+
+              <h1 className="text-2xl font-semibold tracking-[-0.035em] text-white sm:text-3xl">
+                {title}
+              </h1>
+
+              <p className="mt-2.5 text-sm leading-6 text-zinc-500">
+                {description}
+              </p>
+            </div>
+
+            {children}
+          </div>
+
+          {footer && (
+            <div className="mt-6 text-center text-sm text-zinc-500">
+              {footer}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\family\invitation-preview.tsx
+============================================================
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  Check,
+  Clock,
+  LoaderCircle,
+  ShieldCheck,
+  UserRound,
+  X,
+} from "lucide-react";
+
+import { familyService } from "./family-service";
+
+import type { FamilyInvitationPreview } from "@/types/family";
+
+interface InvitationPreviewProps {
+  token: string;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+export function InvitationPreview({
+  token,
+}: InvitationPreviewProps) {
+  const [invitation, setInvitation] =
+    useState<FamilyInvitationPreview | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [declining, setDeclining] = useState(false);
+  const [declined, setDeclined] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInvitation() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response =
+          await familyService.invitations.preview(token);
+
+        if (active) {
+          setInvitation(response);
+        }
+      } catch (requestError) {
+        if (active) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "NÃƒÂ£o foi possÃƒÂ­vel carregar o convite.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInvitation();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  async function declineInvitation() {
+    const confirmed = window.confirm(
+      "Deseja realmente recusar este convite?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeclining(true);
+    setError(null);
+
+    try {
+      await familyService.invitations.decline(token);
+      setDeclined(true);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃƒÂ£o foi possÃƒÂ­vel recusar o convite.",
+      );
+    } finally {
+      setDeclining(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-black">
+        <LoaderCircle className="size-7 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
+
+  if (error || !invitation) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-black p-5">
+        <section className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center">
+          <AlertCircle className="mx-auto size-9 text-rose-300" />
+
+          <h1 className="mt-5 text-xl font-semibold text-white">
+            Convite indisponÃƒÂ­vel
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-zinc-500">
+            {error ??
+              "Este convite nÃƒÂ£o pÃƒÂ´de ser encontrado."}
+          </p>
+
+          <Link
+            href="/login"
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+          >
+            Ir para o login
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const invalid =
+    declined || invitation.status !== "PENDING";
+
+  const roleLabel =
+    invitation.role === "ADMIN"
+      ? "Administrador"
+      : "Membro";
+
+  const RoleIcon =
+    invitation.role === "ADMIN"
+      ? ShieldCheck
+      : UserRound;
+
+  return (
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-black p-5">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]" />
+
+      <section className="relative w-full max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+        <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-white">
+          {invalid ? (
+            <X className="size-5" />
+          ) : (
+            <Check className="size-5" />
+          )}
+        </div>
+
+        <p className="mt-6 text-xs font-medium uppercase tracking-[0.2em] text-zinc-600">
+          Convite para o NÃƒÂºcleo
+        </p>
+
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+          {invalid
+            ? "Este convite nÃƒÂ£o estÃƒÂ¡ mais disponÃƒÂ­vel"
+            : `VocÃƒÂª foi convidado para ${invitation.familyName}`}
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-zinc-500">
+          {invalid
+            ? "O convite pode ter sido aceito, recusado, revogado ou expirado."
+            : `${invitation.invitedByName} convidou ${invitation.maskedEmail} para participar da central familiar.`}
+        </p>
+
+        {!invalid ? (
+          <div className="mt-6 space-y-3 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-3">
+              <RoleIcon className="size-4 text-zinc-400" />
+
+              <div>
+                <p className="text-xs text-zinc-600">
+                  Papel no nÃƒÂºcleo
+                </p>
+                <p className="mt-0.5 text-sm text-zinc-300">
+                  {roleLabel}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Clock className="size-4 text-zinc-400" />
+
+              <div>
+                <p className="text-xs text-zinc-600">
+                  VÃƒÂ¡lido atÃƒÂ©
+                </p>
+                <p className="mt-0.5 text-sm text-zinc-300">
+                  {formatDate(invitation.expiresAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-7 flex flex-col gap-2">
+          {!invalid ? (
+            <>
+              <Link
+                href={`/cadastro?convite=${encodeURIComponent(token)}`}
+                className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+              >
+                Criar conta e participar
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
+              >
+                JÃƒÂ¡ tenho uma conta
+              </Link>
+
+              <button
+                type="button"
+                disabled={declining}
+                onClick={() => void declineInvitation()}
+                className="inline-flex h-11 items-center justify-center gap-2 text-sm text-zinc-600 hover:text-zinc-300 disabled:opacity-50"
+              >
+                {declining ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : null}
+                Recusar convite
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+            >
+              Ir para o login
+            </Link>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\finance\finance-credit-cards.tsx
+============================================================
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  CircleX,
+  CreditCard,
+  FileText,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  Power,
+  RotateCcw,
+  ShoppingBag,
+  Trash2,
+} from "lucide-react";
+
+import { financeService } from "./finance-service";
+import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
+import { FinancialCreditCardForm } from "./financial-credit-card-form";
+import { FinancialInvoicePanel } from "./financial-invoice-panel";
+
+import type {
+  CreateFinancialCardPurchaseRequest,
+  CreateFinancialCreditCardRequest,
+  FinancialAccount,
+  FinancialCategory,
+  FinancialCreditCard,
+  FinancialCreditCardPurchase,
+  UpdateFinancialCardPurchaseRequest,
+  UpdateFinancialCreditCardRequest,
+} from "@/types/finance";
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+function purchasePeriod() {
+  const today = new Date();
+
+  return {
+    from: `${today.getFullYear()}-01-01`,
+    to: `${today.getFullYear()}-12-31`,
+  };
+}
+
+export function FinanceCreditCards() {
+  const [cards, setCards] = useState<FinancialCreditCard[]>([]);
+  const [purchases, setPurchases] = useState<
+    FinancialCreditCardPurchase[]
+  >([]);
+  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [categories, setCategories] = useState<
+    FinancialCategory[]
+  >([]);
+
+  const [editingCard, setEditingCard] =
+    useState<FinancialCreditCard | null>(null);
+  const [editingPurchase, setEditingPurchase] =
+    useState<FinancialCreditCardPurchase | null>(null);
+  const [invoiceCard, setInvoiceCard] =
+    useState<FinancialCreditCard | null>(null);
+
+  const [cardFormOpen, setCardFormOpen] = useState(false);
+  const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const totalLimit = useMemo(
+    () =>
+      cards
+        .filter((card) => card.active)
+        .reduce((total, card) => total + card.creditLimit, 0),
+    [cards],
+  );
+
+  const totalAvailable = useMemo(
+    () =>
+      cards
+        .filter((card) => card.active)
+        .reduce(
+          (total, card) => total + card.availableLimit,
+          0,
+        ),
+    [cards],
+  );
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const period = purchasePeriod();
+
+      const [
+        cardsResult,
+        purchasesResult,
+        accountsResult,
+        categoriesResult,
+      ] = await Promise.all([
+        financeService.creditCards.list(),
+        financeService.cardPurchases.list(period),
+        financeService.accounts.list(),
+        financeService.categories.list("EXPENSE"),
+      ]);
+
+      setCards(cardsResult);
+      setPurchases(purchasesResult);
+      setAccounts(accountsResult);
+      setCategories(categoriesResult);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃ£o foi possÃ­vel carregar os cartÃµes.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  async function submitCard(
+    request:
+      | CreateFinancialCreditCardRequest
+      | UpdateFinancialCreditCardRequest,
+  ) {
+    setSubmitting(true);
+
+    try {
+      if (editingCard) {
+        await financeService.creditCards.update(
+          editingCard.id,
+          request as UpdateFinancialCreditCardRequest,
+        );
+      } else {
+        await financeService.creditCards.create(
+          request as CreateFinancialCreditCardRequest,
+        );
+      }
+
+      setCardFormOpen(false);
+      setEditingCard(null);
+      await loadData();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitPurchase(
+    request:
+      | CreateFinancialCardPurchaseRequest
+      | UpdateFinancialCardPurchaseRequest,
+  ) {
+    setSubmitting(true);
+
+    try {
+      if (editingPurchase) {
+        await financeService.cardPurchases.update(
+          editingPurchase.id,
+          request as UpdateFinancialCardPurchaseRequest,
+        );
+      } else {
+        await financeService.cardPurchases.create(
+          request as CreateFinancialCardPurchaseRequest,
+        );
+      }
+
+      setPurchaseFormOpen(false);
+      setEditingPurchase(null);
+      await loadData();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function executeAction(
+    id: string,
+    action: () => Promise<unknown>,
+  ) {
+    setActionId(id);
+    setError(null);
+
+    try {
+      await action();
+      await loadData();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃ£o foi possÃ­vel realizar a aÃ§Ã£o.",
+      );
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">
+            Limite total
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {currencyFormatter.format(totalLimit)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-xs uppercase tracking-wider text-zinc-500">
+            Limite disponÃ­vel
+          </p>
+          <p className="mt-2 text-xl font-semibold text-white">
+            {currencyFormatter.format(totalAvailable)}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-semibold text-white">
+            CartÃµes de crÃ©dito
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Limites, compras e faturas
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={cards.length === 0}
+            onClick={() => {
+              setEditingPurchase(null);
+              setPurchaseFormOpen(true);
+            }}
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 text-sm font-semibold text-zinc-300 disabled:opacity-40 sm:flex-none"
+          >
+            <ShoppingBag className="size-4" />
+            Nova compra
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCard(null);
+              setCardFormOpen(true);
+            }}
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-semibold text-black sm:flex-none"
+          >
+            <Plus className="size-4" />
+            Novo cartÃ£o
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="flex gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+          <AlertCircle className="size-4 shrink-0" />
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="flex min-h-60 items-center justify-center">
+          <LoaderCircle className="size-6 animate-spin text-zinc-500" />
+        </div>
+      ) : null}
+
+      {!loading && cards.length === 0 ? (
+        <div className="flex min-h-60 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 text-center">
+          <CreditCard className="size-8 text-zinc-600" />
+          <p className="mt-4 font-medium text-zinc-300">
+            Nenhum cartÃ£o cadastrado
+          </p>
+        </div>
+      ) : null}
+
+      {!loading && cards.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {cards.map((card) => (
+            <article
+              key={card.id}
+              className={[
+                "relative overflow-hidden rounded-[1.75rem] border p-5",
+                card.active
+                  ? "border-white/10 bg-white/[0.04]"
+                  : "border-white/[0.06] bg-white/[0.015] opacity-60",
+              ].join(" ")}
+            >
+              <div
+                className="absolute inset-0 opacity-10"
+                style={{
+                  background: `linear-gradient(135deg, ${card.color ?? "#ffffff"}, transparent 65%)`,
+                }}
+              />
+
+              <div className="relative">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-white">
+                      {card.name}
+                    </h3>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {card.brand} â€¢â€¢â€¢â€¢ {card.lastFour}
+                    </p>
+                  </div>
+
+                  {actionId === card.id ? (
+                    <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                  ) : (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        title="Faturas"
+                        onClick={() => setInvoiceCard(card)}
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                      >
+                        <FileText className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Editar"
+                        onClick={() => {
+                          setEditingCard(card);
+                          setCardFormOpen(true);
+                        }}
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title={card.active ? "Desativar" : "Ativar"}
+                        onClick={() =>
+                          void executeAction(card.id, () =>
+                            card.active
+                              ? financeService.creditCards.deactivate(
+                                  card.id,
+                                )
+                              : financeService.creditCards.activate(
+                                  card.id,
+                                ),
+                          )
+                        }
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                      >
+                        <Power className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Excluir"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Deseja excluir o cartÃ£o "${card.name}"?`,
+                            )
+                          ) {
+                            void executeAction(card.id, () =>
+                              financeService.creditCards.remove(
+                                card.id,
+                              ),
+                            );
+                          }
+                        }}
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-8 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-zinc-600">DisponÃ­vel</p>
+                    <p className="mt-1 font-semibold text-white">
+                      {currencyFormatter.format(card.availableLimit)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-600">Em aberto</p>
+                    <p className="mt-1 font-semibold text-zinc-300">
+                      {currencyFormatter.format(card.outstandingAmount)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-white"
+                    style={{
+                      width: `${Math.min(
+                        Math.max(
+                          (card.outstandingAmount /
+                            card.creditLimit) *
+                            100,
+                          0,
+                        ),
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && purchases.length > 0 ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-semibold text-white">
+              Compras do ano
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {purchases.length} registradas
+            </p>
+          </div>
+
+          {purchases.map((purchase) => (
+            <article
+              key={purchase.id}
+              className="flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-white">
+                  {purchase.description}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {purchase.creditCardName} â€¢{" "}
+                  {purchase.totalInstallments}x â€¢{" "}
+                  {purchase.categoryName ?? "Sem categoria"}
+                </p>
+              </div>
+
+              <p className="font-semibold text-white">
+                {currencyFormatter.format(purchase.totalAmount)}
+              </p>
+
+              {actionId === purchase.id ? (
+                <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+              ) : (
+                <div className="flex gap-1">
+                  {purchase.status === "ACTIVE" ? (
+                    <>
+                      <button
+                        type="button"
+                        title="Editar"
+                        onClick={() => {
+                          setEditingPurchase(purchase);
+                          setPurchaseFormOpen(true);
+                        }}
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Cancelar"
+                        onClick={() =>
+                          void executeAction(purchase.id, () =>
+                            financeService.cardPurchases.cancel(
+                              purchase.id,
+                            ),
+                          )
+                        }
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-amber-400/10 hover:text-amber-300"
+                      >
+                        <CircleX className="size-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      title="Restaurar"
+                      onClick={() =>
+                        void executeAction(purchase.id, () =>
+                          financeService.cardPurchases.restore(
+                            purchase.id,
+                          ),
+                        )
+                      }
+                      className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                    >
+                      <RotateCcw className="size-4" />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    title="Excluir"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Deseja excluir a compra "${purchase.description}"?`,
+                        )
+                      ) {
+                        void executeAction(purchase.id, () =>
+                          financeService.cardPurchases.remove(
+                            purchase.id,
+                          ),
+                        );
+                      }
+                    }}
+                    className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {cardFormOpen ? (
+        <FinancialCreditCardForm
+          key={editingCard?.id ?? "new-card"}
+          card={editingCard}
+          accounts={accounts}
+          submitting={submitting}
+          onSubmit={submitCard}
+          onCancel={() => {
+            if (!submitting) {
+              setCardFormOpen(false);
+              setEditingCard(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {purchaseFormOpen ? (
+        <FinancialCardPurchaseForm
+          key={editingPurchase?.id ?? "new-purchase"}
+          purchase={editingPurchase}
+          cards={cards}
+          categories={categories}
+          submitting={submitting}
+          onSubmit={submitPurchase}
+          onCancel={() => {
+            if (!submitting) {
+              setPurchaseFormOpen(false);
+              setEditingPurchase(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {invoiceCard ? (
+        <FinancialInvoicePanel
+          card={invoiceCard}
+          accounts={accounts}
+          onChanged={loadData}
+          onClose={() => setInvoiceCard(null)}
+        />
+      ) : null}
+    </div>
+  );
+}

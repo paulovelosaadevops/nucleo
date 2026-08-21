@@ -1,0 +1,2930 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-action-menu.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import type { AgendaOccurrenceDetails } from "@/types/agenda";
+import {
+  Ban,
+  Check,
+  Copy,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
+
+interface AgendaActionMenuProps {
+  occurrence: AgendaOccurrenceDetails;
+  loading: boolean;
+  onComplete: (notes?: string) => Promise<void>;
+  onCancel: (notes?: string) => Promise<void>;
+  onDuplicate: () => Promise<void>;
+  onDeleteOccurrence: () => Promise<void>;
+  onDeleteSeries: () => Promise<void>;
+}
+
+export function AgendaActionMenu({
+  occurrence,
+  loading,
+  onComplete,
+  onCancel,
+  onDuplicate,
+  onDeleteOccurrence,
+  onDeleteSeries,
+}: AgendaActionMenuProps) {
+  const [notes, setNotes] = useState("");
+  const [actionError, setActionError] =
+    useState<string | null>(null);
+
+  const scheduled =
+    occurrence.status === "SCHEDULED";
+
+  const recurring =
+    occurrence.recurrence &&
+    occurrence.recurrence.frequency !== "NONE";
+
+  async function execute(
+    action: () => Promise<void>,
+  ) {
+    setActionError(null);
+
+    try {
+      await action();
+    } catch {
+      setActionError(
+        "NÃ£o foi possÃ­vel concluir esta aÃ§Ã£o.",
+      );
+    }
+  }
+
+  async function deleteOccurrence() {
+    if (
+      !window.confirm(
+        "Excluir somente esta ocorrÃªncia?",
+      )
+    ) {
+      return;
+    }
+
+    await execute(onDeleteOccurrence);
+  }
+
+  async function deleteSeries() {
+    if (
+      !window.confirm(
+        "Excluir toda a sÃ©rie recorrente? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.",
+      )
+    ) {
+      return;
+    }
+
+    await execute(onDeleteSeries);
+  }
+
+  return (
+    <div className="border-t border-white/[0.07] pt-5">
+      {scheduled && (
+        <div>
+          <label className="mb-2 block text-xs font-medium text-zinc-500">
+            ObservaÃ§Ã£o da conclusÃ£o ou cancelamento
+          </label>
+
+          <textarea
+            rows={2}
+            maxLength={1000}
+            value={notes}
+            onChange={(event) =>
+              setNotes(event.target.value)
+            }
+            placeholder="Opcional"
+            className="w-full resize-none rounded-2xl border border-white/[0.08] bg-black/25 px-3.5 py-3 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-white/20"
+          />
+        </div>
+      )}
+
+      {actionError && (
+        <p className="mt-3 text-xs text-red-300">
+          {actionError}
+        </p>
+      )}
+
+      {scheduled && (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button
+            variant="secondary"
+            loading={loading}
+            onClick={() =>
+              void execute(() =>
+                onComplete(
+                  notes.trim() || undefined,
+                ),
+              )
+            }
+          >
+            <Check className="h-4 w-4" />
+            Concluir
+          </Button>
+
+          <Button
+            variant="secondary"
+            disabled={loading}
+            onClick={() =>
+              void execute(() =>
+                onCancel(
+                  notes.trim() || undefined,
+                ),
+              )
+            }
+          >
+            <Ban className="h-4 w-4" />
+            Cancelar
+          </Button>
+        </div>
+      )}
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Button
+          variant="ghost"
+          disabled={loading}
+          onClick={() =>
+            void execute(onDuplicate)
+          }
+        >
+          <Copy className="h-4 w-4" />
+          Duplicar
+        </Button>
+
+        <Button
+          variant="danger"
+          disabled={loading}
+          onClick={() =>
+            void deleteOccurrence()
+          }
+        >
+          <Trash2 className="h-4 w-4" />
+          Excluir
+        </Button>
+      </div>
+
+      {recurring && (
+        <Button
+          variant="danger"
+          className="mt-2 w-full"
+          disabled={loading}
+          onClick={() => void deleteSeries()}
+        >
+          <Trash2 className="h-4 w-4" />
+          Excluir toda a sÃ©rie
+        </Button>
+      )}
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-calendar-strip.tsx
+============================================================
+"use client";
+
+import { cn } from "@/lib/cn";
+import {
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+
+interface AgendaCalendarStripProps {
+  selectedDate: string;
+  onChange: (date: string) => void;
+}
+
+const weekdayFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+  });
+
+const monthFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(
+  value: string,
+  amount: number,
+): string {
+  const date = parseDate(value);
+  date.setDate(date.getDate() + amount);
+
+  return formatDate(date);
+}
+
+export function AgendaCalendarStrip({
+  selectedDate,
+  onChange,
+}: AgendaCalendarStripProps) {
+  const selected = parseDate(selectedDate);
+
+  const days = Array.from(
+    { length: 7 },
+    (_, index) =>
+      addDays(selectedDate, index - 3),
+  );
+
+  const today = formatDate(new Date());
+
+  const monthLabel = monthFormatter
+    .format(selected)
+    .replace(
+      /^./,
+      (character) => character.toUpperCase(),
+    );
+
+  return (
+    <section className="rounded-[1.35rem] border border-white/[0.08] bg-white/[0.035] p-3 sm:p-4">
+      <div className="mb-3 flex items-center justify-between px-1">
+        <button
+          type="button"
+          onClick={() =>
+            onChange(
+              addDays(selectedDate, -1),
+            )
+          }
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
+          aria-label="Dia anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange(today)}
+          className="text-sm font-medium capitalize text-zinc-300 transition hover:text-white"
+        >
+          {monthLabel}
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            onChange(
+              addDays(selectedDate, 1),
+            )
+          }
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
+          aria-label="PrÃ³ximo dia"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((value) => {
+          const date = parseDate(value);
+          const active =
+            value === selectedDate;
+          const isToday = value === today;
+
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onChange(value)}
+              className={cn(
+                "relative flex min-h-16 flex-col items-center justify-center rounded-2xl border text-center transition sm:min-h-18",
+                active
+                  ? "border-white bg-white text-black"
+                  : "border-transparent text-zinc-500 hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-zinc-200",
+              )}
+            >
+              <span className="text-[0.6rem] font-semibold uppercase">
+                {weekdayFormatter
+                  .format(date)
+                  .replace(".", "")}
+              </span>
+
+              <span className="mt-1 text-base font-semibold">
+                {date.getDate()}
+              </span>
+
+              {isToday && (
+                <span
+                  className={cn(
+                    "absolute bottom-1.5 h-1 w-1 rounded-full",
+                    active
+                      ? "bg-black"
+                      : "bg-white",
+                  )}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-event-form.tsx
+============================================================
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/api/api-client";
+import { getErrorMessage } from "@/lib/api/api-error";
+import { cn } from "@/lib/cn";
+
+import type {
+  AgendaCategory,
+  AgendaDayOfWeek,
+  CreateAgendaEventRequest,
+  RecurrenceFrequency,
+} from "@/types/agenda";
+
+import {
+  Bell,
+  CalendarDays,
+  MapPin,
+  Repeat2,
+  UserRound,
+  X,
+} from "lucide-react";
+
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+
+import { createPortal } from "react-dom";
+
+interface FamilyMemberOption {
+  membershipId: string;
+  name: string;
+  status: string;
+}
+
+interface AgendaEventFormProps {
+  open: boolean;
+  initialDate: string;
+  loading: boolean;
+  onClose: () => void;
+  onCreate: (
+    request: CreateAgendaEventRequest,
+  ) => Promise<unknown>;
+}
+
+const categories: Array<{
+  value: AgendaCategory;
+  label: string;
+}> = [
+  {
+    value: "APPOINTMENT",
+    label: "Compromisso",
+  },
+  {
+    value: "HEALTH",
+    label: "SaÃºde",
+  },
+  {
+    value: "SCHOOL",
+    label: "Escola",
+  },
+  {
+    value: "FAMILY",
+    label: "FamÃ­lia",
+  },
+  {
+    value: "PERSONAL",
+    label: "Pessoal",
+  },
+  {
+    value: "BIRTHDAY",
+    label: "AniversÃ¡rio",
+  },
+  {
+    value: "TASK",
+    label: "Tarefa",
+  },
+  {
+    value: "OTHER",
+    label: "Outro",
+  },
+];
+
+const recurrenceOptions: Array<{
+  value: RecurrenceFrequency;
+  label: string;
+}> = [
+  {
+    value: "NONE",
+    label: "NÃ£o repetir",
+  },
+  {
+    value: "DAILY",
+    label: "Diariamente",
+  },
+  {
+    value: "WEEKLY",
+    label: "Semanalmente",
+  },
+  {
+    value: "MONTHLY",
+    label: "Mensalmente",
+  },
+  {
+    value: "YEARLY",
+    label: "Anualmente",
+  },
+];
+
+const weekDays: Array<{
+  value: AgendaDayOfWeek;
+  label: string;
+}> = [
+  {
+    value: "MONDAY",
+    label: "S",
+  },
+  {
+    value: "TUESDAY",
+    label: "T",
+  },
+  {
+    value: "WEDNESDAY",
+    label: "Q",
+  },
+  {
+    value: "THURSDAY",
+    label: "Q",
+  },
+  {
+    value: "FRIDAY",
+    label: "S",
+  },
+  {
+    value: "SATURDAY",
+    label: "S",
+  },
+  {
+    value: "SUNDAY",
+    label: "D",
+  },
+];
+
+const reminderOptions = [
+  {
+    value: 0,
+    label: "No horÃ¡rio",
+  },
+  {
+    value: 10,
+    label: "10 minutos antes",
+  },
+  {
+    value: 30,
+    label: "30 minutos antes",
+  },
+  {
+    value: 60,
+    label: "1 hora antes",
+  },
+  {
+    value: 1440,
+    label: "1 dia antes",
+  },
+];
+
+function toIsoDateTime(
+  date: string,
+  time: string,
+): string {
+  return new Date(
+    `${date}T${time}:00`,
+  ).toISOString();
+}
+
+export function AgendaEventForm({
+  open,
+  initialDate,
+  loading,
+  onClose,
+  onCreate,
+}: AgendaEventFormProps) {
+  const [mounted, setMounted] =
+    useState(false);
+
+  const [title, setTitle] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
+
+  const [category, setCategory] =
+    useState<AgendaCategory>("APPOINTMENT");
+
+  const [location, setLocation] =
+    useState("");
+
+  const [allDay, setAllDay] =
+    useState(false);
+
+  const [startDate, setStartDate] =
+    useState(initialDate);
+
+  const [startTime, setStartTime] =
+    useState("09:00");
+
+  const [endDate, setEndDate] =
+    useState(initialDate);
+
+  const [endTime, setEndTime] =
+    useState("10:00");
+
+  const [
+    assignedMembershipId,
+    setAssignedMembershipId,
+  ] = useState("");
+
+  const [recurrence, setRecurrence] =
+    useState<RecurrenceFrequency>("NONE");
+
+  const [
+    recurrenceInterval,
+    setRecurrenceInterval,
+  ] = useState("1");
+
+  const [
+    recurrenceCount,
+    setRecurrenceCount,
+  ] = useState("");
+
+  const [selectedDays, setSelectedDays] =
+    useState<AgendaDayOfWeek[]>([]);
+
+  const [reminders, setReminders] =
+    useState<number[]>([30]);
+
+  const [members, setMembers] =
+    useState<FamilyMemberOption[]>([]);
+
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setStartDate(initialDate);
+    setEndDate(initialDate);
+
+    void apiRequest<FamilyMemberOption[]>(
+      "/api/family/members",
+    )
+      .then((response) => {
+        setMembers(
+          response.filter(
+            (member) =>
+              member.status === "ACTIVE",
+          ),
+        );
+      })
+      .catch(() => {
+        setMembers([]);
+      });
+  }, [
+    initialDate,
+    open,
+  ]);
+
+  function reset() {
+    setTitle("");
+    setDescription("");
+    setCategory("APPOINTMENT");
+    setLocation("");
+    setAllDay(false);
+    setStartDate(initialDate);
+    setStartTime("09:00");
+    setEndDate(initialDate);
+    setEndTime("10:00");
+    setAssignedMembershipId("");
+    setRecurrence("NONE");
+    setRecurrenceInterval("1");
+    setRecurrenceCount("");
+    setSelectedDays([]);
+    setReminders([30]);
+    setFormError(null);
+  }
+
+  function handleClose() {
+    if (loading) {
+      return;
+    }
+
+    reset();
+    onClose();
+  }
+
+  function toggleDay(
+    day: AgendaDayOfWeek,
+  ) {
+    setSelectedDays((current) =>
+      current.includes(day)
+        ? current.filter(
+            (currentDay) =>
+              currentDay !== day,
+          )
+        : [
+            ...current,
+            day,
+          ],
+    );
+  }
+
+  function toggleReminder(
+    value: number,
+  ) {
+    setReminders((current) =>
+      current.includes(value)
+        ? current.filter(
+            (reminder) =>
+              reminder !== value,
+          )
+        : [
+            ...current,
+            value,
+          ].sort(
+            (left, right) =>
+              left - right,
+          ),
+    );
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setFormError(null);
+
+    const normalizedTitle =
+      title.trim().replace(/\s+/g, " ");
+
+    if (normalizedTitle.length < 2) {
+      setFormError(
+        "Informe um tÃ­tulo com pelo menos 2 caracteres.",
+      );
+      return;
+    }
+
+    const startsAt = allDay
+      ? toIsoDateTime(
+          startDate,
+          "00:00",
+        )
+      : toIsoDateTime(
+          startDate,
+          startTime,
+        );
+
+    const endsAt = allDay
+      ? toIsoDateTime(
+          endDate,
+          "23:59",
+        )
+      : toIsoDateTime(
+          endDate,
+          endTime,
+        );
+
+    if (
+      new Date(endsAt).getTime() <
+      new Date(startsAt).getTime()
+    ) {
+      setFormError(
+        "O tÃ©rmino nÃ£o pode ser anterior ao inÃ­cio.",
+      );
+      return;
+    }
+
+    if (
+      recurrence === "WEEKLY" &&
+      selectedDays.length === 0
+    ) {
+      setFormError(
+        "Selecione pelo menos um dia da semana.",
+      );
+      return;
+    }
+
+    const interval =
+      Number(recurrenceInterval);
+
+    if (
+      recurrence !== "NONE" &&
+      (
+        !Number.isInteger(interval) ||
+        interval < 1 ||
+        interval > 365
+      )
+    ) {
+      setFormError(
+        "Informe um intervalo de recorrÃªncia vÃ¡lido.",
+      );
+      return;
+    }
+
+    try {
+      await onCreate({
+        title: normalizedTitle,
+        description:
+          description.trim() || undefined,
+        category,
+        location:
+          location.trim() || undefined,
+        allDay,
+        startsAt,
+        endsAt,
+        assignedToMembershipId:
+          assignedMembershipId || undefined,
+        recurrence:
+          recurrence === "NONE"
+            ? undefined
+            : {
+                frequency: recurrence,
+                interval,
+                daysOfWeek:
+                  recurrence === "WEEKLY"
+                    ? selectedDays
+                    : undefined,
+                count: recurrenceCount
+                  ? Number(
+                      recurrenceCount,
+                    )
+                  : undefined,
+              },
+        remindersInMinutes: reminders,
+      });
+
+      reset();
+      onClose();
+    } catch (error) {
+      setFormError(
+        getErrorMessage(error),
+      );
+    }
+  }
+
+  if (!open || !mounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      role="presentation"
+      className="
+        fixed
+        inset-0
+        z-[100]
+        flex
+        items-end
+        justify-center
+        bg-black/80
+        p-0
+        backdrop-blur-sm
+        sm:items-center
+        sm:p-6
+      "
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          handleClose();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          handleClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="agenda-form-title"
+        aria-busy={loading}
+        className="
+          flex
+          max-h-[94dvh]
+          w-full
+          flex-col
+          overflow-hidden
+          rounded-t-[2rem]
+          border
+          border-white/10
+          bg-[#090909]
+          shadow-[0_32px_100px_rgba(0,0,0,0.8)]
+          sm:max-h-[92dvh]
+          sm:max-w-3xl
+          sm:rounded-[2rem]
+        "
+      >
+        <header
+          className="
+            relative
+            z-10
+            flex
+            shrink-0
+            items-start
+            justify-between
+            gap-4
+            border-b
+            border-white/10
+            bg-[#090909]/95
+            px-5
+            py-5
+            backdrop-blur-xl
+            sm:px-7
+          "
+        >
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-600">
+              Agenda familiar
+            </p>
+
+            <h2
+              id="agenda-form-title"
+              className="mt-1 text-xl font-semibold text-white"
+            >
+              Novo compromisso
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleClose}
+            className="
+              flex
+              size-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-white/10
+              text-zinc-400
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+              disabled:opacity-50
+            "
+            aria-label="Fechar formulÃ¡rio"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <form
+          onSubmit={handleSubmit}
+          className="
+            flex
+            min-h-0
+            flex-1
+            flex-col
+          "
+        >
+          <div
+            className="
+              min-h-0
+              flex-1
+              overflow-y-auto
+              overscroll-contain
+              p-5
+              sm:p-7
+            "
+          >
+            {formError && (
+              <div
+                role="alert"
+                className="
+                  mb-6
+                  rounded-2xl
+                  border
+                  border-rose-400/20
+                  bg-rose-400/[0.06]
+                  px-4
+                  py-3
+                  text-sm
+                  leading-6
+                  text-rose-200
+                "
+              >
+                {formError}
+              </div>
+            )}
+
+            <fieldset
+              disabled={loading}
+              className="grid gap-5"
+            >
+              <Input
+                label="TÃ­tulo"
+                placeholder="Ex.: Consulta do Bernardo"
+                maxLength={160}
+                autoFocus
+                value={title}
+                onChange={(event) =>
+                  setTitle(
+                    event.target.value,
+                  )
+                }
+              />
+
+              <div>
+                <label
+                  htmlFor="agenda-description"
+                  className="mb-2 block text-sm font-medium text-zinc-300"
+                >
+                  DescriÃ§Ã£o
+                </label>
+
+                <textarea
+                  id="agenda-description"
+                  rows={3}
+                  maxLength={2000}
+                  value={description}
+                  onChange={(event) =>
+                    setDescription(
+                      event.target.value,
+                    )
+                  }
+                  placeholder="InformaÃ§Ãµes importantes"
+                  className="
+                    w-full
+                    resize-none
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-white/[0.045]
+                    px-4
+                    py-3
+                    text-sm
+                    text-white
+                    outline-none
+                    transition
+                    placeholder:text-zinc-600
+                    focus:border-white/30
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                  "
+                />
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <SelectField
+                  label="Categoria"
+                  icon={
+                    <CalendarDays className="size-4" />
+                  }
+                  value={category}
+                  onChange={(value) =>
+                    setCategory(
+                      value as AgendaCategory,
+                    )
+                  }
+                  options={categories}
+                />
+
+                <Input
+                  label="Local"
+                  placeholder="Opcional"
+                  maxLength={255}
+                  value={location}
+                  leadingIcon={
+                    <MapPin className="size-4" />
+                  }
+                  onChange={(event) =>
+                    setLocation(
+                      event.target.value,
+                    )
+                  }
+                />
+              </div>
+
+              <label
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  rounded-2xl
+                  border
+                  border-white/[0.08]
+                  bg-white/[0.03]
+                  p-4
+                "
+              >
+                <div>
+                  <p className="text-sm font-medium text-zinc-300">
+                    Dia inteiro
+                  </p>
+
+                  <p className="mt-1 text-xs text-zinc-600">
+                    O compromisso ocupa todo o dia
+                  </p>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  onChange={(event) =>
+                    setAllDay(
+                      event.target.checked,
+                    )
+                  }
+                  className="size-5 accent-white"
+                />
+              </label>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    border-white/[0.08]
+                    bg-white/[0.025]
+                    p-4
+                  "
+                >
+                  <p className="mb-4 text-xs font-medium uppercase tracking-[0.12em] text-zinc-500">
+                    InÃ­cio
+                  </p>
+
+                  <div
+                    className={cn(
+                      "grid gap-3",
+                      !allDay &&
+                        "grid-cols-2",
+                    )}
+                  >
+                    <Input
+                      label="Data"
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => {
+                        setStartDate(
+                          event.target.value,
+                        );
+
+                        if (
+                          endDate <
+                          event.target.value
+                        ) {
+                          setEndDate(
+                            event.target.value,
+                          );
+                        }
+                      }}
+                    />
+
+                    {!allDay && (
+                      <Input
+                        label="HorÃ¡rio"
+                        type="time"
+                        value={startTime}
+                        onChange={(event) =>
+                          setStartTime(
+                            event.target.value,
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    border-white/[0.08]
+                    bg-white/[0.025]
+                    p-4
+                  "
+                >
+                  <p className="mb-4 text-xs font-medium uppercase tracking-[0.12em] text-zinc-500">
+                    TÃ©rmino
+                  </p>
+
+                  <div
+                    className={cn(
+                      "grid gap-3",
+                      !allDay &&
+                        "grid-cols-2",
+                    )}
+                  >
+                    <Input
+                      label="Data"
+                      type="date"
+                      min={startDate}
+                      value={endDate}
+                      onChange={(event) =>
+                        setEndDate(
+                          event.target.value,
+                        )
+                      }
+                    />
+
+                    {!allDay && (
+                      <Input
+                        label="HorÃ¡rio"
+                        type="time"
+                        value={endTime}
+                        onChange={(event) =>
+                          setEndTime(
+                            event.target.value,
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {members.length > 0 && (
+                <SelectField
+                  label="ResponsÃ¡vel"
+                  icon={
+                    <UserRound className="size-4" />
+                  }
+                  value={
+                    assignedMembershipId
+                  }
+                  onChange={
+                    setAssignedMembershipId
+                  }
+                  options={[
+                    {
+                      value: "",
+                      label:
+                        "Sem responsÃ¡vel",
+                    },
+                    ...members.map(
+                      (member) => ({
+                        value:
+                          member.membershipId,
+                        label: member.name,
+                      }),
+                    ),
+                  ]}
+                />
+              )}
+
+              <SelectField
+                label="RecorrÃªncia"
+                icon={
+                  <Repeat2 className="size-4" />
+                }
+                value={recurrence}
+                onChange={(value) =>
+                  setRecurrence(
+                    value as RecurrenceFrequency,
+                  )
+                }
+                options={recurrenceOptions}
+              />
+
+              {recurrence !== "NONE" && (
+                <div
+                  className="
+                    rounded-2xl
+                    border
+                    border-white/[0.08]
+                    bg-black/20
+                    p-4
+                  "
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Repetir a cada"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={
+                        recurrenceInterval
+                      }
+                      onChange={(event) =>
+                        setRecurrenceInterval(
+                          event.target.value,
+                        )
+                      }
+                    />
+
+                    <Input
+                      label="Quantidade"
+                      type="number"
+                      min={1}
+                      max={500}
+                      placeholder="Sem limite definido"
+                      value={
+                        recurrenceCount
+                      }
+                      onChange={(event) =>
+                        setRecurrenceCount(
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </div>
+
+                  {recurrence ===
+                    "WEEKLY" && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-sm font-medium text-zinc-300">
+                        Dias da semana
+                      </p>
+
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {weekDays.map(
+                          (day) => {
+                            const active =
+                              selectedDays.includes(
+                                day.value,
+                              );
+
+                            return (
+                              <button
+                                key={
+                                  day.value
+                                }
+                                type="button"
+                                onClick={() =>
+                                  toggleDay(
+                                    day.value,
+                                  )
+                                }
+                                className={cn(
+                                  `
+                                    h-10
+                                    rounded-xl
+                                    border
+                                    text-xs
+                                    font-medium
+                                    transition
+                                  `,
+                                  active
+                                    ? `
+                                        border-white
+                                        bg-white
+                                        text-black
+                                      `
+                                    : `
+                                        border-white/[0.08]
+                                        bg-white/[0.03]
+                                        text-zinc-500
+                                        hover:text-white
+                                      `,
+                                )}
+                              >
+                                {day.label}
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-300">
+                  <Bell className="size-4 text-zinc-600" />
+                  Lembretes
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {reminderOptions.map(
+                    (option) => {
+                      const active =
+                        reminders.includes(
+                          option.value,
+                        );
+
+                      return (
+                        <button
+                          key={
+                            option.value
+                          }
+                          type="button"
+                          onClick={() =>
+                            toggleReminder(
+                              option.value,
+                            )
+                          }
+                          className={cn(
+                            `
+                              rounded-xl
+                              border
+                              px-3
+                              py-2
+                              text-xs
+                              transition
+                            `,
+                            active
+                              ? `
+                                  border-white/30
+                                  bg-white
+                                  text-black
+                                `
+                              : `
+                                  border-white/[0.08]
+                                  bg-white/[0.03]
+                                  text-zinc-500
+                                  hover:text-white
+                                `,
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          <footer
+            className="
+              flex
+              shrink-0
+              flex-col-reverse
+              gap-2
+              border-t
+              border-white/10
+              bg-[#090909]/95
+              p-5
+              backdrop-blur-xl
+              sm:flex-row
+              sm:justify-end
+              sm:px-7
+            "
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              size="large"
+              disabled={loading}
+              onClick={handleClose}
+              className="sm:min-w-32"
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              type="submit"
+              size="large"
+              loading={loading}
+              className="sm:min-w-48"
+            >
+              Criar compromisso
+            </Button>
+          </footer>
+        </form>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
+interface SelectFieldProps {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+  options: Array<{
+    value: string;
+    label: string;
+  }>;
+  onChange: (
+    value: string,
+  ) => void;
+}
+
+function SelectField({
+  label,
+  value,
+  icon,
+  options,
+  onChange,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-zinc-300">
+        {label}
+      </label>
+
+      <div className="relative">
+        {icon && (
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-zinc-500">
+            {icon}
+          </div>
+        )}
+
+        <select
+          value={value}
+          onChange={(event) =>
+            onChange(
+              event.target.value,
+            )
+          }
+          className={cn(
+            `
+              h-12
+              w-full
+              appearance-none
+              rounded-2xl
+              border
+              border-white/10
+              bg-[#111113]
+              px-4
+              text-sm
+              text-white
+              outline-none
+              transition
+              focus:border-white/30
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            `,
+            icon && "pl-11",
+          )}
+        >
+          {options.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-occurrence-card.tsx
+============================================================
+import { cn } from "@/lib/cn";
+import type {
+  AgendaCategory,
+  AgendaOccurrenceSummary,
+} from "@/types/agenda";
+import {
+  BriefcaseMedical,
+  Cake,
+  CalendarClock,
+  Check,
+  CircleUserRound,
+  Clock3,
+  GraduationCap,
+  House,
+  ListChecks,
+  MapPin,
+  Stethoscope,
+  UsersRound,
+} from "lucide-react";
+
+interface AgendaOccurrenceCardProps {
+  occurrence: AgendaOccurrenceSummary;
+  onClick: () => void;
+}
+
+const categoryConfiguration: Record<
+  AgendaCategory,
+  {
+    label: string;
+    icon: typeof CalendarClock;
+  }
+> = {
+  APPOINTMENT: {
+    label: "Compromisso",
+    icon: CalendarClock,
+  },
+  HEALTH: {
+    label: "SaÃºde",
+    icon: Stethoscope,
+  },
+  SCHOOL: {
+    label: "Escola",
+    icon: GraduationCap,
+  },
+  FAMILY: {
+    label: "FamÃ­lia",
+    icon: UsersRound,
+  },
+  PERSONAL: {
+    label: "Pessoal",
+    icon: CircleUserRound,
+  },
+  BIRTHDAY: {
+    label: "AniversÃ¡rio",
+    icon: Cake,
+  },
+  TASK: {
+    label: "Tarefa",
+    icon: ListChecks,
+  },
+  OTHER: {
+    label: "Outro",
+    icon: BriefcaseMedical,
+  },
+};
+
+const timeFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+export function AgendaOccurrenceCard({
+  occurrence,
+  onClick,
+}: AgendaOccurrenceCardProps) {
+  const category =
+    categoryConfiguration[
+      occurrence.category
+    ];
+
+  const CategoryIcon = category.icon;
+  const startsAt = new Date(
+    occurrence.startsAt,
+  );
+
+  const completed =
+    occurrence.status === "COMPLETED";
+
+  const cancelled =
+    occurrence.status === "CANCELLED";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex w-full gap-3 rounded-[1.25rem] border p-4 text-left transition",
+        completed || cancelled
+          ? "border-white/[0.05] bg-white/[0.02] opacity-60"
+          : "border-white/[0.08] bg-white/[0.04] hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.065]",
+      )}
+    >
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-black/25 text-zinc-400">
+        {completed ? (
+          <Check className="h-5 w-5" />
+        ) : (
+          <CategoryIcon className="h-5 w-5" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p
+              className={cn(
+                "truncate text-sm font-medium text-zinc-200 group-hover:text-white",
+                completed &&
+                  "line-through decoration-zinc-600",
+              )}
+            >
+              {occurrence.title}
+            </p>
+
+            <p className="mt-1 text-[0.68rem] text-zinc-600">
+              {category.label}
+            </p>
+          </div>
+
+          <span className="shrink-0 rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1 text-[0.65rem] font-medium text-zinc-500">
+            {occurrence.allDay
+              ? "Dia inteiro"
+              : timeFormatter.format(startsAt)}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[0.68rem] text-zinc-600">
+          {!occurrence.allDay && (
+            <span className="flex items-center gap-1">
+              <Clock3 className="h-3 w-3" />
+
+              {timeFormatter.format(startsAt)}
+
+              {occurrence.endsAt && (
+                <>
+                  {" â€” "}
+                  {timeFormatter.format(
+                    new Date(occurrence.endsAt),
+                  )}
+                </>
+              )}
+            </span>
+          )}
+
+          {occurrence.location && (
+            <span className="flex max-w-44 items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 shrink-0" />
+              {occurrence.location}
+            </span>
+          )}
+
+          {occurrence.assignedTo && (
+            <span className="flex max-w-44 items-center gap-1 truncate">
+              <House className="h-3 w-3 shrink-0" />
+              {occurrence.assignedTo.name}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-occurrence-details.tsx
+============================================================
+"use client";
+
+import { AgendaActionMenu } from "@/features/agenda/agenda-action-menu";
+import type { AgendaOccurrenceDetails } from "@/types/agenda";
+import {
+  Bell,
+  CalendarDays,
+  Clock3,
+  MapPin,
+  Repeat2,
+  UserRound,
+  X,
+} from "lucide-react";
+
+interface AgendaOccurrenceDetailsProps {
+  occurrence: AgendaOccurrenceDetails | null;
+  loading: boolean;
+  performingAction: boolean;
+  onClose: () => void;
+  onComplete: (notes?: string) => Promise<void>;
+  onCancel: (notes?: string) => Promise<void>;
+  onDuplicate: () => Promise<void>;
+  onDeleteOccurrence: () => Promise<void>;
+  onDeleteSeries: () => Promise<void>;
+}
+
+const dateFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+  });
+
+const timeFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const categoryLabels: Record<string, string> = {
+  APPOINTMENT: "Compromisso",
+  HEALTH: "SaÃºde",
+  SCHOOL: "Escola",
+  FAMILY: "FamÃ­lia",
+  PERSONAL: "Pessoal",
+  BIRTHDAY: "AniversÃ¡rio",
+  TASK: "Tarefa",
+  OTHER: "Outro",
+};
+
+const recurrenceLabels: Record<string, string> = {
+  NONE: "NÃ£o se repete",
+  DAILY: "DiÃ¡ria",
+  WEEKLY: "Semanal",
+  MONTHLY: "Mensal",
+  YEARLY: "Anual",
+};
+
+function reminderLabel(minutes: number): string {
+  if (minutes === 0) {
+    return "No horÃ¡rio";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} minutos antes`;
+  }
+
+  if (minutes === 60) {
+    return "1 hora antes";
+  }
+
+  if (minutes === 1440) {
+    return "1 dia antes";
+  }
+
+  return `${minutes} minutos antes`;
+}
+
+export function AgendaOccurrenceDetailsPanel({
+  occurrence,
+  loading,
+  performingAction,
+  onClose,
+  onComplete,
+  onCancel,
+  onDuplicate,
+  onDeleteOccurrence,
+  onDeleteSeries,
+}: AgendaOccurrenceDetailsProps) {
+  if (!loading && !occurrence) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex justify-end bg-black/70 backdrop-blur-sm">
+      <button
+        type="button"
+        aria-label="Fechar detalhes"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
+
+      <aside className="relative z-10 h-full w-full max-w-md overflow-y-auto border-l border-white/10 bg-[#0b0b0c] p-5 shadow-2xl sm:p-7">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {loading || !occurrence ? (
+          <div className="mt-8 animate-pulse space-y-4">
+            <div className="h-4 w-24 rounded bg-white/[0.05]" />
+            <div className="h-8 w-3/4 rounded bg-white/[0.07]" />
+            <div className="h-24 rounded-2xl bg-white/[0.04]" />
+          </div>
+        ) : (
+          <div className="animate-fade-up">
+            <div className="flex items-center gap-2 text-xs text-zinc-600">
+              <CalendarDays className="h-3.5 w-3.5" />
+              {categoryLabels[
+                occurrence.category
+              ]}
+            </div>
+
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-white">
+              {occurrence.title}
+            </h2>
+
+            <StatusBadge
+              status={occurrence.status}
+            />
+
+            {occurrence.description && (
+              <p className="mt-5 whitespace-pre-line text-sm leading-6 text-zinc-400">
+                {occurrence.description}
+              </p>
+            )}
+
+            <div className="my-6 space-y-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+              <DetailRow
+                icon={CalendarDays}
+                label="Data"
+                value={dateFormatter.format(
+                  new Date(occurrence.startsAt),
+                )}
+              />
+
+              <DetailRow
+                icon={Clock3}
+                label="HorÃ¡rio"
+                value={
+                  occurrence.allDay
+                    ? "Dia inteiro"
+                    : `${timeFormatter.format(
+                        new Date(
+                          occurrence.startsAt,
+                        ),
+                      )}${
+                        occurrence.endsAt
+                          ? ` atÃ© ${timeFormatter.format(
+                              new Date(
+                                occurrence.endsAt,
+                              ),
+                            )}`
+                          : ""
+                      }`
+                }
+              />
+
+              {occurrence.location && (
+                <DetailRow
+                  icon={MapPin}
+                  label="Local"
+                  value={occurrence.location}
+                />
+              )}
+
+              {occurrence.assignedTo && (
+                <DetailRow
+                  icon={UserRound}
+                  label="ResponsÃ¡vel"
+                  value={
+                    occurrence.assignedTo.name
+                  }
+                />
+              )}
+
+              {occurrence.recurrence && (
+                <DetailRow
+                  icon={Repeat2}
+                  label="RecorrÃªncia"
+                  value={
+                    recurrenceLabels[
+                      occurrence.recurrence
+                        .frequency
+                    ] ??
+                    occurrence.recurrence
+                      .frequency
+                  }
+                />
+              )}
+
+              {occurrence.remindersInMinutes
+                .length > 0 && (
+                <DetailRow
+                  icon={Bell}
+                  label="Lembretes"
+                  value={occurrence.remindersInMinutes
+                    .map(reminderLabel)
+                    .join(", ")}
+                />
+              )}
+            </div>
+
+            <p className="mb-5 text-xs text-zinc-700">
+              Criado por{" "}
+              {occurrence.createdBy.name}
+            </p>
+
+            {occurrence.notes && (
+              <div className="mb-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <p className="text-xs font-medium text-zinc-600">
+                  ObservaÃ§Ãµes
+                </p>
+
+                <p className="mt-2 whitespace-pre-line text-sm text-zinc-400">
+                  {occurrence.notes}
+                </p>
+              </div>
+            )}
+
+            <AgendaActionMenu
+              occurrence={occurrence}
+              loading={performingAction}
+              onComplete={onComplete}
+              onCancel={onCancel}
+              onDuplicate={onDuplicate}
+              onDeleteOccurrence={
+                onDeleteOccurrence
+              }
+              onDeleteSeries={onDeleteSeries}
+            />
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+interface DetailRowProps {
+  icon: typeof CalendarDays;
+  label: string;
+  value: string;
+}
+
+function DetailRow({
+  icon: Icon,
+  label,
+  value,
+}: DetailRowProps) {
+  return (
+    <div className="flex gap-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" />
+
+      <div>
+        <p className="text-[0.65rem] text-zinc-700">
+          {label}
+        </p>
+
+        <p className="mt-0.5 text-sm text-zinc-300">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: AgendaOccurrenceDetails["status"];
+}) {
+  const label =
+    status === "COMPLETED"
+      ? "ConcluÃ­do"
+      : status === "CANCELLED"
+        ? "Cancelado"
+        : "Agendado";
+
+  return (
+    <span className="mt-3 inline-flex rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-medium text-zinc-400">
+      {label}
+    </span>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-page.tsx
+============================================================
+"use client";
+
+import { EmptyState } from "@/components/feedback/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { AgendaCalendarStrip } from "@/features/agenda/agenda-calendar-strip";
+import { AgendaEventForm } from "@/features/agenda/agenda-event-form";
+import { AgendaOccurrenceCard } from "@/features/agenda/agenda-occurrence-card";
+import { AgendaOccurrenceDetailsPanel } from "@/features/agenda/agenda-occurrence-details";
+import { useAgenda } from "@/features/agenda/use-agenda";
+import { cn } from "@/lib/cn";
+import type { OccurrenceStatus } from "@/types/agenda";
+import {
+  CalendarDays,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+const filters: Array<{
+  label: string;
+  value: OccurrenceStatus | undefined;
+}> = [
+  { label: "Todos", value: undefined },
+  { label: "Agendados", value: "SCHEDULED" },
+  { label: "ConcluÃ­dos", value: "COMPLETED" },
+  { label: "Cancelados", value: "CANCELLED" },
+];
+
+const fullDateFormatter =
+  new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  });
+
+function parseDate(value: string): Date {
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+export function AgendaPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const {
+    selectedDate,
+    setSelectedDate,
+    statusFilter,
+    setStatusFilter,
+    occurrences,
+    selectedOccurrence,
+    loading,
+    loadingDetails,
+    performingAction,
+    error,
+    refresh,
+    openOccurrence,
+    closeOccurrence,
+    createEvent,
+    completeOccurrence,
+    cancelOccurrence,
+    duplicateOccurrence,
+    removeOccurrence,
+    removeEventSeries,
+  } = useAgenda();
+
+  useEffect(() => {
+    if (searchParams.get("novo") === "true") {
+      setFormOpen(true);
+    }
+
+    const occurrenceId =
+      searchParams.get("ocorrencia");
+
+    if (occurrenceId) {
+      void openOccurrence(occurrenceId);
+    }
+  }, [
+    openOccurrence,
+    searchParams,
+  ]);
+
+  function clearQuery() {
+    router.replace("/agenda", {
+      scroll: false,
+    });
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    clearQuery();
+  }
+
+  function closeDetails() {
+    closeOccurrence();
+    clearQuery();
+  }
+
+  const selectedDateLabel =
+    fullDateFormatter
+      .format(parseDate(selectedDate))
+      .replace(
+        /^./,
+        (character) =>
+          character.toUpperCase(),
+      );
+
+  return (
+    <div className="animate-fade-up space-y-6">
+      <PageHeader
+        eyebrow="Rotina familiar"
+        title="Agenda"
+        description="Compromissos, tarefas e lembretes compartilhados."
+        action={
+          <Button
+            onClick={() =>
+              setFormOpen(true)
+            }
+          >
+            <Plus className="h-4 w-4" />
+            Novo
+          </Button>
+        }
+      />
+
+      <AgendaCalendarStrip
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+      />
+
+      <section>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-zinc-200">
+              {selectedDateLabel}
+            </h2>
+
+            <p className="mt-1 text-xs text-zinc-600">
+              {occurrences.length}{" "}
+              {occurrences.length === 1
+                ? "compromisso"
+                : "compromissos"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
+            aria-label="Atualizar agenda"
+          >
+            <RefreshCw
+              className={cn(
+                "h-4 w-4",
+                loading && "animate-spin",
+              )}
+            />
+          </button>
+        </div>
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {filters.map((filter) => {
+            const active =
+              statusFilter === filter.value;
+
+            return (
+              <button
+                key={filter.label}
+                type="button"
+                onClick={() =>
+                  setStatusFilter(filter.value)
+                }
+                className={cn(
+                  "h-9 shrink-0 rounded-xl border px-3.5 text-xs font-medium transition",
+                  active
+                    ? "border-white bg-white text-black"
+                    : "border-white/[0.08] bg-white/[0.025] text-zinc-500 hover:text-white",
+                )}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-2xl border border-red-400/15 bg-red-400/[0.055] px-4 py-3 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 3 }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="h-28 animate-pulse rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03]"
+                />
+              ),
+            )}
+          </div>
+        ) : occurrences.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              icon={CalendarDays}
+              title="Nenhum compromisso"
+              description="Este dia estÃ¡ livre. Aproveite ou adicione um novo compromisso."
+              actionLabel="Adicionar compromisso"
+              actionIcon={
+                <Plus className="h-4 w-4" />
+              }
+              onAction={() =>
+                setFormOpen(true)
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            {occurrences.map(
+              (occurrence) => (
+                <AgendaOccurrenceCard
+                  key={
+                    occurrence.occurrenceId
+                  }
+                  occurrence={occurrence}
+                  onClick={() => {
+                    router.replace(
+                      `/agenda?ocorrencia=${occurrence.occurrenceId}`,
+                      {
+                        scroll: false,
+                      },
+                    );
+
+                    void openOccurrence(
+                      occurrence.occurrenceId,
+                    );
+                  }}
+                />
+              ),
+            )}
+          </div>
+        )}
+      </section>
+
+      <AgendaEventForm
+        open={formOpen}
+        initialDate={selectedDate}
+        loading={performingAction}
+        onClose={closeForm}
+        onCreate={createEvent}
+      />
+
+      <AgendaOccurrenceDetailsPanel
+        occurrence={selectedOccurrence}
+        loading={loadingDetails}
+        performingAction={performingAction}
+        onClose={closeDetails}
+        onComplete={async (notes) => {
+          if (!selectedOccurrence) {
+            return;
+          }
+
+          await completeOccurrence(
+            selectedOccurrence.occurrenceId,
+            { notes },
+          );
+        }}
+        onCancel={async (notes) => {
+          if (!selectedOccurrence) {
+            return;
+          }
+
+          await cancelOccurrence(
+            selectedOccurrence.occurrenceId,
+            { notes },
+          );
+        }}
+        onDuplicate={async () => {
+          if (!selectedOccurrence) {
+            return;
+          }
+
+          await duplicateOccurrence(
+            selectedOccurrence.occurrenceId,
+          );
+        }}
+        onDeleteOccurrence={async () => {
+          if (!selectedOccurrence) {
+            return;
+          }
+
+          await removeOccurrence(
+            selectedOccurrence.occurrenceId,
+          );
+        }}
+        onDeleteSeries={async () => {
+          if (!selectedOccurrence) {
+            return;
+          }
+
+          await removeEventSeries(
+            selectedOccurrence.eventId,
+          );
+        }}
+      />
+    </div>
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\agenda-service.ts
+============================================================
+import { apiRequest } from "@/lib/api/api-client";
+import type {
+  AgendaOccurrenceActionRequest,
+  AgendaOccurrenceDetails,
+  AgendaOccurrenceSummary,
+  CreateAgendaEventRequest,
+  CreateAgendaEventResponse,
+  DuplicateAgendaEventRequest,
+  OccurrenceStatus,
+} from "@/types/agenda";
+
+interface ListAgendaOccurrencesParameters {
+  from: string;
+  to: string;
+  status?: OccurrenceStatus;
+  assignedToMembershipId?: string;
+}
+
+export async function listAgendaOccurrences({
+  from,
+  to,
+  status,
+  assignedToMembershipId,
+}: ListAgendaOccurrencesParameters) {
+  const query = new URLSearchParams({
+    from,
+    to,
+  });
+
+  if (status) {
+    query.set("status", status);
+  }
+
+  if (assignedToMembershipId) {
+    query.set(
+      "assignedToMembershipId",
+      assignedToMembershipId,
+    );
+  }
+
+  return apiRequest<AgendaOccurrenceSummary[]>(
+    `/api/agenda/occurrences?${query}`,
+  );
+}
+
+export async function getAgendaOccurrence(
+  occurrenceId: string,
+) {
+  return apiRequest<AgendaOccurrenceDetails>(
+    `/api/agenda/occurrences/${occurrenceId}`,
+  );
+}
+
+export async function createAgendaEvent(
+  request: CreateAgendaEventRequest,
+) {
+  return apiRequest<CreateAgendaEventResponse>(
+    "/api/agenda/events",
+    {
+      method: "POST",
+      body: request,
+    },
+  );
+}
+
+export async function completeAgendaOccurrence(
+  occurrenceId: string,
+  request: AgendaOccurrenceActionRequest = {},
+) {
+  return apiRequest<void>(
+    `/api/agenda/occurrences/${occurrenceId}/complete`,
+    {
+      method: "PATCH",
+      body: request,
+    },
+  );
+}
+
+export async function cancelAgendaOccurrence(
+  occurrenceId: string,
+  request: AgendaOccurrenceActionRequest = {},
+) {
+  return apiRequest<void>(
+    `/api/agenda/occurrences/${occurrenceId}/cancel`,
+    {
+      method: "PATCH",
+      body: request,
+    },
+  );
+}
+
+export async function duplicateAgendaOccurrence(
+  occurrenceId: string,
+  request?: DuplicateAgendaEventRequest,
+) {
+  return apiRequest<CreateAgendaEventResponse>(
+    `/api/agenda/occurrences/${occurrenceId}/duplicate`,
+    {
+      method: "POST",
+      body: request,
+    },
+  );
+}
+
+export async function deleteAgendaOccurrence(
+  occurrenceId: string,
+) {
+  return apiRequest<void>(
+    `/api/agenda/occurrences/${occurrenceId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export async function deleteAgendaEventSeries(
+  eventId: string,
+) {
+  return apiRequest<void>(
+    `/api/agenda/events/${eventId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\features\agenda\use-agenda.ts
+============================================================
+"use client";
+
+import {
+  cancelAgendaOccurrence,
+  completeAgendaOccurrence,
+  createAgendaEvent,
+  deleteAgendaEventSeries,
+  deleteAgendaOccurrence,
+  duplicateAgendaOccurrence,
+  getAgendaOccurrence,
+  listAgendaOccurrences,
+} from "@/features/agenda/agenda-service";
+import { getErrorMessage } from "@/lib/api/api-error";
+import type {
+  AgendaOccurrenceActionRequest,
+  AgendaOccurrenceDetails,
+  AgendaOccurrenceSummary,
+  CreateAgendaEventRequest,
+  DuplicateAgendaEventRequest,
+  OccurrenceStatus,
+} from "@/types/agenda";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromInput(value: string): Date {
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function periodForDate(value: string) {
+  const from = dateFromInput(value);
+  from.setHours(0, 0, 0, 0);
+
+  const to = dateFromInput(value);
+  to.setHours(23, 59, 59, 999);
+
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+export function useAgenda() {
+  const [selectedDate, setSelectedDate] =
+    useState(() => formatDateInput(new Date()));
+
+  const [statusFilter, setStatusFilter] =
+    useState<OccurrenceStatus | undefined>();
+
+  const [occurrences, setOccurrences] =
+    useState<AgendaOccurrenceSummary[]>([]);
+
+  const [selectedOccurrence, setSelectedOccurrence] =
+    useState<AgendaOccurrenceDetails | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [loadingDetails, setLoadingDetails] =
+    useState(false);
+
+  const [performingAction, setPerformingAction] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const period = periodForDate(selectedDate);
+
+      const response =
+        await listAgendaOccurrences({
+          ...period,
+          status: statusFilter,
+        });
+
+      setOccurrences(response);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate, statusFilter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const openOccurrence = useCallback(
+    async (occurrenceId: string) => {
+      setLoadingDetails(true);
+      setError(null);
+
+      try {
+        const response =
+          await getAgendaOccurrence(
+            occurrenceId,
+          );
+
+        setSelectedOccurrence(response);
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+      } finally {
+        setLoadingDetails(false);
+      }
+    },
+    [],
+  );
+
+  const closeOccurrence = useCallback(() => {
+    setSelectedOccurrence(null);
+  }, []);
+
+  const createEvent = useCallback(
+    async (request: CreateAgendaEventRequest) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        const response =
+          await createAgendaEvent(request);
+
+        await load();
+
+        return response;
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  const completeOccurrence = useCallback(
+    async (
+      occurrenceId: string,
+      request: AgendaOccurrenceActionRequest = {},
+    ) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        await completeAgendaOccurrence(
+          occurrenceId,
+          request,
+        );
+
+        setSelectedOccurrence(null);
+        await load();
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  const cancelOccurrence = useCallback(
+    async (
+      occurrenceId: string,
+      request: AgendaOccurrenceActionRequest = {},
+    ) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        await cancelAgendaOccurrence(
+          occurrenceId,
+          request,
+        );
+
+        setSelectedOccurrence(null);
+        await load();
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  const duplicateOccurrence = useCallback(
+    async (
+      occurrenceId: string,
+      request?: DuplicateAgendaEventRequest,
+    ) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        const response =
+          await duplicateAgendaOccurrence(
+            occurrenceId,
+            request,
+          );
+
+        setSelectedOccurrence(null);
+        await load();
+
+        return response;
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  const removeOccurrence = useCallback(
+    async (occurrenceId: string) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        await deleteAgendaOccurrence(
+          occurrenceId,
+        );
+
+        setSelectedOccurrence(null);
+        await load();
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  const removeEventSeries = useCallback(
+    async (eventId: string) => {
+      setPerformingAction(true);
+      setError(null);
+
+      try {
+        await deleteAgendaEventSeries(eventId);
+
+        setSelectedOccurrence(null);
+        await load();
+      } catch (requestError) {
+        setError(getErrorMessage(requestError));
+        throw requestError;
+      } finally {
+        setPerformingAction(false);
+      }
+    },
+    [load],
+  );
+
+  return {
+    selectedDate,
+    setSelectedDate,
+    statusFilter,
+    setStatusFilter,
+    occurrences,
+    selectedOccurrence,
+    loading,
+    loadingDetails,
+    performingAction,
+    error,
+    refresh: load,
+    openOccurrence,
+    closeOccurrence,
+    createEvent,
+    completeOccurrence,
+    cancelOccurrence,
+    duplicateOccurrence,
+    removeOccurrence,
+    removeEventSeries,
+  };
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\types\agenda.ts
+============================================================
+export type AgendaCategory =
+  | "APPOINTMENT"
+  | "HEALTH"
+  | "SCHOOL"
+  | "FAMILY"
+  | "PERSONAL"
+  | "BIRTHDAY"
+  | "TASK"
+  | "OTHER";
+
+export type OccurrenceStatus =
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type RecurrenceFrequency =
+  | "NONE"
+  | "DAILY"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "YEARLY";
+
+export type AgendaDayOfWeek =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY"
+  | "SUNDAY";
+
+export interface AgendaAssignedMember {
+  membershipId: string;
+  userId: string;
+  name: string;
+}
+
+export interface AgendaOccurrenceSummary {
+  occurrenceId: string;
+  eventId: string;
+  title: string;
+  category: AgendaCategory;
+  location: string | null;
+  allDay: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  status: OccurrenceStatus;
+  assignedTo: AgendaAssignedMember | null;
+}
+
+export interface AgendaCreatedBy {
+  userId: string;
+  name: string;
+}
+
+export interface AgendaRecurrenceDetails {
+  frequency: RecurrenceFrequency;
+  interval: number;
+  daysOfWeek: string | null;
+  until: string | null;
+  count: number | null;
+}
+
+export interface AgendaOccurrenceDetails {
+  occurrenceId: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  category: AgendaCategory;
+  location: string | null;
+  allDay: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  status: OccurrenceStatus;
+  assignedTo: AgendaAssignedMember | null;
+  createdBy: AgendaCreatedBy;
+  recurrence: AgendaRecurrenceDetails | null;
+  remindersInMinutes: number[];
+  completedAt: string | null;
+  cancelledAt: string | null;
+  notes: string | null;
+}
+
+export interface AgendaRecurrenceRequest {
+  frequency: RecurrenceFrequency;
+  interval?: number;
+  daysOfWeek?: AgendaDayOfWeek[];
+  until?: string;
+  count?: number;
+}
+
+export interface CreateAgendaEventRequest {
+  title: string;
+  description?: string;
+  category: AgendaCategory;
+  location?: string;
+  allDay: boolean;
+  startsAt: string;
+  endsAt?: string;
+  assignedToMembershipId?: string;
+  recurrence?: AgendaRecurrenceRequest;
+  remindersInMinutes?: number[];
+}
+
+export interface CreateAgendaEventResponse {
+  eventId: string;
+  recurrenceFrequency: RecurrenceFrequency;
+  occurrencesCreated: number;
+  firstOccurrenceStartsAt: string;
+  lastOccurrenceStartsAt: string;
+}
+
+export interface AgendaOccurrenceActionRequest {
+  notes?: string;
+}
+
+export interface DuplicateAgendaEventRequest {
+  title?: string;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export interface AgendaPeriod {
+  from: string;
+  to: string;
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\web\src\app\(app)\agenda\page.tsx
+============================================================
+import { AgendaPage } from "@/features/agenda/agenda-page";
+import type { Metadata } from "next";
+import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Agenda",
+};
+
+export default function AgendaRoute() {
+  return (
+    <Suspense fallback={<AgendaPageFallback />}>
+      <AgendaPage />
+    </Suspense>
+  );
+}
+
+function AgendaPageFallback() {
+  return (
+    <div className="animate-pulse space-y-6">
+      <div>
+        <div className="h-3 w-28 rounded bg-white/[0.05]" />
+        <div className="mt-3 h-8 w-40 rounded-lg bg-white/[0.07]" />
+      </div>
+
+      <div className="h-28 rounded-[1.35rem] border border-white/[0.06] bg-white/[0.03]" />
+
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map(
+          (_, index) => (
+            <div
+              key={index}
+              className="h-28 rounded-[1.25rem] border border-white/[0.06] bg-white/[0.03]"
+            />
+          ),
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,815 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\controller\ShoppingController.java
+============================================================
+package br.com.nucleo.api.shopping.controller;
+
+import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
+import br.com.nucleo.api.shopping.dto.CreateShoppingItemRequest;
+import br.com.nucleo.api.shopping.dto.CreateShoppingListRequest;
+import br.com.nucleo.api.shopping.dto.MarkShoppingItemPurchasedRequest;
+import br.com.nucleo.api.shopping.dto.ShoppingItemResponse;
+import br.com.nucleo.api.shopping.dto.ShoppingListDetailsResponse;
+import br.com.nucleo.api.shopping.dto.ShoppingListSummaryResponse;
+import br.com.nucleo.api.shopping.dto.UpdateShoppingItemRequest;
+import br.com.nucleo.api.shopping.dto.UpdateShoppingListRequest;
+import br.com.nucleo.api.shopping.service.ShoppingService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/shopping")
+public class ShoppingController {
+
+    private final ShoppingService shoppingService;
+
+    public ShoppingController(
+            ShoppingService shoppingService
+    ) {
+        this.shoppingService = shoppingService;
+    }
+
+    @PostMapping("/lists")
+    public ResponseEntity<ShoppingListDetailsResponse> createList(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateShoppingListRequest request
+    ) {
+        ShoppingListDetailsResponse response =
+                shoppingService.createList(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/shopping/lists/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping("/lists")
+    public List<ShoppingListSummaryResponse> listLists(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false)
+            ShoppingListStatus status
+    ) {
+        return shoppingService.listLists(
+                userId(jwt),
+                status
+        );
+    }
+
+    @GetMapping("/lists/{listId}")
+    public ShoppingListDetailsResponse findListById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.findListById(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PutMapping("/lists/{listId}")
+    public ShoppingListDetailsResponse updateList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @Valid @RequestBody
+            UpdateShoppingListRequest request
+    ) {
+        return shoppingService.updateList(
+                userId(jwt),
+                listId,
+                request
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/complete")
+    public ShoppingListDetailsResponse completeList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.completeList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/reopen")
+    public ShoppingListDetailsResponse reopenList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.reopenList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @PatchMapping("/lists/{listId}/archive")
+    public ShoppingListDetailsResponse archiveList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        return shoppingService.archiveList(
+                userId(jwt),
+                listId
+        );
+    }
+
+    @DeleteMapping("/lists/{listId}")
+    public ResponseEntity<Void> deleteList(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId
+    ) {
+        shoppingService.deleteList(
+                userId(jwt),
+                listId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/lists/{listId}/items")
+    public ResponseEntity<ShoppingItemResponse> createItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @Valid @RequestBody
+            CreateShoppingItemRequest request
+    ) {
+        ShoppingItemResponse response =
+                shoppingService.createItem(
+                        userId(jwt),
+                        listId,
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/shopping/lists/"
+                                        + listId
+                                        + "/items/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @PutMapping("/lists/{listId}/items/{itemId}")
+    public ShoppingItemResponse updateItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody
+            UpdateShoppingItemRequest request
+    ) {
+        return shoppingService.updateItem(
+                userId(jwt),
+                listId,
+                itemId,
+                request
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/purchase"
+    )
+    public ShoppingItemResponse markItemAsPurchased(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId,
+            @Valid
+            @RequestBody(required = false)
+            MarkShoppingItemPurchasedRequest request
+    ) {
+        return shoppingService.markItemAsPurchased(
+                userId(jwt),
+                listId,
+                itemId,
+                request
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/pending"
+    )
+    public ShoppingItemResponse markItemAsPending(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.markItemAsPending(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/cancel"
+    )
+    public ShoppingItemResponse cancelItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.cancelItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @PatchMapping(
+            "/lists/{listId}/items/{itemId}/restore"
+    )
+    public ShoppingItemResponse restoreItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        return shoppingService.restoreItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+    }
+
+    @DeleteMapping(
+            "/lists/{listId}/items/{itemId}"
+    )
+    public ResponseEntity<Void> deleteItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID listId,
+            @PathVariable UUID itemId
+    ) {
+        shoppingService.deleteItem(
+                userId(jwt),
+                listId,
+                itemId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\CreateShoppingListRequest.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import java.time.LocalDate;
+
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+
+public record CreateShoppingListRequest(
+
+        @NotBlank(message = "Informe o nome da lista")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome da lista deve ter entre 2 e 120 caracteres"
+        )
+        String name,
+
+        @Size(
+                max = 500,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 500 caracteres"
+        )
+        String description,
+
+        LocalDate dueDate
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\UpdateShoppingListRequest.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import java.time.LocalDate;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record UpdateShoppingListRequest(
+
+        @NotBlank(message = "Informe o nome da lista")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome da lista deve ter entre 2 e 120 caracteres"
+        )
+        String name,
+
+        @Size(
+                max = 500,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 500 caracteres"
+        )
+        String description,
+
+        LocalDate dueDate
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\ShoppingListSummaryResponse.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItem;
+import br.com.nucleo.api.shopping.domain.ShoppingList;
+import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+public record ShoppingListSummaryResponse(
+        UUID id,
+        String name,
+        String description,
+        ShoppingListStatus status,
+        LocalDate dueDate,
+        String createdByName,
+        long totalItems,
+        long pendingItems,
+        long purchasedItems,
+        long cancelledItems,
+        BigDecimal estimatedTotal,
+        BigDecimal actualTotal,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static ShoppingListSummaryResponse from(
+            ShoppingList shoppingList,
+            List<ShoppingItem> items
+    ) {
+        long pendingItems = items.stream()
+                .filter(ShoppingItem::isPending)
+                .count();
+
+        long purchasedItems = items.stream()
+                .filter(ShoppingItem::isPurchased)
+                .count();
+
+        long cancelledItems = items.stream()
+                .filter(ShoppingItem::isCancelled)
+                .count();
+
+        BigDecimal estimatedTotal = items.stream()
+                .filter(item -> !item.isCancelled())
+                .map(ShoppingItem::getEstimatedTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal actualTotal = items.stream()
+                .filter(ShoppingItem::isPurchased)
+                .map(ShoppingItem::getActualTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new ShoppingListSummaryResponse(
+                shoppingList.getId(),
+                shoppingList.getName(),
+                shoppingList.getDescription(),
+                shoppingList.getStatus(),
+                shoppingList.getDueDate(),
+                shoppingList.getCreatedBy().getName(),
+                items.size(),
+                pendingItems,
+                purchasedItems,
+                cancelledItems,
+                estimatedTotal,
+                actualTotal,
+                shoppingList.getCreatedAt(),
+                shoppingList.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\ShoppingListDetailsResponse.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItem;
+import br.com.nucleo.api.shopping.domain.ShoppingList;
+import br.com.nucleo.api.shopping.domain.ShoppingListStatus;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+public record ShoppingListDetailsResponse(
+        UUID id,
+        String name,
+        String description,
+        ShoppingListStatus status,
+        LocalDate dueDate,
+        UUID createdByUserId,
+        String createdByName,
+        long totalItems,
+        long pendingItems,
+        long purchasedItems,
+        long cancelledItems,
+        BigDecimal estimatedTotal,
+        BigDecimal actualTotal,
+        List<ShoppingItemResponse> items,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static ShoppingListDetailsResponse from(
+            ShoppingList shoppingList,
+            List<ShoppingItem> shoppingItems
+    ) {
+        List<ShoppingItemResponse> itemResponses = shoppingItems.stream()
+                .map(ShoppingItemResponse::from)
+                .toList();
+
+        long pendingItems = shoppingItems.stream()
+                .filter(ShoppingItem::isPending)
+                .count();
+
+        long purchasedItems = shoppingItems.stream()
+                .filter(ShoppingItem::isPurchased)
+                .count();
+
+        long cancelledItems = shoppingItems.stream()
+                .filter(ShoppingItem::isCancelled)
+                .count();
+
+        BigDecimal estimatedTotal = shoppingItems.stream()
+                .filter(item -> !item.isCancelled())
+                .map(ShoppingItem::getEstimatedTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal actualTotal = shoppingItems.stream()
+                .filter(ShoppingItem::isPurchased)
+                .map(ShoppingItem::getActualTotal)
+                .filter(value -> value != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new ShoppingListDetailsResponse(
+                shoppingList.getId(),
+                shoppingList.getName(),
+                shoppingList.getDescription(),
+                shoppingList.getStatus(),
+                shoppingList.getDueDate(),
+                shoppingList.getCreatedBy().getId(),
+                shoppingList.getCreatedBy().getName(),
+                shoppingItems.size(),
+                pendingItems,
+                purchasedItems,
+                cancelledItems,
+                estimatedTotal,
+                actualTotal,
+                itemResponses,
+                shoppingList.getCreatedAt(),
+                shoppingList.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\CreateShoppingItemRequest.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItemCategory;
+import br.com.nucleo.api.shopping.domain.ShoppingItemPriority;
+import br.com.nucleo.api.shopping.domain.ShoppingItemUnit;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CreateShoppingItemRequest(
+
+        @NotBlank(message = "Informe o nome do item")
+        @Size(
+                max = 160,
+                message = "O nome do item deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String name,
+
+        @Size(
+                max = 500,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 500 caracteres"
+        )
+        String description,
+
+        ShoppingItemCategory category,
+
+        @DecimalMin(
+                value = "0.001",
+                message = "A quantidade deve ser maior que zero"
+        )
+        @Digits(
+                integer = 9,
+                fraction = 3,
+                message = "A quantidade deve ter atÃ© 9 inteiros e 3 decimais"
+        )
+        BigDecimal quantity,
+
+        ShoppingItemUnit unit,
+
+        @DecimalMin(
+                value = "0.00",
+                message = "O preÃ§o estimado nÃ£o pode ser negativo"
+        )
+        @Digits(
+                integer = 12,
+                fraction = 2,
+                message = "O preÃ§o estimado deve ter atÃ© 12 inteiros e 2 decimais"
+        )
+        BigDecimal estimatedUnitPrice,
+
+        ShoppingItemPriority priority,
+
+        UUID assignedToMembershipId
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\UpdateShoppingItemRequest.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItemCategory;
+import br.com.nucleo.api.shopping.domain.ShoppingItemPriority;
+import br.com.nucleo.api.shopping.domain.ShoppingItemUnit;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record UpdateShoppingItemRequest(
+
+        @NotBlank(message = "Informe o nome do item")
+        @Size(
+                max = 160,
+                message = "O nome do item deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String name,
+
+        @Size(
+                max = 500,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 500 caracteres"
+        )
+        String description,
+
+        ShoppingItemCategory category,
+
+        @DecimalMin(
+                value = "0.001",
+                message = "A quantidade deve ser maior que zero"
+        )
+        @Digits(
+                integer = 9,
+                fraction = 3,
+                message = "A quantidade deve ter atÃ© 9 inteiros e 3 decimais"
+        )
+        BigDecimal quantity,
+
+        ShoppingItemUnit unit,
+
+        @DecimalMin(
+                value = "0.00",
+                message = "O preÃ§o estimado nÃ£o pode ser negativo"
+        )
+        @Digits(
+                integer = 12,
+                fraction = 2,
+                message = "O preÃ§o estimado deve ter atÃ© 12 inteiros e 2 decimais"
+        )
+        BigDecimal estimatedUnitPrice,
+
+        ShoppingItemPriority priority,
+
+        UUID assignedToMembershipId
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\MarkShoppingItemPurchasedRequest.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import java.math.BigDecimal;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+
+public record MarkShoppingItemPurchasedRequest(
+
+        @DecimalMin(
+                value = "0.00",
+                message = "O preÃ§o real nÃ£o pode ser negativo"
+        )
+        @Digits(
+                integer = 12,
+                fraction = 2,
+                message = "O preÃ§o real deve ter atÃ© 12 inteiros e 2 decimais"
+        )
+        BigDecimal actualUnitPrice
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\dto\ShoppingItemResponse.java
+============================================================
+package br.com.nucleo.api.shopping.dto;
+
+import br.com.nucleo.api.shopping.domain.ShoppingItem;
+import br.com.nucleo.api.shopping.domain.ShoppingItemCategory;
+import br.com.nucleo.api.shopping.domain.ShoppingItemPriority;
+import br.com.nucleo.api.shopping.domain.ShoppingItemStatus;
+import br.com.nucleo.api.shopping.domain.ShoppingItemUnit;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record ShoppingItemResponse(
+        UUID id,
+        String name,
+        String description,
+        ShoppingItemCategory category,
+        BigDecimal quantity,
+        ShoppingItemUnit unit,
+        BigDecimal estimatedUnitPrice,
+        BigDecimal estimatedTotal,
+        BigDecimal actualUnitPrice,
+        BigDecimal actualTotal,
+        ShoppingItemPriority priority,
+        ShoppingItemStatus status,
+        UUID assignedToMembershipId,
+        String assignedToName,
+        UUID checkedByMembershipId,
+        String checkedByName,
+        Instant checkedAt,
+        int sortOrder,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static ShoppingItemResponse from(
+            ShoppingItem item
+    ) {
+        UUID assignedToMembershipId = null;
+        String assignedToName = null;
+
+        if (item.getAssignedTo() != null) {
+            assignedToMembershipId = item.getAssignedTo().getId();
+            assignedToName = item.getAssignedTo()
+                    .getUser()
+                    .getName();
+        }
+
+        UUID checkedByMembershipId = null;
+        String checkedByName = null;
+
+        if (item.getCheckedBy() != null) {
+            checkedByMembershipId = item.getCheckedBy().getId();
+            checkedByName = item.getCheckedBy()
+                    .getUser()
+                    .getName();
+        }
+
+        return new ShoppingItemResponse(
+                item.getId(),
+                item.getName(),
+                item.getDescription(),
+                item.getCategory(),
+                item.getQuantity(),
+                item.getUnit(),
+                item.getEstimatedUnitPrice(),
+                item.getEstimatedTotal(),
+                item.getActualUnitPrice(),
+                item.getActualTotal(),
+                item.getPriority(),
+                item.getStatus(),
+                assignedToMembershipId,
+                assignedToName,
+                checkedByMembershipId,
+                checkedByName,
+                item.getCheckedAt(),
+                item.getSortOrder(),
+                item.getCreatedAt(),
+                item.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\domain\ShoppingListStatus.java
+============================================================
+package br.com.nucleo.api.shopping.domain;
+
+public enum ShoppingListStatus {
+    ACTIVE,
+    COMPLETED,
+    ARCHIVED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\domain\ShoppingItemStatus.java
+============================================================
+package br.com.nucleo.api.shopping.domain;
+
+public enum ShoppingItemStatus {
+    PENDING,
+    PURCHASED,
+    CANCELLED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\domain\ShoppingItemCategory.java
+============================================================
+package br.com.nucleo.api.shopping.domain;
+
+public enum ShoppingItemCategory {
+    FOOD,
+    BEVERAGE,
+    HYGIENE,
+    CLEANING,
+    PHARMACY,
+    BABY,
+    PET,
+    HOUSEHOLD,
+    CLOTHING,
+    ELECTRONICS,
+    OTHER
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\domain\ShoppingItemPriority.java
+============================================================
+package br.com.nucleo.api.shopping.domain;
+
+public enum ShoppingItemPriority {
+    LOW,
+    NORMAL,
+    HIGH,
+    URGENT
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\shopping\domain\ShoppingItemUnit.java
+============================================================
+package br.com.nucleo.api.shopping.domain;
+
+public enum ShoppingItemUnit {
+    UNIT,
+    PACKAGE,
+    BOX,
+    BOTTLE,
+    CAN,
+    LITER,
+    MILLILITER,
+    KILOGRAM,
+    GRAM,
+    METER,
+    DOZEN
+}

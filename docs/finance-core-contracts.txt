@@ -1,0 +1,1114 @@
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialAccountController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.ChangeInitialBalanceRequest;
+import br.com.nucleo.api.finance.dto.CreateFinancialAccountRequest;
+import br.com.nucleo.api.finance.dto.FinancialAccountResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialAccountRequest;
+import br.com.nucleo.api.finance.service.FinancialAccountService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/accounts")
+public class FinancialAccountController {
+
+    private final FinancialAccountService accountService;
+
+    public FinancialAccountController(
+            FinancialAccountService accountService
+    ) {
+        this.accountService = accountService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialAccountResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialAccountRequest request
+    ) {
+        FinancialAccountResponse response =
+                accountService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/accounts/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialAccountResponse> list(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return accountService.list(userId(jwt));
+    }
+
+    @GetMapping("/{accountId}")
+    public FinancialAccountResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId
+    ) {
+        return accountService.findById(
+                userId(jwt),
+                accountId
+        );
+    }
+
+    @PutMapping("/{accountId}")
+    public FinancialAccountResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId,
+            @Valid @RequestBody
+            UpdateFinancialAccountRequest request
+    ) {
+        return accountService.update(
+                userId(jwt),
+                accountId,
+                request
+        );
+    }
+
+    @PatchMapping("/{accountId}/initial-balance")
+    public FinancialAccountResponse changeInitialBalance(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId,
+            @Valid @RequestBody
+            ChangeInitialBalanceRequest request
+    ) {
+        return accountService.changeInitialBalance(
+                userId(jwt),
+                accountId,
+                request
+        );
+    }
+
+    @PatchMapping("/{accountId}/activate")
+    public FinancialAccountResponse activate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId
+    ) {
+        return accountService.activate(
+                userId(jwt),
+                accountId
+        );
+    }
+
+    @PatchMapping("/{accountId}/deactivate")
+    public FinancialAccountResponse deactivate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId
+    ) {
+        return accountService.deactivate(
+                userId(jwt),
+                accountId
+        );
+    }
+
+    @DeleteMapping("/{accountId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID accountId
+    ) {
+        accountService.delete(
+                userId(jwt),
+                accountId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialCategoryController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+import br.com.nucleo.api.finance.dto.CreateFinancialCategoryRequest;
+import br.com.nucleo.api.finance.dto.FinancialCategoryResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialCategoryRequest;
+import br.com.nucleo.api.finance.service.FinancialCategoryService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/categories")
+public class FinancialCategoryController {
+
+    private final FinancialCategoryService categoryService;
+
+    public FinancialCategoryController(
+            FinancialCategoryService categoryService
+    ) {
+        this.categoryService = categoryService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialCategoryResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialCategoryRequest request
+    ) {
+        FinancialCategoryResponse response =
+                categoryService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/categories/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialCategoryResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false)
+            FinancialCategoryType type
+    ) {
+        return categoryService.list(
+                userId(jwt),
+                type
+        );
+    }
+
+    @PutMapping("/{categoryId}")
+    public FinancialCategoryResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID categoryId,
+            @Valid @RequestBody
+            UpdateFinancialCategoryRequest request
+    ) {
+        return categoryService.update(
+                userId(jwt),
+                categoryId,
+                request
+        );
+    }
+
+    @PatchMapping("/{categoryId}/activate")
+    public FinancialCategoryResponse activate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID categoryId
+    ) {
+        return categoryService.activate(
+                userId(jwt),
+                categoryId
+        );
+    }
+
+    @PatchMapping("/{categoryId}/deactivate")
+    public FinancialCategoryResponse deactivate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID categoryId
+    ) {
+        return categoryService.deactivate(
+                userId(jwt),
+                categoryId
+        );
+    }
+
+    @DeleteMapping("/{categoryId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID categoryId
+    ) {
+        categoryService.delete(
+                userId(jwt),
+                categoryId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialDashboardController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.dto.FinancialDashboardResponse;
+import br.com.nucleo.api.finance.service.FinancialDashboardService;
+
+import java.time.LocalDate;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/dashboard")
+public class FinancialDashboardController {
+
+    private final FinancialDashboardService dashboardService;
+
+    public FinancialDashboardController(
+            FinancialDashboardService dashboardService
+    ) {
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping
+    public FinancialDashboardResponse getDashboard(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
+    ) {
+        return dashboardService.getDashboard(
+                userId(jwt),
+                from,
+                to
+        );
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\controller\FinancialTransactionController.java
+============================================================
+package br.com.nucleo.api.finance.controller;
+
+import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+import br.com.nucleo.api.finance.dto.CreateFinancialTransactionRequest;
+import br.com.nucleo.api.finance.dto.FinancialTransactionResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialTransactionRequest;
+import br.com.nucleo.api.finance.service.FinancialTransactionService;
+
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/finance/transactions")
+public class FinancialTransactionController {
+
+    private final FinancialTransactionService transactionService;
+
+    public FinancialTransactionController(
+            FinancialTransactionService transactionService
+    ) {
+        this.transactionService = transactionService;
+    }
+
+    @PostMapping
+    public ResponseEntity<FinancialTransactionResponse> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody
+            CreateFinancialTransactionRequest request
+    ) {
+        FinancialTransactionResponse response =
+                transactionService.create(
+                        userId(jwt),
+                        request
+                );
+
+        return ResponseEntity
+                .created(
+                        URI.create(
+                                "/api/finance/transactions/"
+                                        + response.id()
+                        )
+                )
+                .body(response);
+    }
+
+    @GetMapping
+    public List<FinancialTransactionResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to,
+
+            @RequestParam(required = false)
+            FinancialTransactionType type,
+
+            @RequestParam(required = false)
+            FinancialTransactionStatus status,
+
+            @RequestParam(required = false)
+            UUID accountId,
+
+            @RequestParam(required = false)
+            UUID categoryId
+    ) {
+        return transactionService.search(
+                userId(jwt),
+                from,
+                to,
+                type,
+                status,
+                accountId,
+                categoryId
+        );
+    }
+
+    @GetMapping("/{transactionId}")
+    public FinancialTransactionResponse findById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        return transactionService.findById(
+                userId(jwt),
+                transactionId
+        );
+    }
+
+    @PutMapping("/{transactionId}")
+    public FinancialTransactionResponse update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId,
+            @Valid @RequestBody
+            UpdateFinancialTransactionRequest request
+    ) {
+        return transactionService.update(
+                userId(jwt),
+                transactionId,
+                request
+        );
+    }
+
+    @PatchMapping("/{transactionId}/pay")
+    public FinancialTransactionResponse markAsPaid(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        return transactionService.markAsPaid(
+                userId(jwt),
+                transactionId
+        );
+    }
+
+    @PatchMapping("/{transactionId}/pending")
+    public FinancialTransactionResponse markAsPending(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        return transactionService.markAsPending(
+                userId(jwt),
+                transactionId
+        );
+    }
+
+    @PatchMapping("/{transactionId}/cancel")
+    public FinancialTransactionResponse cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        return transactionService.cancel(
+                userId(jwt),
+                transactionId
+        );
+    }
+
+    @PatchMapping("/{transactionId}/restore")
+    public FinancialTransactionResponse restore(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        return transactionService.restore(
+                userId(jwt),
+                transactionId
+        );
+    }
+
+    @DeleteMapping("/{transactionId}")
+    public ResponseEntity<Void> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID transactionId
+    ) {
+        transactionService.delete(
+                userId(jwt),
+                transactionId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private UUID userId(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialAccountRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialAccountType;
+
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+
+public record CreateFinancialAccountRequest(
+
+        @NotBlank(message = "Informe o nome da conta")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome da conta deve ter entre 2 e 120 caracteres"
+        )
+        String name,
+
+        @NotNull(message = "Informe o tipo da conta")
+        FinancialAccountType type,
+
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O saldo inicial deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal initialBalance,
+
+        @Size(
+                max = 20,
+                message = "A cor deve ter no mÃ¡ximo 20 caracteres"
+        )
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color,
+
+        Boolean includeInTotal
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialCategoryRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+public record CreateFinancialCategoryRequest(
+
+        @NotBlank(message = "Informe o nome da categoria")
+        @Size(
+                min = 2,
+                max = 80,
+                message = "O nome da categoria deve ter entre 2 e 80 caracteres"
+        )
+        String name,
+
+        @NotNull(message = "Informe o tipo da categoria")
+        FinancialCategoryType type,
+
+        @Size(
+                max = 20,
+                message = "A cor deve ter no mÃ¡ximo 20 caracteres"
+        )
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color,
+
+        @Size(
+                max = 50,
+                message = "O Ã­cone deve ter no mÃ¡ximo 50 caracteres"
+        )
+        String icon
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\CreateFinancialTransactionRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record CreateFinancialTransactionRequest(
+
+        @NotNull(message = "Informe a conta")
+        UUID accountId,
+
+        UUID categoryId,
+
+        @NotNull(message = "Informe o tipo do lanÃ§amento")
+        FinancialTransactionType type,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(
+                max = 160,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String description,
+
+        @NotNull(message = "Informe o valor")
+        @DecimalMin(
+                value = "0.01",
+                message = "O valor deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O valor deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal amount,
+
+        @NotNull(message = "Informe a data do lanÃ§amento")
+        LocalDate transactionDate,
+
+        LocalDate dueDate,
+
+        FinancialTransactionStatus status,
+
+        FinancialPaymentMethod paymentMethod,
+
+        @Size(
+                max = 1000,
+                message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 1000 caracteres"
+        )
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialAccountResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialAccount;
+import br.com.nucleo.api.finance.domain.FinancialAccountType;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record FinancialAccountResponse(
+        UUID id,
+        String name,
+        FinancialAccountType type,
+        BigDecimal initialBalance,
+        BigDecimal paidMovementBalance,
+        BigDecimal currentBalance,
+        String color,
+        boolean includeInTotal,
+        boolean active,
+        UUID createdByUserId,
+        String createdByName,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialAccountResponse from(
+            FinancialAccount account,
+            BigDecimal paidMovementBalance
+    ) {
+        BigDecimal movements = paidMovementBalance == null
+                ? BigDecimal.ZERO
+                : paidMovementBalance;
+
+        BigDecimal currentBalance = account
+                .getInitialBalance()
+                .add(movements);
+
+        return new FinancialAccountResponse(
+                account.getId(),
+                account.getName(),
+                account.getType(),
+                account.getInitialBalance(),
+                movements,
+                currentBalance,
+                account.getColor(),
+                account.isIncludeInTotal(),
+                account.isActive(),
+                account.getCreatedBy().getId(),
+                account.getCreatedBy().getName(),
+                account.getCreatedAt(),
+                account.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCategoryResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialCategory;
+import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record FinancialCategoryResponse(
+        UUID id,
+        String name,
+        FinancialCategoryType type,
+        String color,
+        String icon,
+        boolean active,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialCategoryResponse from(
+            FinancialCategory category
+    ) {
+        return new FinancialCategoryResponse(
+                category.getId(),
+                category.getName(),
+                category.getType(),
+                category.getColor(),
+                category.getIcon(),
+                category.isActive(),
+                category.getCreatedAt(),
+                category.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialCategorySummaryResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record FinancialCategorySummaryResponse(
+        UUID categoryId,
+        String categoryName,
+        String color,
+        String icon,
+        FinancialTransactionType type,
+        long transactionCount,
+        BigDecimal total,
+        BigDecimal percentage
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialDashboardResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+public record FinancialDashboardResponse(
+        LocalDate from,
+        LocalDate to,
+        BigDecimal totalAccountBalance,
+        BigDecimal totalIncome,
+        BigDecimal totalExpense,
+        BigDecimal periodBalance,
+        BigDecimal pendingIncome,
+        BigDecimal pendingExpense,
+        BigDecimal overdueExpense,
+        long overdueTransactionCount,
+        List<FinancialCategorySummaryResponse> incomeByCategory,
+        List<FinancialCategorySummaryResponse> expenseByCategory
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\FinancialTransactionResponse.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialTransaction;
+import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record FinancialTransactionResponse(
+        UUID id,
+        UUID accountId,
+        String accountName,
+        UUID categoryId,
+        String categoryName,
+        String categoryColor,
+        String categoryIcon,
+        FinancialTransactionType type,
+        String description,
+        BigDecimal amount,
+        LocalDate transactionDate,
+        LocalDate dueDate,
+        FinancialTransactionStatus status,
+        FinancialPaymentMethod paymentMethod,
+        Instant paidAt,
+        boolean overdue,
+        String notes,
+        UUID recurrenceId,
+        Integer recurrenceSequence,
+        UUID creditCardInvoiceId,
+        boolean invoicePayment,
+        boolean excludedFromReports,
+        UUID createdByUserId,
+        String createdByName,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static FinancialTransactionResponse from(
+            FinancialTransaction transaction,
+            LocalDate today
+    ) {
+        UUID categoryId = null;
+        String categoryName = null;
+        String categoryColor = null;
+        String categoryIcon = null;
+
+        if (transaction.getCategory() != null) {
+            categoryId = transaction.getCategory().getId();
+            categoryName = transaction.getCategory().getName();
+            categoryColor = transaction.getCategory().getColor();
+            categoryIcon = transaction.getCategory().getIcon();
+        }
+
+        UUID recurrenceId = null;
+
+        if (transaction.getRecurrence() != null) {
+            recurrenceId = transaction.getRecurrence().getId();
+        }
+
+        UUID creditCardInvoiceId = null;
+
+        if (transaction.getCreditCardInvoice() != null) {
+            creditCardInvoiceId =
+                    transaction.getCreditCardInvoice().getId();
+        }
+
+        boolean overdue =
+                transaction.isPending()
+                        && transaction.getDueDate() != null
+                        && transaction.getDueDate().isBefore(today);
+
+        return new FinancialTransactionResponse(
+                transaction.getId(),
+                transaction.getAccount().getId(),
+                transaction.getAccount().getName(),
+                categoryId,
+                categoryName,
+                categoryColor,
+                categoryIcon,
+                transaction.getType(),
+                transaction.getDescription(),
+                transaction.getAmount(),
+                transaction.getTransactionDate(),
+                transaction.getDueDate(),
+                transaction.getStatus(),
+                transaction.getPaymentMethod(),
+                transaction.getPaidAt(),
+                overdue,
+                transaction.getNotes(),
+                recurrenceId,
+                transaction.getRecurrenceSequence(),
+                creditCardInvoiceId,
+                transaction.isInvoicePayment(),
+                transaction.isExcludedFromReports(),
+                transaction.getCreatedBy().getId(),
+                transaction.getCreatedBy().getName(),
+                transaction.getCreatedAt(),
+                transaction.getUpdatedAt()
+        );
+    }
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialAccountRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialAccountType;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+public record UpdateFinancialAccountRequest(
+
+        @NotBlank(message = "Informe o nome da conta")
+        @Size(
+                min = 2,
+                max = 120,
+                message = "O nome da conta deve ter entre 2 e 120 caracteres"
+        )
+        String name,
+
+        @NotNull(message = "Informe o tipo da conta")
+        FinancialAccountType type,
+
+        @Size(
+                max = 20,
+                message = "A cor deve ter no mÃ¡ximo 20 caracteres"
+        )
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color,
+
+        @NotNull(
+                message = "Informe se a conta entra no total"
+        )
+        Boolean includeInTotal
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialCategoryRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+public record UpdateFinancialCategoryRequest(
+
+        @NotBlank(message = "Informe o nome da categoria")
+        @Size(
+                min = 2,
+                max = 80,
+                message = "O nome da categoria deve ter entre 2 e 80 caracteres"
+        )
+        String name,
+
+        @Size(
+                max = 20,
+                message = "A cor deve ter no mÃ¡ximo 20 caracteres"
+        )
+        @Pattern(
+                regexp = "^$|^#[0-9A-Fa-f]{6}$",
+                message = "Informe uma cor hexadecimal vÃ¡lida"
+        )
+        String color,
+
+        @Size(
+                max = 50,
+                message = "O Ã­cone deve ter no mÃ¡ximo 50 caracteres"
+        )
+        String icon
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\dto\UpdateFinancialTransactionRequest.java
+============================================================
+package br.com.nucleo.api.finance.dto;
+
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record UpdateFinancialTransactionRequest(
+
+        @NotNull(message = "Informe a conta")
+        UUID accountId,
+
+        UUID categoryId,
+
+        @NotNull(message = "Informe o tipo do lanÃ§amento")
+        FinancialTransactionType type,
+
+        @NotBlank(message = "Informe a descriÃ§Ã£o")
+        @Size(
+                max = 160,
+                message = "A descriÃ§Ã£o deve ter no mÃ¡ximo 160 caracteres"
+        )
+        String description,
+
+        @NotNull(message = "Informe o valor")
+        @DecimalMin(
+                value = "0.01",
+                message = "O valor deve ser maior que zero"
+        )
+        @Digits(
+                integer = 16,
+                fraction = 2,
+                message = "O valor deve ter atÃ© 16 inteiros e 2 decimais"
+        )
+        BigDecimal amount,
+
+        @NotNull(message = "Informe a data do lanÃ§amento")
+        LocalDate transactionDate,
+
+        LocalDate dueDate,
+
+        FinancialPaymentMethod paymentMethod,
+
+        @Size(
+                max = 1000,
+                message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 1000 caracteres"
+        )
+        String notes
+) {
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialAccountType.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialAccountType {
+    CASH,
+    CHECKING,
+    SAVINGS,
+    INVESTMENT,
+    DIGITAL_WALLET,
+    OTHER
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialPaymentMethod.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialPaymentMethod {
+    CASH,
+    PIX,
+    DEBIT_CARD,
+    BANK_TRANSFER,
+    BANK_SLIP,
+    DIRECT_DEBIT,
+    OTHER
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialTransactionStatus.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialTransactionStatus {
+    PENDING,
+    PAID,
+    CANCELLED
+}
+
+============================================================
+ARQUIVO: C:\nucleo\apps\api\src\main\java\br\com\nucleo\api\finance\domain\FinancialTransactionType.java
+============================================================
+package br.com.nucleo.api.finance.domain;
+
+public enum FinancialTransactionType {
+    INCOME,
+    EXPENSE
+}
