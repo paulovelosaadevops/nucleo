@@ -58,8 +58,4 @@ EXPOSE 8090
 
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Dfile.encoding=UTF-8 -Duser.timezone=UTC"
 
-ENTRYPOINT [
-    "sh",
-    "-c",
-    "exec java $JAVA_OPTS -jar /app/application.jar"
-]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/application.jar"]
