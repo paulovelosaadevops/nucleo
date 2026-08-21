@@ -38,11 +38,13 @@ function mapFamilySettings(
   response: FamilySettingsApiResponse,
 ): FamilySettings {
   return {
+    id: response.id,
     name: response.familyName,
     timeZone: response.timeZone,
-    currentUserRole:
-      response.currentUserRole,
+    currentUserRole: response.currentUserRole,
     canManage: response.canManage,
+    createdAt: response.createdAt,
+    updatedAt: response.updatedAt,
   };
 }
 

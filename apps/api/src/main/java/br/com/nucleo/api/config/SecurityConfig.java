@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,42 +34,55 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session
-                .sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS
-                )
+                        .sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
                 )
                 .exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(securityErrorWriter)
-                .accessDeniedHandler(securityErrorWriter)
-                )
-                .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(
-                        "/api/auth/register",
-                        "/api/auth/login",
-                        "/api/auth/refresh",
-                        "/api/auth/logout",
-                        "/actuator/health",
-                        "/actuator/health/**",
-                        "/error"
-                ).permitAll()
-                .requestMatchers(
-                        "/api/invitations/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(resourceServer
-                        -> resourceServer
                         .authenticationEntryPoint(
                                 securityErrorWriter
                         )
                         .accessDeniedHandler(
                                 securityErrorWriter
                         )
-                        .jwt(jwt -> jwt
-                        .jwtAuthenticationConverter(
-                                jwtAuthenticationConverter()
-                        )
-                        )
+                )
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/invitations/*"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/invitations/*/decline"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(resourceServer ->
+                        resourceServer
+                                .authenticationEntryPoint(
+                                        securityErrorWriter
+                                )
+                                .accessDeniedHandler(
+                                        securityErrorWriter
+                                )
+                                .jwt(jwt -> jwt
+                                        .jwtAuthenticationConverter(
+                                                jwtAuthenticationConverter()
+                                        )
+                                )
                 );
 
         return http.build();
@@ -81,8 +95,8 @@ public class SecurityConfig {
 
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter
-                = new JwtAuthenticationConverter();
+        JwtAuthenticationConverter converter =
+                new JwtAuthenticationConverter();
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             String role = jwt.getClaimAsString("role");
@@ -92,7 +106,9 @@ public class SecurityConfig {
             }
 
             return List.of(
-                    new SimpleGrantedAuthority("ROLE_" + role)
+                    new SimpleGrantedAuthority(
+                            "ROLE_" + role
+                    )
             );
         });
 
@@ -101,9 +117,13 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:3000}") List<String> allowedOrigins
+            @Value(
+                    "${app.cors.allowed-origins:http://localhost:3001}"
+            )
+            List<String> allowedOrigins
     ) {
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(
@@ -123,14 +143,19 @@ public class SecurityConfig {
                         "Accept"
                 )
         );
-        configuration.setExposedHeaders(List.of("Location"));
+        configuration.setExposedHeaders(
+                List.of("Location")
+        );
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source
-                = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
 
         return source;
     }

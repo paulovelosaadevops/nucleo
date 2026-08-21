@@ -1,9 +1,11 @@
-# Environment
+# Environment and secrets
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.local.example
 
-# Java
+# Java / Maven
 target/
 *.class
 *.jar
@@ -15,12 +17,15 @@ target/
 .classpath
 .settings/
 bin/
+hs_err_pid*
+replay_pid*
 
 # Node / Next.js
 node_modules/
 .next/
 out/
 dist/
+build/
 coverage/
 *.tsbuildinfo
 next-env.d.ts
@@ -35,10 +40,23 @@ next-env.d.ts
 Thumbs.db
 desktop.ini
 
-# Docker
+# Docker local data
 docker-data/
+
+# Certificates and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+*.bak
+*.swp
+
+# Local production artifacts
+.env.production
+apps/web/.env.production
