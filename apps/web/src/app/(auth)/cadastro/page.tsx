@@ -39,15 +39,22 @@ export default async function CadastroPage({
           : "Comece agora a organizar tudo o que importa para sua família."
       }
       footer={
-        <p>
-          Já possui uma conta?{" "}
-          <Link
-            href="/login"
-            className="font-medium text-zinc-200 transition hover:text-white"
-          >
-            Entrar
-          </Link>
-        </p>
+        invitationToken ? (
+          <p>
+            O convite é pessoal e deve ser usado com
+            o mesmo e-mail para o qual foi enviado.
+          </p>
+        ) : (
+          <p>
+            Já possui uma conta?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-zinc-200 transition hover:text-white"
+            >
+              Entrar
+            </Link>
+          </p>
+        )
       }
     >
       <RegisterForm

@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -12,13 +15,49 @@ import {
   X,
 } from "lucide-react";
 
-import { familyService } from "./family-service";
+import {
+  Button,
+  buttonClassName,
+} from "@/components/ui/button";
+import type {
+  FamilyInvitationPreview,
+  InvitationStatus,
+} from "@/types/family";
 
-import type { FamilyInvitationPreview } from "@/types/family";
+import { familyService } from "./family-service";
 
 interface InvitationPreviewProps {
   token: string;
 }
+
+const unavailableContent: Record<
+  Exclude<InvitationStatus, "PENDING">,
+  {
+    title: string;
+    description: string;
+  }
+> = {
+  ACCEPTED: {
+    title: "Convite já aceito",
+    description:
+      "Este convite já foi utilizado para entrar no núcleo familiar.",
+  },
+  DECLINED: {
+    title: "Convite recusado",
+    description:
+      "Este convite foi recusado e não pode mais ser utilizado.",
+  },
+  REVOKED: {
+    title: "Convite revogado",
+    description:
+      "O administrador do núcleo revogou este convite.",
+  },
+  EXPIRED: {
+    title: "Convite expirado",
+    description:
+      "O prazo para utilizar este convite terminou.",
+  },
+};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -38,16 +77,21 @@ export function InvitationPreview({
 
   const [loading, setLoading] = useState(true);
   const [declining, setDeclining] = useState(false);
-  const [declined, setDeclined] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const [
+    confirmingDecline,
+    setConfirmingDecline,
+  ] = useState(false);
+
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function loadInvitation() {
-      setLoading(true);
-      setError(null);
-
       try {
         const response =
           await familyService.invitations.preview(token);
@@ -57,6 +101,8 @@ export function InvitationPreview({
         }
       } catch (requestError) {
         if (active) {
+          setInvitation(null);
+
           setError(
             requestError instanceof Error
               ? requestError.message
@@ -75,23 +121,34 @@ export function InvitationPreview({
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [reloadKey, token]);
+
+  function retryInvitation() {
+    setLoading(true);
+    setError(null);
+
+    setReloadKey(
+      (current) => current + 1,
+    );
+  }
 
   async function declineInvitation() {
-    const confirmed = window.confirm(
-      "Deseja realmente recusar este convite?",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setDeclining(true);
     setError(null);
 
     try {
       await familyService.invitations.decline(token);
-      setDeclined(true);
+
+      setInvitation((current) =>
+        current
+          ? {
+              ...current,
+              status: "DECLINED",
+            }
+          : current,
+      );
+
+      setConfirmingDecline(false);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -105,40 +162,72 @@ export function InvitationPreview({
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-black">
-        <LoaderCircle className="size-7 animate-spin text-zinc-500" />
-      </div>
+      <main
+        aria-busy="true"
+        aria-live="polite"
+        className="flex min-h-dvh items-center justify-center bg-black"
+      >
+        <div className="flex flex-col items-center gap-3 text-zinc-500">
+          <LoaderCircle className="size-7 animate-spin" />
+
+          <p className="text-sm">
+            Carregando convite...
+          </p>
+        </div>
+      </main>
     );
   }
 
   if (error || !invitation) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-black p-5">
-        <section className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center">
+        <section className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center shadow-2xl backdrop-blur-xl">
           <AlertCircle className="mx-auto size-9 text-rose-300" />
 
           <h1 className="mt-5 text-xl font-semibold text-white">
-            Convite indisponível
+            Não foi possível carregar o convite
           </h1>
 
-          <p className="mt-3 text-sm leading-6 text-zinc-500">
+          <p
+            role="alert"
+            className="mt-3 text-sm leading-6 text-zinc-500"
+          >
             {error ??
-              "Este convite não pôde ser encontrado."}
+              "O convite não pôde ser encontrado."}
           </p>
 
-          <Link
-            href="/login"
-            className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
-          >
-            Ir para o login
-          </Link>
+          <div className="mt-6 flex flex-col gap-2">
+            <Button
+              type="button"
+              size="large"
+              onClick={retryInvitation}
+            >
+              Tentar novamente
+            </Button>
+
+            <Link
+              href="/login"
+              className={buttonClassName({
+                variant: "secondary",
+                size: "large",
+                className: "w-full",
+              })}
+            >
+              Ir para o login
+            </Link>
+          </div>
         </section>
       </main>
     );
   }
 
-  const invalid =
-    declined || invitation.status !== "PENDING";
+  const pending =
+    invitation.status === "PENDING";
+
+  const unavailable =
+    invitation.status === "PENDING"
+      ? null
+      : unavailableContent[invitation.status];
 
   const roleLabel =
     invitation.role === "ADMIN"
@@ -150,16 +239,23 @@ export function InvitationPreview({
       ? ShieldCheck
       : UserRound;
 
+  const successfulStatus =
+    invitation.status === "PENDING" ||
+    invitation.status === "ACCEPTED";
+
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-black p-5">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_35%)]"
+      />
 
       <section className="relative w-full max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
         <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-white">
-          {invalid ? (
-            <X className="size-5" />
-          ) : (
+          {successfulStatus ? (
             <Check className="size-5" />
+          ) : (
+            <X className="size-5" />
           )}
         </div>
 
@@ -168,18 +264,18 @@ export function InvitationPreview({
         </p>
 
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-          {invalid
-            ? "Este convite não está mais disponível"
-            : `Você foi convidado para ${invitation.familyName}`}
+          {pending
+            ? `Você foi convidado para ${invitation.familyName}`
+            : unavailable?.title}
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-zinc-500">
-          {invalid
-            ? "O convite pode ter sido aceito, recusado, revogado ou expirado."
-            : `${invitation.invitedByName} convidou ${invitation.maskedEmail} para participar da central familiar.`}
+          {pending
+            ? `${invitation.invitedByName} convidou ${invitation.maskedEmail} para participar da central familiar.`
+            : unavailable?.description}
         </p>
 
-        {!invalid ? (
+        {pending ? (
           <div className="mt-6 space-y-3 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
             <div className="flex items-center gap-3">
               <RoleIcon className="size-4 text-zinc-400" />
@@ -188,6 +284,7 @@ export function InvitationPreview({
                 <p className="text-xs text-zinc-600">
                   Papel no núcleo
                 </p>
+
                 <p className="mt-0.5 text-sm text-zinc-300">
                   {roleLabel}
                 </p>
@@ -201,8 +298,11 @@ export function InvitationPreview({
                 <p className="text-xs text-zinc-600">
                   Válido até
                 </p>
+
                 <p className="mt-0.5 text-sm text-zinc-300">
-                  {formatDate(invitation.expiresAt)}
+                  {formatDate(
+                    invitation.expiresAt,
+                  )}
                 </p>
               </div>
             </div>
@@ -210,44 +310,79 @@ export function InvitationPreview({
         ) : null}
 
         {error ? (
-          <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
+          <div
+            role="alert"
+            className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200"
+          >
             {error}
           </div>
         ) : null}
 
         <div className="mt-7 flex flex-col gap-2">
-          {!invalid ? (
+          {pending ? (
             <>
               <Link
                 href={`/cadastro?convite=${encodeURIComponent(token)}`}
-                className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+                className={buttonClassName({
+                  size: "large",
+                  className: "w-full",
+                })}
               >
                 Criar conta e participar
               </Link>
 
-              <Link
-                href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
-              >
-                Já tenho uma conta
-              </Link>
+              {!confirmingDecline ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="large"
+                  className="w-full text-zinc-500"
+                  onClick={() =>
+                    setConfirmingDecline(true)
+                  }
+                >
+                  Recusar convite
+                </Button>
+              ) : (
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4">
+                  <p className="text-sm leading-6 text-zinc-300">
+                    Deseja realmente recusar este
+                    convite?
+                  </p>
 
-              <button
-                type="button"
-                disabled={declining}
-                onClick={() => void declineInvitation()}
-                className="inline-flex h-11 items-center justify-center gap-2 text-sm text-zinc-600 hover:text-zinc-300 disabled:opacity-50"
-              >
-                {declining ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : null}
-                Recusar convite
-              </button>
+                  <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={declining}
+                      onClick={() =>
+                        setConfirmingDecline(false)
+                      }
+                    >
+                      Voltar
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="danger"
+                      loading={declining}
+                      onClick={() =>
+                        void declineInvitation()
+                      }
+                    >
+                      Confirmar recusa
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <Link
               href="/login"
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+              className={buttonClassName({
+                size: "large",
+                className: "w-full",
+              })}
             >
               Ir para o login
             </Link>

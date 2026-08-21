@@ -1,14 +1,18 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  useState,
+  type FormEvent,
+} from "react";
 import {
   Check,
   Copy,
-  LoaderCircle,
   MailPlus,
   X,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type {
   CreateFamilyInvitationRequest,
   FamilyInvitationCreated,
@@ -23,11 +27,17 @@ interface FamilyInvitationFormProps {
   onCancel: () => void;
 }
 
-const inputClassName =
-  "h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-white/25 disabled:opacity-50";
+function buildInvitationUrl(
+  invitation: FamilyInvitationCreated,
+) {
+  if (typeof window === "undefined") {
+    return invitation.invitationUrl;
+  }
 
-const labelClassName =
-  "mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-500";
+  return `${window.location.origin}/convites/${encodeURIComponent(
+    invitation.invitationToken,
+  )}`;
+}
 
 export function FamilyInvitationForm({
   submitting = false,
@@ -35,26 +45,47 @@ export function FamilyInvitationForm({
   onCancel,
 }: FamilyInvitationFormProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Exclude<FamilyRole, "OWNER">>(
-    "MEMBER",
-  );
+
+  const [role, setRole] =
+    useState<Exclude<FamilyRole, "OWNER">>(
+      "MEMBER",
+    );
 
   const [result, setResult] =
-    useState<FamilyInvitationCreated | null>(null);
+    useState<FamilyInvitationCreated | null>(
+      null,
+    );
 
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [emailError, setEmailError] =
+    useState<string | undefined>();
+
+  const [formError, setFormError] =
+    useState<string | null>(null);
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
-    setError(null);
 
-    const normalizedEmail = email.trim().toLowerCase();
+    setEmailError(undefined);
+    setFormError(null);
+
+    const normalizedEmail =
+      email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setEmailError("Informe o e-mail");
+      return;
+    }
 
     if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        normalizedEmail,
+      )
     ) {
-      setError("Informe um e-mail válido.");
+      setEmailError("Informe um e-mail válido");
       return;
     }
 
@@ -66,7 +97,7 @@ export function FamilyInvitationForm({
 
       setResult(response);
     } catch (submissionError) {
-      setError(
+      setFormError(
         submissionError instanceof Error
           ? submissionError.message
           : "Não foi possível criar o convite.",
@@ -79,28 +110,45 @@ export function FamilyInvitationForm({
       return;
     }
 
-    const localInvitationUrl = `${window.location.origin}/convites/${result.invitationToken}`;
+    setFormError(null);
 
-    await navigator.clipboard.writeText(localInvitationUrl);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(
+        buildInvitationUrl(result),
+      );
 
-    window.setTimeout(() => setCopied(false), 2000);
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      setFormError(
+        "Não foi possível copiar o link. Selecione e copie o endereço manualmente.",
+      );
+    }
   }
 
   if (result) {
-    const localInvitationUrl =
-      typeof window === "undefined"
-        ? result.invitationUrl
-        : `${window.location.origin}/convites/${result.invitationToken}`;
+    const invitationUrl =
+      buildInvitationUrl(result);
 
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-6">
-        <section className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] p-6 sm:max-w-xl sm:rounded-[2rem] sm:p-7">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invitation-created-title"
+          className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] p-6 shadow-2xl sm:max-w-xl sm:rounded-[2rem] sm:p-7"
+        >
           <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
             <Check className="size-5" />
           </div>
 
-          <h2 className="mt-5 text-xl font-semibold text-white">
+          <h2
+            id="invitation-created-title"
+            className="mt-5 text-xl font-semibold text-white"
+          >
             Convite criado
           </h2>
 
@@ -114,23 +162,33 @@ export function FamilyInvitationForm({
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
             <p className="break-all font-mono text-xs leading-6 text-zinc-400">
-              {localInvitationUrl}
+              {invitationUrl}
             </p>
           </div>
 
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button
+          {formError ? (
+            <div
+              role="alert"
+              className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/[0.08] p-4 text-sm leading-6 text-red-200"
+            >
+              {formError}
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
               type="button"
+              variant="secondary"
               onClick={onCancel}
-              className="h-11 rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
             >
               Fechar
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
-              onClick={() => void copyInvitationLink()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black"
+              onClick={() =>
+                void copyInvitationLink()
+              }
             >
               {copied ? (
                 <Check className="size-4" />
@@ -138,8 +196,10 @@ export function FamilyInvitationForm({
                 <Copy className="size-4" />
               )}
 
-              {copied ? "Link copiado" : "Copiar link"}
-            </button>
+              {copied
+                ? "Link copiado"
+                : "Copiar link"}
+            </Button>
           </div>
         </section>
       </div>
@@ -148,77 +208,101 @@ export function FamilyInvitationForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-6">
-      <section className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] sm:max-w-xl sm:rounded-[2rem]">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invitation-form-title"
+        className="w-full rounded-t-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:max-w-xl sm:rounded-[2rem]"
+      >
         <header className="flex items-start justify-between border-b border-white/10 p-5 sm:px-7">
           <div>
             <p className="text-xs uppercase tracking-wider text-zinc-600">
               Núcleo familiar
             </p>
 
-            <h2 className="mt-1 text-xl font-semibold text-white">
+            <h2
+              id="invitation-form-title"
+              className="mt-1 text-xl font-semibold text-white"
+            >
               Convidar familiar
             </h2>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             disabled={submitting}
+            aria-label="Fechar formulário de convite"
             onClick={onCancel}
-            className="flex size-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400"
           >
             <X className="size-4" />
-          </button>
+          </Button>
         </header>
 
         <form
           onSubmit={handleSubmit}
           className="space-y-5 p-5 sm:p-7"
+          noValidate
         >
-          <div>
-            <label
-              htmlFor="invitation-email"
-              className={labelClassName}
-            >
-              E-mail
-            </label>
+          <Input
+            id="invitation-email"
+            label="E-mail"
+            type="email"
+            autoFocus
+            required
+            maxLength={254}
+            autoComplete="email"
+            inputMode="email"
+            disabled={submitting}
+            placeholder="familiar@exemplo.com"
+            value={email}
+            error={emailError}
+            onChange={(event) => {
+              setEmail(event.target.value);
 
-            <input
-              id="invitation-email"
-              type="email"
-              value={email}
-              autoFocus
-              maxLength={254}
-              disabled={submitting}
-              placeholder="familiar@exemplo.com"
-              onChange={(event) => setEmail(event.target.value)}
-              className={inputClassName}
-            />
-          </div>
+              if (emailError) {
+                setEmailError(undefined);
+              }
+
+              if (formError) {
+                setFormError(null);
+              }
+            }}
+          />
 
           <div>
             <label
               htmlFor="invitation-role"
-              className={labelClassName}
+              className="mb-2 block text-sm font-medium text-zinc-300"
             >
-              Papel
+              Papel no núcleo
             </label>
 
             <select
               id="invitation-role"
               value={role}
               disabled={submitting}
-              onChange={(event) =>
-                setRole(
-                  event.target.value as Exclude<
-                    FamilyRole,
-                    "OWNER"
-                  >,
-                )
-              }
-              className={inputClassName}
+              className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-[0.95rem] text-white outline-none transition hover:border-white/16 focus:border-white/30 focus:bg-white/[0.065] focus:ring-2 focus:ring-white/[0.06] disabled:opacity-50"
+              onChange={(event) => {
+                const selectedRole =
+                  event.target.value;
+
+                if (
+                  selectedRole === "MEMBER" ||
+                  selectedRole === "ADMIN"
+                ) {
+                  setRole(selectedRole);
+                }
+              }}
             >
-              <option value="MEMBER">Membro</option>
-              <option value="ADMIN">Administrador</option>
+              <option value="MEMBER">
+                Membro
+              </option>
+
+              <option value="ADMIN">
+                Administrador
+              </option>
             </select>
           </div>
 
@@ -227,42 +311,40 @@ export function FamilyInvitationForm({
               <MailPlus className="mt-0.5 size-4 shrink-0 text-zinc-400" />
 
               <p className="text-xs leading-6 text-zinc-500">
-                Administradores podem gerenciar convites. Membros
-                participam da Agenda, Compras e Finanças, mas não
+                Administradores podem gerenciar
+                convites. Membros participam da
+                Agenda, Compras e Finanças, mas não
                 administram o núcleo.
               </p>
             </div>
           </div>
 
-          {error ? (
-            <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
-              {error}
+          {formError ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] p-4 text-sm leading-6 text-red-200"
+            >
+              {formError}
             </div>
           ) : null}
 
           <footer className="flex flex-col-reverse gap-2 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               disabled={submitting}
               onClick={onCancel}
-              className="h-11 rounded-2xl border border-white/10 px-5 text-sm font-semibold text-zinc-300"
             >
               Cancelar
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="submit"
-              disabled={submitting}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-6 text-sm font-semibold text-black disabled:opacity-60"
+              loading={submitting}
             >
-              {submitting ? (
-                <LoaderCircle className="size-4 animate-spin" />
-              ) : (
-                <MailPlus className="size-4" />
-              )}
-
+              <MailPlus className="size-4" />
               Criar convite
-            </button>
+            </Button>
           </footer>
         </form>
       </section>
