@@ -1,19 +1,21 @@
 package br.com.nucleo.api.finance.dto;
 
-import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
-import br.com.nucleo.api.finance.domain.FinancialRecurrence;
-import br.com.nucleo.api.finance.domain.FinancialRecurrenceFrequency;
-import br.com.nucleo.api.finance.domain.FinancialTransactionType;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
+import br.com.nucleo.api.finance.domain.FinancialRecurrence;
+import br.com.nucleo.api.finance.domain.FinancialRecurrenceFrequency;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+
 public record FinancialRecurrenceResponse(
         UUID id,
         UUID accountId,
         String accountName,
+        UUID creditCardId,
+        String creditCardName,
         UUID categoryId,
         String categoryName,
         FinancialTransactionType type,
@@ -37,6 +39,22 @@ public record FinancialRecurrenceResponse(
     public static FinancialRecurrenceResponse from(
             FinancialRecurrence recurrence
     ) {
+        UUID accountId = null;
+        String accountName = null;
+
+        if (recurrence.getAccount() != null) {
+            accountId = recurrence.getAccount().getId();
+            accountName = recurrence.getAccount().getName();
+        }
+
+        UUID creditCardId = null;
+        String creditCardName = null;
+
+        if (recurrence.getCreditCard() != null) {
+            creditCardId = recurrence.getCreditCard().getId();
+            creditCardName = recurrence.getCreditCard().getName();
+        }
+
         UUID categoryId = null;
         String categoryName = null;
 
@@ -47,8 +65,10 @@ public record FinancialRecurrenceResponse(
 
         return new FinancialRecurrenceResponse(
                 recurrence.getId(),
-                recurrence.getAccount().getId(),
-                recurrence.getAccount().getName(),
+                accountId,
+                accountName,
+                creditCardId,
+                creditCardName,
                 categoryId,
                 categoryName,
                 recurrence.getType(),

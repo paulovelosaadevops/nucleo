@@ -4,6 +4,7 @@ public enum FinancialPaymentMethod {
     CASH,
     PIX,
     DEBIT_CARD,
+    CREDIT_CARD,
     BANK_TRANSFER,
     BANK_SLIP,
     DIRECT_DEBIT,

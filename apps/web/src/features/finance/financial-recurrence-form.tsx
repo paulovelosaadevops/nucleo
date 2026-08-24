@@ -7,6 +7,7 @@ import type {
   CreateFinancialRecurrenceRequest,
   FinancialAccount,
   FinancialCategory,
+  FinancialCreditCard,
   FinancialPaymentMethod,
   FinancialRecurrence,
   FinancialRecurrenceFrequency,
@@ -21,6 +22,7 @@ type RecurrenceFormRequest =
 interface FinancialRecurrenceFormProps {
   accounts: FinancialAccount[];
   categories: FinancialCategory[];
+  creditCards: FinancialCreditCard[];
   recurrence?: FinancialRecurrence | null;
   submitting?: boolean;
   onSubmit: (request: RecurrenceFormRequest) => Promise<void>;
@@ -29,6 +31,7 @@ interface FinancialRecurrenceFormProps {
 
 interface FormState {
   accountId: string;
+  creditCardId: string;
   categoryId: string;
   type: FinancialTransactionType;
   description: string;
@@ -52,6 +55,28 @@ const frequencies: Array<{
   { value: "YEARLY", label: "Anual" },
 ];
 
+const frequencyIntervalDetails: Record<
+  FinancialRecurrenceFrequency,
+  { label: string; help: string }
+> = {
+  DAILY: {
+    label: "Intervalo em dias",
+    help: "Use 1 para repetir todos os dias.",
+  },
+  WEEKLY: {
+    label: "Intervalo em semanas",
+    help: "Use 1 para repetir toda semana.",
+  },
+  MONTHLY: {
+    label: "Intervalo em meses",
+    help: "Use 1 para repetir todo mês.",
+  },
+  YEARLY: {
+    label: "Intervalo em anos",
+    help: "Use 1 para repetir todo ano.",
+  },
+};
+
 const paymentMethods: Array<{
   value: FinancialPaymentMethod;
   label: string;
@@ -62,6 +87,7 @@ const paymentMethods: Array<{
   { value: "BANK_TRANSFER", label: "Transferência bancária" },
   { value: "BANK_SLIP", label: "Boleto bancário" },
   { value: "DIRECT_DEBIT", label: "Débito automático" },
+  { value: "CREDIT_CARD", label: "Cartão de crédito" },
   { value: "OTHER", label: "Outro" },
 ];
 
@@ -86,7 +112,8 @@ function createInitialState(
 ): FormState {
   if (recurrence) {
     return {
-      accountId: recurrence.accountId,
+      accountId: recurrence.accountId ?? "",
+      creditCardId: recurrence.creditCardId ?? "",
       categoryId: recurrence.categoryId ?? "",
       type: recurrence.type,
       description: recurrence.description,
@@ -103,6 +130,7 @@ function createInitialState(
 
   return {
     accountId: "",
+    creditCardId: "",
     categoryId: "",
     type: "EXPENSE",
     description: "",
@@ -120,6 +148,7 @@ function createInitialState(
 export function FinancialRecurrenceForm({
   accounts,
   categories,
+  creditCards,
   recurrence,
   submitting = false,
   onSubmit,
@@ -153,6 +182,19 @@ export function FinancialRecurrenceForm({
     [categories, form.categoryId, form.type],
   );
 
+  const availableCreditCards = useMemo(
+    () =>
+      creditCards.filter(
+        (creditCard) =>
+          creditCard.active || creditCard.id === form.creditCardId,
+      ),
+    [creditCards, form.creditCardId],
+  );
+
+  const usesCreditCard =
+    form.type === "EXPENSE" &&
+    form.paymentMethod === "CREDIT_CARD";
+
   function updateField<K extends keyof FormState>(
     field: K,
     value: FormState[K],
@@ -172,6 +214,12 @@ export function FinancialRecurrenceForm({
       return {
         ...current,
         type,
+        paymentMethod:
+          type === "INCOME" &&
+          current.paymentMethod === "CREDIT_CARD"
+            ? ""
+            : current.paymentMethod,
+        creditCardId: type === "INCOME" ? "" : current.creditCardId,
         categoryId:
           selectedCategory?.type === type
             ? current.categoryId
@@ -187,7 +235,12 @@ export function FinancialRecurrenceForm({
     const amount = Number(form.amount);
     const interval = Number(form.interval);
 
-    if (!form.accountId) {
+    if (usesCreditCard && !form.creditCardId) {
+      setError("Selecione um cartão de crédito.");
+      return;
+    }
+
+    if (!usesCreditCard && !form.accountId) {
       setError("Selecione uma conta.");
       return;
     }
@@ -203,7 +256,8 @@ export function FinancialRecurrenceForm({
     }
 
     const commonRequest = {
-      accountId: form.accountId,
+      accountId: usesCreditCard ? null : form.accountId,
+      creditCardId: usesCreditCard ? form.creditCardId : null,
       categoryId: form.categoryId || null,
       type: form.type,
       description: form.description.trim(),
@@ -401,25 +455,39 @@ export function FinancialRecurrenceForm({
                 id="recurrence-payment"
                 value={form.paymentMethod}
                 disabled={submitting}
-                onChange={(event) =>
-                  updateField(
-                    "paymentMethod",
-                    event.target
-                      .value as FinancialPaymentMethod | "",
-                  )
-                }
+                onChange={(event) => {
+                  const value = event.target
+                    .value as FinancialPaymentMethod | "";
+
+                  setForm((current) => ({
+                    ...current,
+                    paymentMethod: value,
+                    accountId:
+                      value === "CREDIT_CARD" ? "" : current.accountId,
+                    creditCardId:
+                      value === "CREDIT_CARD"
+                        ? current.creditCardId
+                        : "",
+                  }));
+                }}
                 className={inputClassName}
               >
                 <option value="">Não informada</option>
 
-                {paymentMethods.map((method) => (
+                {paymentMethods
+                  .filter(
+                    (method) =>
+                      form.type === "EXPENSE" ||
+                      method.value !== "CREDIT_CARD",
+                  )
+                  .map((method) => (
                   <option
                     key={method.value}
                     value={method.value}
                   >
                     {method.label}
                   </option>
-                ))}
+                  ))}
               </select>
             </div>
           </div>
@@ -427,30 +495,55 @@ export function FinancialRecurrenceForm({
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
-                htmlFor="recurrence-account"
+                htmlFor={
+                  usesCreditCard
+                    ? "recurrence-credit-card"
+                    : "recurrence-account"
+                }
                 className={labelClassName}
               >
-                Conta
+                {usesCreditCard ? "Cartão de crédito" : "Conta"}
               </label>
 
-              <select
-                id="recurrence-account"
-                value={form.accountId}
-                disabled={submitting}
-                onChange={(event) =>
-                  updateField("accountId", event.target.value)
-                }
-                className={inputClassName}
-              >
-                <option value="">Selecione uma conta</option>
+              {usesCreditCard ? (
+                <select
+                  id="recurrence-credit-card"
+                  value={form.creditCardId}
+                  disabled={submitting}
+                  onChange={(event) =>
+                    updateField("creditCardId", event.target.value)
+                  }
+                  className={inputClassName}
+                >
+                  <option value="">Selecione um cartão</option>
 
-                {availableAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                    {!account.active ? " — Inativa" : ""}
-                  </option>
-                ))}
-              </select>
+                  {availableCreditCards.map((creditCard) => (
+                    <option key={creditCard.id} value={creditCard.id}>
+                      {creditCard.name} •••• {creditCard.lastFour}
+                      {!creditCard.active ? " — Inativo" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  id="recurrence-account"
+                  value={form.accountId}
+                  disabled={submitting}
+                  onChange={(event) =>
+                    updateField("accountId", event.target.value)
+                  }
+                  className={inputClassName}
+                >
+                  <option value="">Selecione uma conta</option>
+
+                  {availableAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                      {!account.active ? " — Inativa" : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -534,7 +627,7 @@ export function FinancialRecurrenceForm({
                     htmlFor="recurrence-interval"
                     className={labelClassName}
                   >
-                    A cada
+                    {frequencyIntervalDetails[form.frequency].label}
                   </label>
 
                   <input
@@ -550,6 +643,10 @@ export function FinancialRecurrenceForm({
                     }
                     className={inputClassName}
                   />
+
+                  <p className="mt-2 text-xs text-zinc-600">
+                    {frequencyIntervalDetails[form.frequency].help}
+                  </p>
                 </div>
               </div>
 

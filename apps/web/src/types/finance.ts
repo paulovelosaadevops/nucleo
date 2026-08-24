@@ -16,9 +16,10 @@ export type FinancialAccountType =
   | "OTHER";
 
 export type FinancialPaymentMethod =
-  | "CASH"
   | "PIX"
+  | "CASH"
   | "DEBIT_CARD"
+  | "CREDIT_CARD"
   | "BANK_TRANSFER"
   | "BANK_SLIP"
   | "DIRECT_DEBIT"
@@ -237,7 +238,8 @@ export interface FinancialBudget {
 }
 
 export interface CreateFinancialRecurrenceRequest {
-  accountId: string;
+  accountId: string | null;
+  creditCardId: string | null;
   categoryId: string | null;
   type: FinancialTransactionType;
   description: string;
@@ -252,7 +254,8 @@ export interface CreateFinancialRecurrenceRequest {
 }
 
 export interface UpdateFinancialRecurrenceRequest {
-  accountId: string;
+  accountId: string | null;
+  creditCardId: string | null;
   categoryId: string | null;
   type: FinancialTransactionType;
   description: string;
@@ -263,8 +266,10 @@ export interface UpdateFinancialRecurrenceRequest {
 
 export interface FinancialRecurrence {
   id: string;
-  accountId: string;
-  accountName: string;
+  accountId: string | null;
+  accountName: string | null;
+  creditCardId: string | null;
+  creditCardName: string | null;
   categoryId: string | null;
   categoryName: string | null;
   type: FinancialTransactionType;
@@ -289,6 +294,7 @@ export interface FinancialRecurrenceGenerationResult {
   generatedUntil: string;
   processedRecurrences: number;
   createdTransactions: number;
+  createdCreditCardPurchases: number;
 }
 
 export interface CreateFinancialCreditCardRequest {
@@ -370,6 +376,8 @@ export interface FinancialCreditCardPurchase {
   creditCardName: string;
   categoryId: string | null;
   categoryName: string | null;
+  recurrenceId: string | null;
+  recurrenceSequence: number | null;
   description: string;
   totalAmount: number;
   purchaseDate: string;

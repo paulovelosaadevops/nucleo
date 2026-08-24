@@ -1,5 +1,11 @@
 package br.com.nucleo.api.finance.domain;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
 import br.com.nucleo.api.family.domain.Family;
 import br.com.nucleo.api.identity.user.domain.User;
 import jakarta.persistence.Column;
@@ -16,11 +22,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Objects;
-import java.util.UUID;
 
 @Entity
 @Table(name = "financial_recurrences")
@@ -34,9 +35,13 @@ public class FinancialRecurrence {
     @JoinColumn(name = "family_id", nullable = false)
     private Family family;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
     private FinancialAccount account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "credit_card_id")
+    private FinancialCreditCard creditCard;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
@@ -101,6 +106,7 @@ public class FinancialRecurrence {
     private FinancialRecurrence(
             Family family,
             FinancialAccount account,
+            FinancialCreditCard creditCard,
             FinancialCategory category,
             FinancialTransactionType type,
             String description,
@@ -118,10 +124,16 @@ public class FinancialRecurrence {
                 family,
                 "Family cannot be null"
         );
-        this.account = Objects.requireNonNull(
+
+        validateSource(
                 account,
-                "Financial account cannot be null"
+                creditCard,
+                type,
+                paymentMethod
         );
+
+        this.account = account;
+        this.creditCard = creditCard;
         this.category = category;
         this.type = Objects.requireNonNull(
                 type,
@@ -156,6 +168,7 @@ public class FinancialRecurrence {
     public static FinancialRecurrence create(
             Family family,
             FinancialAccount account,
+            FinancialCreditCard creditCard,
             FinancialCategory category,
             FinancialTransactionType type,
             String description,
@@ -172,6 +185,7 @@ public class FinancialRecurrence {
         return new FinancialRecurrence(
                 family,
                 account,
+                creditCard,
                 category,
                 type,
                 description,
@@ -189,6 +203,7 @@ public class FinancialRecurrence {
 
     public void update(
             FinancialAccount account,
+            FinancialCreditCard creditCard,
             FinancialCategory category,
             FinancialTransactionType type,
             String description,
@@ -196,10 +211,15 @@ public class FinancialRecurrence {
             FinancialPaymentMethod paymentMethod,
             String notes
     ) {
-        this.account = Objects.requireNonNull(
+        validateSource(
                 account,
-                "Financial account cannot be null"
+                creditCard,
+                type,
+                paymentMethod
         );
+
+        this.account = account;
+        this.creditCard = creditCard;
         this.category = category;
         this.type = Objects.requireNonNull(
                 type,
@@ -296,6 +316,13 @@ public class FinancialRecurrence {
 
     @PrePersist
     private void onCreate() {
+        validateSource(
+                account,
+                creditCard,
+                type,
+                paymentMethod
+        );
+
         Instant now = Instant.now();
 
         createdAt = now;
@@ -304,7 +331,63 @@ public class FinancialRecurrence {
 
     @PreUpdate
     private void onUpdate() {
+        validateSource(
+                account,
+                creditCard,
+                type,
+                paymentMethod
+        );
+
         updatedAt = Instant.now();
+    }
+
+    private static void validateSource(
+            FinancialAccount account,
+            FinancialCreditCard creditCard,
+            FinancialTransactionType type,
+            FinancialPaymentMethod paymentMethod
+    ) {
+        Objects.requireNonNull(
+                type,
+                "Transaction type cannot be null"
+        );
+
+        boolean creditCardRecurrence =
+                paymentMethod == FinancialPaymentMethod.CREDIT_CARD;
+
+        if (creditCardRecurrence) {
+            if (type != FinancialTransactionType.EXPENSE) {
+                throw new IllegalArgumentException(
+                        "Credit card recurrence must be an expense"
+                );
+            }
+
+            if (account != null) {
+                throw new IllegalArgumentException(
+                        "Credit card recurrence cannot have a financial account"
+                );
+            }
+
+            if (creditCard == null) {
+                throw new IllegalArgumentException(
+                        "Credit card recurrence must have a credit card"
+                );
+            }
+
+            return;
+        }
+
+        if (account == null) {
+            throw new IllegalArgumentException(
+                    "Bank recurrence must have a financial account"
+            );
+        }
+
+        if (creditCard != null) {
+            throw new IllegalArgumentException(
+                    "Bank recurrence cannot have a credit card"
+            );
+        }
     }
 
     private static void validatePeriod(
@@ -422,6 +505,10 @@ public class FinancialRecurrence {
 
     public FinancialAccount getAccount() {
         return account;
+    }
+
+    public FinancialCreditCard getCreditCard() {
+        return creditCard;
     }
 
     public FinancialCategory getCategory() {

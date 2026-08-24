@@ -20,6 +20,7 @@ import type {
   CreateFinancialRecurrenceRequest,
   FinancialAccount,
   FinancialCategory,
+  FinancialCreditCard,
   FinancialRecurrence,
   FinancialRecurrenceFrequency,
   UpdateFinancialRecurrenceRequest,
@@ -69,6 +70,7 @@ export function FinanceRecurrences() {
   const [categories, setCategories] = useState<
     FinancialCategory[]
   >([]);
+  const [creditCards, setCreditCards] = useState<FinancialCreditCard[]>([]);
 
   const [editing, setEditing] =
     useState<FinancialRecurrence | null>(null);
@@ -80,16 +82,6 @@ export function FinanceRecurrences() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  const loadReferences = useCallback(async () => {
-    const [accountResult, categoryResult] = await Promise.all([
-      financeService.accounts.list(),
-      financeService.categories.list(),
-    ]);
-
-    setAccounts(accountResult);
-    setCategories(categoryResult);
-  }, []);
 
   const loadRecurrences = useCallback(async () => {
     setLoading(true);
@@ -111,18 +103,73 @@ export function FinanceRecurrences() {
   }, []);
 
   useEffect(() => {
-    void loadReferences().catch((requestError) => {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível carregar contas e categorias.",
-      );
-    });
-  }, [loadReferences]);
+    let active = true;
+
+    Promise.all([
+      financeService.accounts.list(),
+      financeService.categories.list(),
+      financeService.creditCards.list(),
+    ])
+      .then(([accountResult, categoryResult, creditCardResult]) => {
+        if (!active) {
+          return;
+        }
+
+        setAccounts(accountResult);
+        setCategories(categoryResult);
+        setCreditCards(creditCardResult);
+      })
+      .catch((requestError: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível carregar contas, categorias e cartões.",
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    void loadRecurrences();
-  }, [loadRecurrences]);
+    let active = true;
+
+    financeService.recurrences
+      .list()
+      .then((response) => {
+        if (!active) {
+          return;
+        }
+
+        setRecurrences(response);
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível carregar as recorrências.",
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit(
     request:
@@ -194,7 +241,7 @@ export function FinanceRecurrences() {
         );
 
       setMessage(
-        `${result.createdTransactions} lançamento(s) criado(s) a partir de ${result.processedRecurrences} recorrência(s).`,
+        `${result.createdTransactions} lançamento(s) em conta e ${result.createdCreditCardPurchases} compra(s) no cartão criados a partir de ${result.processedRecurrences} recorrência(s).`,
       );
 
       await loadRecurrences();
@@ -333,7 +380,7 @@ export function FinanceRecurrences() {
                       </h3>
 
                       <p className="mt-1 text-xs text-zinc-500">
-                        {recurrence.accountName}
+                        {recurrence.creditCardName ?? recurrence.accountName}
                         {recurrence.categoryName
                           ? ` • ${recurrence.categoryName}`
                           : ""}
@@ -468,6 +515,7 @@ export function FinanceRecurrences() {
           recurrence={editing}
           accounts={accounts}
           categories={categories}
+          creditCards={creditCards}
           submitting={submitting}
           onSubmit={handleSubmit}
           onCancel={() => {

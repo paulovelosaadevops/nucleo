@@ -1,9 +1,24 @@
 package br.com.nucleo.api.finance.service;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import br.com.nucleo.api.common.error.ForbiddenOperationException;
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.domain.FamilyRole;
 import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialAccount;
 import br.com.nucleo.api.finance.domain.FinancialCategory;
 import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+import br.com.nucleo.api.finance.domain.FinancialCreditCard;
+import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
 import br.com.nucleo.api.finance.domain.FinancialRecurrence;
 import br.com.nucleo.api.finance.domain.FinancialTransaction;
 import br.com.nucleo.api.finance.domain.FinancialTransactionType;
@@ -13,22 +28,10 @@ import br.com.nucleo.api.finance.dto.GenerateFinancialRecurrencesResponse;
 import br.com.nucleo.api.finance.dto.UpdateFinancialRecurrenceRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardPurchaseRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 import br.com.nucleo.api.finance.repository.FinancialRecurrenceRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
-
-import br.com.nucleo.api.common.error.ForbiddenOperationException;
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.family.domain.FamilyMembership;
-import br.com.nucleo.api.family.domain.FamilyRole;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FinancialRecurrenceService {
@@ -39,21 +42,30 @@ public class FinancialRecurrenceService {
     private final FamilyAccessService familyAccessService;
     private final FinancialAccountRepository accountRepository;
     private final FinancialCategoryRepository categoryRepository;
+    private final FinancialCreditCardRepository cardRepository;
+    private final FinancialCreditCardPurchaseRepository purchaseRepository;
     private final FinancialRecurrenceRepository recurrenceRepository;
     private final FinancialTransactionRepository transactionRepository;
+    private final FinancialCreditCardPurchaseService purchaseService;
 
     public FinancialRecurrenceService(
             FamilyAccessService familyAccessService,
             FinancialAccountRepository accountRepository,
             FinancialCategoryRepository categoryRepository,
+            FinancialCreditCardRepository cardRepository,
+            FinancialCreditCardPurchaseRepository purchaseRepository,
             FinancialRecurrenceRepository recurrenceRepository,
-            FinancialTransactionRepository transactionRepository
+            FinancialTransactionRepository transactionRepository,
+            FinancialCreditCardPurchaseService purchaseService
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
         this.categoryRepository = categoryRepository;
+        this.cardRepository = cardRepository;
+        this.purchaseRepository = purchaseRepository;
         this.recurrenceRepository = recurrenceRepository;
         this.transactionRepository = transactionRepository;
+        this.purchaseService = purchaseService;
     }
 
     @Transactional
@@ -71,15 +83,34 @@ public class FinancialRecurrenceService {
                 request.endDate()
         );
 
-        FinancialAccount account = requireActiveAccount(
+        validateSourceSelection(
                 request.accountId(),
-                membership.getFamily().getId()
+                request.creditCardId(),
+                request.type(),
+                request.paymentMethod()
         );
+
+        UUID familyId = membership.getFamily().getId();
+
+        FinancialAccount account = request.accountId() == null
+                ? null
+                : requireActiveAccount(
+                        request.accountId(),
+                        familyId
+                );
+
+        FinancialCreditCard creditCard =
+                request.creditCardId() == null
+                        ? null
+                        : requireActiveCard(
+                                request.creditCardId(),
+                                familyId
+                        );
 
         FinancialCategory category = findActiveCategory(
                 request.categoryId(),
                 request.type(),
-                membership.getFamily().getId()
+                familyId
         );
 
         int interval = request.interval() == null
@@ -90,6 +121,7 @@ public class FinancialRecurrenceService {
                 FinancialRecurrence.create(
                         membership.getFamily(),
                         account,
+                        creditCard,
                         category,
                         request.type(),
                         request.description(),
@@ -104,7 +136,16 @@ public class FinancialRecurrenceService {
                         membership.getUser()
                 );
 
-        recurrenceRepository.save(recurrence);
+        recurrenceRepository.saveAndFlush(recurrence);
+
+        LocalDate today = LocalDate.now();
+
+        if (recurrence.canGenerateOnOrBefore(today)) {
+            generateRecurrences(
+                    List.of(recurrence),
+                    today
+            );
+        }
 
         return FinancialRecurrenceResponse.from(recurrence);
     }
@@ -143,19 +184,39 @@ public class FinancialRecurrenceService {
                 membership.getFamily().getId()
         );
 
-        FinancialAccount account = requireActiveAccount(
+        validateSourceSelection(
                 request.accountId(),
-                membership.getFamily().getId()
+                request.creditCardId(),
+                request.type(),
+                request.paymentMethod()
         );
+
+        UUID familyId = membership.getFamily().getId();
+
+        FinancialAccount account = request.accountId() == null
+                ? null
+                : requireActiveAccount(
+                        request.accountId(),
+                        familyId
+                );
+
+        FinancialCreditCard creditCard =
+                request.creditCardId() == null
+                        ? null
+                        : requireActiveCard(
+                                request.creditCardId(),
+                                familyId
+                        );
 
         FinancialCategory category = findActiveCategory(
                 request.categoryId(),
                 request.type(),
-                membership.getFamily().getId()
+                familyId
         );
 
         recurrence.update(
                 account,
+                creditCard,
                 category,
                 request.type(),
                 request.description(),
@@ -202,9 +263,21 @@ public class FinancialRecurrenceService {
                 membership.getFamily().getId()
         );
 
-        if (!recurrence.getAccount().isActive()) {
+        if (
+                recurrence.getAccount() != null
+                        && !recurrence.getAccount().isActive()
+        ) {
             throw new IllegalArgumentException(
                     "A conta da recorrência está inativa"
+            );
+        }
+
+        if (
+                recurrence.getCreditCard() != null
+                        && !recurrence.getCreditCard().isActive()
+        ) {
+            throw new IllegalArgumentException(
+                    "O cartão da recorrência está inativo"
             );
         }
 
@@ -245,16 +318,50 @@ public class FinancialRecurrenceService {
                                 limitDate
                         );
 
+        return generateRecurrences(
+                recurrences,
+                limitDate
+        );
+    }
+
+    @Transactional
+    public GenerateFinancialRecurrencesResponse generateDueAutomatically(
+            LocalDate limitDate
+    ) {
+        Objects.requireNonNull(
+                limitDate,
+                "Generation limit cannot be null"
+        );
+
+        List<FinancialRecurrence> recurrences =
+                recurrenceRepository
+                        .findAllByActiveTrueAndNextGenerationDateLessThanEqualOrderByNextGenerationDateAsc(
+                                limitDate
+                        );
+
+        return generateRecurrences(
+                recurrences,
+                limitDate
+        );
+    }
+
+    private GenerateFinancialRecurrencesResponse generateRecurrences(
+            List<FinancialRecurrence> recurrences,
+            LocalDate limitDate
+    ) {
+
         int createdTransactions = 0;
+        int createdCreditCardPurchases = 0;
+        int createdItems = 0;
         int processedRecurrences = 0;
 
         for (FinancialRecurrence recurrence : recurrences) {
-            if (createdTransactions
+            if (createdItems
                     >= MAXIMUM_GENERATED_PER_REQUEST) {
                 break;
             }
 
-            if (!recurrence.getAccount().isActive()) {
+            if (!isSourceActive(recurrence)) {
                 recurrence.pause();
                 continue;
             }
@@ -269,8 +376,15 @@ public class FinancialRecurrenceService {
 
             processedRecurrences++;
 
-            int sequence =
-                    transactionRepository
+            boolean creditCardRecurrence =
+                    isCreditCardRecurrence(recurrence);
+
+            int sequence = creditCardRecurrence
+                    ? purchaseRepository
+                            .findMaximumRecurrenceSequence(
+                                    recurrence.getId()
+                            ) + 1
+                    : transactionRepository
                             .findMaximumRecurrenceSequence(
                                     recurrence.getId()
                             ) + 1;
@@ -280,32 +394,48 @@ public class FinancialRecurrenceService {
 
             while (
                     recurrence.canGenerateOnOrBefore(limitDate)
-                            && createdTransactions
+                            && createdItems
                             < MAXIMUM_GENERATED_PER_REQUEST
             ) {
-                FinancialTransaction transaction =
-                        FinancialTransaction
-                                .createFromRecurrence(
-                                        recurrence,
-                                        sequence,
-                                        recurrence
-                                                .getNextGenerationDate()
-                                );
+                LocalDate generationDate =
+                        recurrence.getNextGenerationDate();
 
-                generated.add(transaction);
+                if (creditCardRecurrence) {
+                    purchaseService.createFromRecurrence(
+                            recurrence,
+                            sequence,
+                            generationDate
+                    );
+
+                    createdCreditCardPurchases++;
+                } else {
+                    FinancialTransaction transaction =
+                            FinancialTransaction
+                                    .createFromRecurrence(
+                                            recurrence,
+                                            sequence,
+                                            generationDate
+                                    );
+
+                    generated.add(transaction);
+                    createdTransactions++;
+                }
 
                 sequence++;
-                createdTransactions++;
+                createdItems++;
                 recurrence.advanceAfterGeneration();
             }
 
-            transactionRepository.saveAll(generated);
+            if (!generated.isEmpty()) {
+                transactionRepository.saveAll(generated);
+            }
         }
 
         return new GenerateFinancialRecurrencesResponse(
                 limitDate,
                 processedRecurrences,
-                createdTransactions
+                createdTransactions,
+                createdCreditCardPurchases
         );
     }
 
@@ -328,6 +458,8 @@ public class FinancialRecurrenceService {
 
         if (
                 transactionRepository
+                        .existsByRecurrence_Id(recurrenceId)
+                        || purchaseRepository
                         .existsByRecurrence_Id(recurrenceId)
         ) {
             throw new IllegalArgumentException(
@@ -373,6 +505,93 @@ public class FinancialRecurrenceService {
         }
 
         return account;
+    }
+
+    private FinancialCreditCard requireActiveCard(
+            UUID creditCardId,
+            UUID familyId
+    ) {
+        FinancialCreditCard creditCard = cardRepository
+                .findByIdAndFamily_Id(
+                        creditCardId,
+                        familyId
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Cartão de crédito não encontrado"
+                        )
+                );
+
+        if (!creditCard.isActive()) {
+            throw new IllegalArgumentException(
+                    "O cartão selecionado está inativo"
+            );
+        }
+
+        return creditCard;
+    }
+
+    private void validateSourceSelection(
+            UUID accountId,
+            UUID creditCardId,
+            FinancialTransactionType type,
+            FinancialPaymentMethod paymentMethod
+    ) {
+        boolean creditCardRecurrence =
+                paymentMethod == FinancialPaymentMethod.CREDIT_CARD;
+
+        if (creditCardRecurrence) {
+            if (type != FinancialTransactionType.EXPENSE) {
+                throw new IllegalArgumentException(
+                        "Cartão de crédito só pode ser usado em recorrências de despesa"
+                );
+            }
+
+            if (creditCardId == null) {
+                throw new IllegalArgumentException(
+                        "Informe o cartão de crédito"
+                );
+            }
+
+            if (accountId != null) {
+                throw new IllegalArgumentException(
+                        "Recorrência de cartão não pode possuir conta financeira"
+                );
+            }
+
+            return;
+        }
+
+        if (accountId == null) {
+            throw new IllegalArgumentException(
+                    "Informe a conta financeira"
+            );
+        }
+
+        if (creditCardId != null) {
+            throw new IllegalArgumentException(
+                    "Selecione cartão de crédito como forma de pagamento"
+            );
+        }
+    }
+
+    private boolean isCreditCardRecurrence(
+            FinancialRecurrence recurrence
+    ) {
+        return recurrence.getPaymentMethod()
+                == FinancialPaymentMethod.CREDIT_CARD;
+    }
+
+    private boolean isSourceActive(
+            FinancialRecurrence recurrence
+    ) {
+        if (isCreditCardRecurrence(recurrence)) {
+            return recurrence.getCreditCard() != null
+                    && recurrence.getCreditCard().isActive();
+        }
+
+        return recurrence.getAccount() != null
+                && recurrence.getAccount().isActive();
     }
 
     private FinancialCategory findActiveCategory(

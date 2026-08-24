@@ -5,6 +5,7 @@ import java.time.LocalDate;
 public record GenerateFinancialRecurrencesResponse(
         LocalDate generatedUntil,
         int processedRecurrences,
-        int createdTransactions
+        int createdTransactions,
+        int createdCreditCardPurchases
 ) {
 }

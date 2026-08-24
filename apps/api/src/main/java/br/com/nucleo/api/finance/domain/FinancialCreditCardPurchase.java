@@ -1,5 +1,11 @@
 package br.com.nucleo.api.finance.domain;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
 import br.com.nucleo.api.family.domain.Family;
 import br.com.nucleo.api.identity.user.domain.User;
 import jakarta.persistence.Column;
@@ -16,11 +22,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Objects;
-import java.util.UUID;
 
 @Entity
 @Table(name = "financial_credit_card_purchases")
@@ -41,6 +42,13 @@ public class FinancialCreditCardPurchase {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private FinancialCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurrence_id")
+    private FinancialRecurrence recurrence;
+
+    @Column(name = "recurrence_sequence")
+    private Integer recurrenceSequence;
 
     @Column(nullable = false, length = 160)
     private String description;
@@ -87,6 +95,8 @@ public class FinancialCreditCardPurchase {
             Family family,
             FinancialCreditCard creditCard,
             FinancialCategory category,
+            FinancialRecurrence recurrence,
+            Integer recurrenceSequence,
             String description,
             BigDecimal totalAmount,
             LocalDate purchaseDate,
@@ -103,6 +113,8 @@ public class FinancialCreditCardPurchase {
                 "Credit card cannot be null"
         );
         this.category = category;
+        this.recurrence = recurrence;
+        this.recurrenceSequence = recurrenceSequence;
         this.description = normalizeDescription(description);
         this.totalAmount = validatePositiveMoney(totalAmount);
         this.purchaseDate = Objects.requireNonNull(
@@ -117,6 +129,8 @@ public class FinancialCreditCardPurchase {
                 "Purchase creator cannot be null"
         );
         this.status = FinancialCreditCardPurchaseStatus.ACTIVE;
+
+        validateRecurrenceOrigin();
     }
 
     public static FinancialCreditCardPurchase create(
@@ -134,12 +148,54 @@ public class FinancialCreditCardPurchase {
                 family,
                 creditCard,
                 category,
+                null,
+                null,
                 description,
                 totalAmount,
                 purchaseDate,
                 totalInstallments,
                 notes,
                 createdBy
+        );
+    }
+
+    public static FinancialCreditCardPurchase createFromRecurrence(
+            FinancialRecurrence recurrence,
+            int recurrenceSequence,
+            LocalDate purchaseDate
+    ) {
+        FinancialRecurrence source = Objects.requireNonNull(
+                recurrence,
+                "Recurrence cannot be null"
+        );
+
+        if (
+                source.getPaymentMethod()
+                        != FinancialPaymentMethod.CREDIT_CARD
+        ) {
+            throw new IllegalArgumentException(
+                    "Recurrence is not configured for a credit card"
+            );
+        }
+
+        if (source.getCreditCard() == null) {
+            throw new IllegalArgumentException(
+                    "Credit card recurrence must have a credit card"
+            );
+        }
+
+        return new FinancialCreditCardPurchase(
+                source.getFamily(),
+                source.getCreditCard(),
+                source.getCategory(),
+                source,
+                recurrenceSequence,
+                source.getDescription(),
+                source.getAmount(),
+                purchaseDate,
+                1,
+                source.getNotes(),
+                source.getCreatedBy()
         );
     }
 
@@ -156,7 +212,10 @@ public class FinancialCreditCardPurchase {
     }
 
     public void cancel() {
-        if (status == FinancialCreditCardPurchaseStatus.CANCELLED) {
+        if (
+                status
+                        == FinancialCreditCardPurchaseStatus.CANCELLED
+        ) {
             throw new IllegalStateException(
                     "Credit card purchase is already cancelled"
             );
@@ -166,7 +225,10 @@ public class FinancialCreditCardPurchase {
     }
 
     public void restore() {
-        if (status != FinancialCreditCardPurchaseStatus.CANCELLED) {
+        if (
+                status
+                        != FinancialCreditCardPurchaseStatus.CANCELLED
+        ) {
             throw new IllegalStateException(
                     "Only a cancelled purchase can be restored"
             );
@@ -176,11 +238,17 @@ public class FinancialCreditCardPurchase {
     }
 
     public boolean isActive() {
-        return status == FinancialCreditCardPurchaseStatus.ACTIVE;
+        return status
+                == FinancialCreditCardPurchaseStatus.ACTIVE;
     }
 
     public boolean isCancelled() {
-        return status == FinancialCreditCardPurchaseStatus.CANCELLED;
+        return status
+                == FinancialCreditCardPurchaseStatus.CANCELLED;
+    }
+
+    public boolean isGeneratedFromRecurrence() {
+        return recurrence != null;
     }
 
     private void ensureActive() {
@@ -193,19 +261,56 @@ public class FinancialCreditCardPurchase {
 
     @PrePersist
     private void onCreate() {
+        validateRecurrenceOrigin();
+
         Instant now = Instant.now();
 
         createdAt = now;
         updatedAt = now;
 
         if (status == null) {
-            status = FinancialCreditCardPurchaseStatus.ACTIVE;
+            status =
+                    FinancialCreditCardPurchaseStatus.ACTIVE;
         }
     }
 
     @PreUpdate
     private void onUpdate() {
+        validateRecurrenceOrigin();
         updatedAt = Instant.now();
+    }
+
+    private void validateRecurrenceOrigin() {
+        if (
+                recurrence == null
+                        && recurrenceSequence != null
+        ) {
+            throw new IllegalStateException(
+                    "Purchase without recurrence cannot have a sequence"
+            );
+        }
+
+        if (
+                recurrence != null
+                        && (
+                        recurrenceSequence == null
+                                || recurrenceSequence < 1
+                )
+        ) {
+            throw new IllegalStateException(
+                    "Recurring purchase must have a valid sequence"
+            );
+        }
+
+        if (
+                recurrence != null
+                        && recurrence.getPaymentMethod()
+                        != FinancialPaymentMethod.CREDIT_CARD
+        ) {
+            throw new IllegalStateException(
+                    "Recurring purchase requires a credit card recurrence"
+            );
+        }
     }
 
     private static String normalizeDescription(String value) {
@@ -214,7 +319,10 @@ public class FinancialCreditCardPurchase {
                 "Purchase description cannot be null"
         ).trim().replaceAll("\\s+", " ");
 
-        if (normalized.isEmpty() || normalized.length() > 160) {
+        if (
+                normalized.isEmpty()
+                        || normalized.length() > 160
+        ) {
             throw new IllegalArgumentException(
                     "Purchase description must contain between 1 and 160 characters"
             );
@@ -270,7 +378,9 @@ public class FinancialCreditCardPurchase {
             return null;
         }
 
-        String normalized = value.trim().replaceAll("\\s+", " ");
+        String normalized = value
+                .trim()
+                .replaceAll("\\s+", " ");
 
         if (normalized.length() > maximumLength) {
             throw new IllegalArgumentException(
@@ -284,7 +394,10 @@ public class FinancialCreditCardPurchase {
     }
 
     private static int normalizedScale(BigDecimal value) {
-        return Math.max(value.stripTrailingZeros().scale(), 0);
+        return Math.max(
+                value.stripTrailingZeros().scale(),
+                0
+        );
     }
 
     public UUID getId() {
@@ -301,6 +414,14 @@ public class FinancialCreditCardPurchase {
 
     public FinancialCategory getCategory() {
         return category;
+    }
+
+    public FinancialRecurrence getRecurrence() {
+        return recurrence;
+    }
+
+    public Integer getRecurrenceSequence() {
+        return recurrenceSequence;
     }
 
     public String getDescription() {

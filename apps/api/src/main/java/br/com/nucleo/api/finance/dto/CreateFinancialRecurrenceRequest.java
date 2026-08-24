@@ -1,9 +1,12 @@
 package br.com.nucleo.api.finance.dto;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
 import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
 import br.com.nucleo.api.finance.domain.FinancialRecurrenceFrequency;
 import br.com.nucleo.api.finance.domain.FinancialTransactionType;
-
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -11,14 +14,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.UUID;
 
 public record CreateFinancialRecurrenceRequest(
 
-        @NotNull(message = "Informe a conta")
         UUID accountId,
+
+        UUID creditCardId,
 
         UUID categoryId,
 

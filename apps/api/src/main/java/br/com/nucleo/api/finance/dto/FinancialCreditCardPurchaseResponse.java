@@ -1,12 +1,13 @@
 package br.com.nucleo.api.finance.dto;
 
-import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
-import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseStatus;
 
 public record FinancialCreditCardPurchaseResponse(
         UUID id,
@@ -14,6 +15,8 @@ public record FinancialCreditCardPurchaseResponse(
         String creditCardName,
         UUID categoryId,
         String categoryName,
+        UUID recurrenceId,
+        Integer recurrenceSequence,
         String description,
         BigDecimal totalAmount,
         LocalDate purchaseDate,
@@ -38,12 +41,20 @@ public record FinancialCreditCardPurchaseResponse(
             categoryName = purchase.getCategory().getName();
         }
 
+        UUID recurrenceId = null;
+
+        if (purchase.getRecurrence() != null) {
+            recurrenceId = purchase.getRecurrence().getId();
+        }
+
         return new FinancialCreditCardPurchaseResponse(
                 purchase.getId(),
                 purchase.getCreditCard().getId(),
                 purchase.getCreditCard().getName(),
                 categoryId,
                 categoryName,
+                recurrenceId,
+                purchase.getRecurrenceSequence(),
                 purchase.getDescription(),
                 purchase.getTotalAmount(),
                 purchase.getPurchaseDate(),

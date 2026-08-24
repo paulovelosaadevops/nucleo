@@ -1,25 +1,5 @@
 package br.com.nucleo.api.finance.service;
 
-import br.com.nucleo.api.common.error.ForbiddenOperationException;
-import br.com.nucleo.api.common.error.ResourceNotFoundException;
-import br.com.nucleo.api.family.domain.FamilyMembership;
-import br.com.nucleo.api.family.domain.FamilyRole;
-import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.finance.domain.FinancialCategory;
-import br.com.nucleo.api.finance.domain.FinancialCategoryType;
-import br.com.nucleo.api.finance.domain.FinancialCreditCard;
-import br.com.nucleo.api.finance.domain.FinancialCreditCardInstallment;
-import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoice;
-import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
-import br.com.nucleo.api.finance.dto.CreateFinancialCreditCardPurchaseRequest;
-import br.com.nucleo.api.finance.dto.FinancialCreditCardInstallmentResponse;
-import br.com.nucleo.api.finance.dto.FinancialCreditCardPurchaseResponse;
-import br.com.nucleo.api.finance.dto.UpdateFinancialCreditCardPurchaseRequest;
-import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
-import br.com.nucleo.api.finance.repository.FinancialCreditCardInstallmentRepository;
-import br.com.nucleo.api.finance.repository.FinancialCreditCardInvoiceRepository;
-import br.com.nucleo.api.finance.repository.FinancialCreditCardPurchaseRepository;
-import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -29,8 +9,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import br.com.nucleo.api.common.error.ForbiddenOperationException;
+import br.com.nucleo.api.common.error.ResourceNotFoundException;
+import br.com.nucleo.api.family.domain.Family;
+import br.com.nucleo.api.family.domain.FamilyMembership;
+import br.com.nucleo.api.family.domain.FamilyRole;
+import br.com.nucleo.api.family.service.FamilyAccessService;
+import br.com.nucleo.api.finance.domain.FinancialCategory;
+import br.com.nucleo.api.finance.domain.FinancialCategoryType;
+import br.com.nucleo.api.finance.domain.FinancialCreditCard;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInstallment;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoice;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
+import br.com.nucleo.api.finance.domain.FinancialRecurrence;
+import br.com.nucleo.api.finance.dto.CreateFinancialCreditCardPurchaseRequest;
+import br.com.nucleo.api.finance.dto.FinancialCreditCardInstallmentResponse;
+import br.com.nucleo.api.finance.dto.FinancialCreditCardPurchaseResponse;
+import br.com.nucleo.api.finance.dto.UpdateFinancialCreditCardPurchaseRequest;
+import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardInstallmentRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardInvoiceRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardPurchaseRepository;
+import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 
 @Service
 public class FinancialCreditCardPurchaseService {
@@ -150,7 +154,7 @@ public class FinancialCreditCardPurchaseService {
         installmentRepository.saveAll(installments);
 
         evaluateBudgetAlerts(
-                membership,
+                membership.getFamily(),
                 category,
                 installments
         );
@@ -159,6 +163,88 @@ public class FinancialCreditCardPurchaseService {
                 purchase,
                 installments
         );
+    }
+
+    @Transactional
+    public FinancialCreditCardPurchase createFromRecurrence(
+            FinancialRecurrence recurrence,
+            int recurrenceSequence,
+            LocalDate purchaseDate
+    ) {
+        Objects.requireNonNull(
+                recurrence,
+                "Recurrence cannot be null"
+        );
+        Objects.requireNonNull(
+                purchaseDate,
+                "Purchase date cannot be null"
+        );
+        UUID familyId = recurrence.getFamily().getId();
+
+        if (recurrenceSequence < 1) {
+            throw new IllegalArgumentException(
+                    "A sequência da recorrência deve ser maior que zero"
+            );
+        }
+
+        if (recurrence.getCreditCard() == null) {
+            throw new IllegalArgumentException(
+                    "A recorrência não possui cartão de crédito"
+            );
+        }
+
+        FinancialCreditCard card = requireActiveCard(
+                recurrence.getCreditCard().getId(),
+                familyId
+        );
+
+        UUID categoryId = recurrence.getCategory() == null
+                ? null
+                : recurrence.getCategory().getId();
+
+        FinancialCategory category = findExpenseCategory(
+                categoryId,
+                familyId
+        );
+
+        FinancialCreditCardPurchase purchase =
+                FinancialCreditCardPurchase
+                        .createFromRecurrence(
+                                recurrence,
+                                recurrenceSequence,
+                                purchaseDate
+                        );
+
+        purchaseRepository.save(purchase);
+
+        YearMonth dueMonth = calculateFirstDueMonth(
+                card,
+                purchaseDate
+        );
+
+        FinancialCreditCardInvoice invoice =
+                findOrCreateInvoice(
+                        card,
+                        dueMonth
+                );
+
+        FinancialCreditCardInstallment installment =
+                FinancialCreditCardInstallment.create(
+                        purchase,
+                        invoice,
+                        1,
+                        recurrence.getAmount()
+                );
+
+        installmentRepository.save(installment);
+
+        evaluateBudgetAlerts(
+                recurrence.getFamily(),
+                category,
+                List.of(installment)
+        );
+
+        return purchase;
     }
 
     @Transactional(readOnly = true)
@@ -241,7 +327,7 @@ public class FinancialCreditCardPurchaseService {
         );
 
         evaluateBudgetAlerts(
-                membership,
+                membership.getFamily(),
                 category,
                 installments
         );
@@ -313,7 +399,7 @@ public class FinancialCreditCardPurchaseService {
         );
 
         evaluateBudgetAlerts(
-                membership,
+                membership.getFamily(),
                 purchase.getCategory(),
                 installments
         );
@@ -350,7 +436,11 @@ public class FinancialCreditCardPurchaseService {
 
         ensureNoPaidInvoice(installments);
 
+        installmentRepository.deleteAll(installments);
+        installmentRepository.flush();
+
         purchaseRepository.delete(purchase);
+        purchaseRepository.flush();
     }
 
     private FinancialCreditCard requireActiveCard(
@@ -663,7 +753,7 @@ public class FinancialCreditCardPurchaseService {
     }
 
     private void evaluateBudgetAlerts(
-            FamilyMembership membership,
+            Family family,
             FinancialCategory category,
             List<FinancialCreditCardInstallment> installments
     ) {
@@ -683,7 +773,7 @@ public class FinancialCreditCardPurchaseService {
                 .distinct()
                 .forEach(referenceMonth ->
                         budgetAlertService.evaluate(
-                                membership.getFamily(),
+                                family,
                                 category,
                                 referenceMonth
                         )
