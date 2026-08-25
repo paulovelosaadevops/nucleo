@@ -112,7 +112,7 @@ public class FinancialCreditCardPurchaseService {
                 );
 
         YearMonth currentDueMonth =
-                calculateCurrentOpenDueMonth(
+                calculateCurrentInvoiceDueMonth(
                         card,
                         LocalDate.now(
                                 ZoneId.of(
@@ -604,25 +604,23 @@ public class FinancialCreditCardPurchaseService {
         );
     }
 
-    private YearMonth calculateCurrentOpenDueMonth(
+    private YearMonth calculateCurrentInvoiceDueMonth(
             FinancialCreditCard card,
             LocalDate currentDate
     ) {
-        YearMonth closingMonth =
+        YearMonth currentMonth =
                 YearMonth.from(currentDate);
 
-        if (
-                currentDate.getDayOfMonth()
-                        > card.getClosingDay()
-        ) {
-            closingMonth =
-                    closingMonth.plusMonths(1);
+        LocalDate currentMonthDueDate =
+                currentMonth.atDay(
+                        card.getDueDay()
+                );
+
+        if (currentDate.isAfter(currentMonthDueDate)) {
+            return currentMonth.plusMonths(1);
         }
 
-        return calculateDueMonthFromClosingMonth(
-                card,
-                closingMonth
-        );
+        return currentMonth;
     }
 
     private YearMonth calculateDueMonthFromClosingMonth(
