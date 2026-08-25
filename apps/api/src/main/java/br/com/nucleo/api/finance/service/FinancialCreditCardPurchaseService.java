@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,8 @@ import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 public class FinancialCreditCardPurchaseService {
 
     private static final long MAXIMUM_SEARCH_PERIOD = 366;
+    private static final String APPLICATION_TIME_ZONE =
+            "America/Sao_Paulo";
 
     private final FamilyAccessService familyAccessService;
     private final FinancialCreditCardRepository cardRepository;
@@ -96,6 +99,35 @@ public class FinancialCreditCardPurchaseService {
                 request.totalInstallments()
         );
 
+        List<BigDecimal> installmentAmounts =
+                distributeAmount(
+                        request.totalAmount(),
+                        request.totalInstallments()
+                );
+
+        YearMonth firstDueMonth =
+                calculateFirstDueMonth(
+                        card,
+                        request.purchaseDate()
+                );
+
+        YearMonth currentDueMonth =
+                calculateCurrentOpenDueMonth(
+                        card,
+                        LocalDate.now(
+                                ZoneId.of(
+                                        APPLICATION_TIME_ZONE
+                                )
+                        )
+                );
+
+        int firstInstallmentNumber =
+                calculateFirstInstallmentNumberToCreate(
+                        firstDueMonth,
+                        currentDueMonth,
+                        request.totalInstallments()
+                );
+
         FinancialCreditCardPurchase purchase =
                 FinancialCreditCardPurchase.create(
                         membership.getFamily(),
@@ -111,23 +143,11 @@ public class FinancialCreditCardPurchaseService {
 
         purchaseRepository.save(purchase);
 
-        List<BigDecimal> installmentAmounts =
-                distributeAmount(
-                        request.totalAmount(),
-                        request.totalInstallments()
-                );
-
-        YearMonth firstDueMonth =
-                calculateFirstDueMonth(
-                        card,
-                        request.purchaseDate()
-                );
-
         List<FinancialCreditCardInstallment> installments =
                 new ArrayList<>();
 
         for (
-                int index = 0;
+                int index = firstInstallmentNumber - 1;
                 index < request.totalInstallments();
                 index++
         ) {
@@ -572,11 +592,43 @@ public class FinancialCreditCardPurchaseService {
 
         if (
                 purchaseDate.getDayOfMonth()
+                        >= card.getClosingDay()
+        ) {
+            closingMonth =
+                    closingMonth.plusMonths(1);
+        }
+
+        return calculateDueMonthFromClosingMonth(
+                card,
+                closingMonth
+        );
+    }
+
+    private YearMonth calculateCurrentOpenDueMonth(
+            FinancialCreditCard card,
+            LocalDate currentDate
+    ) {
+        YearMonth closingMonth =
+                YearMonth.from(currentDate);
+
+        if (
+                currentDate.getDayOfMonth()
                         > card.getClosingDay()
         ) {
             closingMonth =
                     closingMonth.plusMonths(1);
         }
+
+        return calculateDueMonthFromClosingMonth(
+                card,
+                closingMonth
+        );
+    }
+
+    private YearMonth calculateDueMonthFromClosingMonth(
+            FinancialCreditCard card,
+            YearMonth closingMonth
+    ) {
 
         if (
                 card.getDueDay()
@@ -586,6 +638,31 @@ public class FinancialCreditCardPurchaseService {
         }
 
         return closingMonth.plusMonths(1);
+    }
+
+    private int calculateFirstInstallmentNumberToCreate(
+            YearMonth firstDueMonth,
+            YearMonth currentDueMonth,
+            int totalInstallments
+    ) {
+        if (currentDueMonth.isBefore(firstDueMonth)) {
+            return 1;
+        }
+
+        long elapsedMonths = ChronoUnit.MONTHS.between(
+                firstDueMonth,
+                currentDueMonth
+        );
+
+        long installmentNumber = elapsedMonths + 1;
+
+        if (installmentNumber > totalInstallments) {
+            throw new IllegalArgumentException(
+                    "O parcelamento informado já foi concluído"
+            );
+        }
+
+        return Math.toIntExact(installmentNumber);
     }
 
     private List<BigDecimal> distributeAmount(
