@@ -14,6 +14,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialRecurrenceForm } from "./financial-recurrence-form";
 
 import type {
@@ -347,54 +353,97 @@ export function FinanceRecurrences() {
       ) : null}
 
       {!loading && recurrences.length > 0 ? (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <FinanceCompactList
+          columns={[
+            "Nome",
+            "Origem",
+            "Categoria",
+            "Frequência",
+            "Valor",
+            "Próxima",
+            "Restantes",
+            "Situação",
+            "Ações",
+          ]}
+          gridClassName="lg:grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_8rem_9rem_8rem_7rem_7rem_9rem]"
+        >
           {recurrences.map((recurrence) => {
             const processing = actionId === recurrence.id;
+            const amountClass =
+              recurrence.type === "INCOME"
+                ? "text-emerald-300"
+                : "text-rose-300";
 
             return (
-              <article
+              <FinanceCompactRow
                 key={recurrence.id}
-                className={[
-                  "rounded-[1.5rem] border p-5 transition",
+                gridClassName="lg:grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_8rem_9rem_8rem_7rem_7rem_9rem]"
+                className={
                   recurrence.active
-                    ? "border-white/10 bg-white/[0.035]"
-                    : "border-white/[0.06] bg-white/[0.015] opacity-65",
-                ].join(" ")}
+                    ? undefined
+                    : "bg-white/[0.012] opacity-70"
+                }
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div
-                      className={[
-                        "flex size-11 shrink-0 items-center justify-center rounded-2xl",
-                        recurrence.type === "INCOME"
-                          ? "bg-emerald-400/10 text-emerald-300"
-                          : "bg-rose-400/10 text-rose-300",
-                      ].join(" ")}
-                    >
-                      <CalendarSync className="size-5" />
-                    </div>
-
+                <FinanceCell>
+                  <div className="flex items-start justify-between gap-3 lg:block">
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-white">
+                      <p className="truncate text-sm font-medium text-white">
                         {recurrence.description}
-                      </h3>
-
-                      <p className="mt-1 text-xs text-zinc-500">
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500 lg:hidden">
                         {recurrence.creditCardName ?? recurrence.accountName}
-                        {recurrence.categoryName
-                          ? ` • ${recurrence.categoryName}`
-                          : ""}
+                        {" · "}
+                        {frequencyLabels[recurrence.frequency]}
                       </p>
                     </div>
+                    <p className={`shrink-0 text-right text-sm font-semibold tabular-nums lg:hidden ${amountClass}`}>
+                      {currencyFormatter.format(recurrence.amount)}
+                    </p>
                   </div>
+                </FinanceCell>
 
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {recurrence.creditCardName ?? recurrence.accountName ?? "Sem origem"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {recurrence.categoryName ?? "Sem categoria"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {frequencyLabels[recurrence.frequency]}
+                  {recurrence.interval > 1 ? ` / ${recurrence.interval}` : ""}
+                </FinanceCell>
+
+                <FinanceCell className={`hidden text-right text-sm font-semibold tabular-nums lg:block ${amountClass}`}>
+                  {currencyFormatter.format(recurrence.amount)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {formatDate(recurrence.nextGenerationDate)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {recurrence.remainingOccurrences ?? "Sem limite"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 lg:mt-0">
+                  <FinanceStatusPill tone={recurrence.active ? "positive" : "warning"}>
+                    {recurrence.active ? "Ativa" : "Pausada"}
+                  </FinanceStatusPill>
+                </FinanceCell>
+
+                <FinanceCell className="mt-3 lg:mt-0">
                   {processing ? (
-                    <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    <div className="flex size-9 items-center justify-end">
+                      <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    </div>
                   ) : (
-                    <div className="flex gap-1">
+                    <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         title="Editar"
+                        aria-label="Editar recorrência"
                         onClick={() => {
                           setEditing(recurrence);
                           setFormOpen(true);
@@ -406,22 +455,15 @@ export function FinanceRecurrences() {
 
                       <button
                         type="button"
-                        title={
-                          recurrence.active
-                            ? "Pausar"
-                            : "Retomar"
-                        }
+                        title={recurrence.active ? "Pausar" : "Retomar"}
+                        aria-label={recurrence.active ? "Pausar recorrência" : "Retomar recorrência"}
                         onClick={() =>
                           void executeAction(
                             recurrence.id,
                             () =>
                               recurrence.active
-                                ? financeService.recurrences.pause(
-                                    recurrence.id,
-                                  )
-                                : financeService.recurrences.resume(
-                                    recurrence.id,
-                                  ),
+                                ? financeService.recurrences.pause(recurrence.id)
+                                : financeService.recurrences.resume(recurrence.id),
                           )
                         }
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
@@ -436,79 +478,20 @@ export function FinanceRecurrences() {
                       <button
                         type="button"
                         title="Excluir"
-                        onClick={() =>
-                          removeRecurrence(recurrence)
-                        }
+                        aria-label="Excluir recorrência"
+                        onClick={() => removeRecurrence(recurrence)}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                       >
                         <Trash2 className="size-4" />
                       </button>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-6 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Valor
-                    </p>
-
-                    <p
-                      className={[
-                        "mt-1 text-lg font-semibold",
-                        recurrence.type === "INCOME"
-                          ? "text-emerald-300"
-                          : "text-rose-300",
-                      ].join(" ")}
-                    >
-                      {currencyFormatter.format(recurrence.amount)}
-                    </p>
-                  </div>
-
-                  <span className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400">
-                    {frequencyLabels[recurrence.frequency]}
-                    {recurrence.interval > 1
-                      ? ` • a cada ${recurrence.interval}`
-                      : ""}
-                  </span>
-                </div>
-
-                <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-4">
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Próxima geração
-                    </p>
-
-                    <p className="mt-1 text-sm text-zinc-300">
-                      {formatDate(
-                        recurrence.nextGenerationDate,
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Ocorrências restantes
-                    </p>
-
-                    <p className="mt-1 text-sm text-zinc-300">
-                      {recurrence.remainingOccurrences ??
-                        "Sem limite"}
-                    </p>
-                  </div>
-                </div>
-
-                {!recurrence.active ? (
-                  <p className="mt-4 text-xs font-medium text-amber-300">
-                    Recorrência pausada
-                  </p>
-                ) : null}
-              </article>
+                </FinanceCell>
+              </FinanceCompactRow>
             );
           })}
-        </div>
+        </FinanceCompactList>
       ) : null}
-
       {formOpen ? (
         <FinancialRecurrenceForm
           key={editing?.id ?? "new-recurrence"}

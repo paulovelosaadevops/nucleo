@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialCategoryForm } from "./financial-category-form";
 
 import type {
@@ -205,24 +211,27 @@ export function FinanceCategories() {
       ) : null}
 
       {!loading && filteredCategories.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <FinanceCompactList
+          columns={["Categoria", "Tipo", "Marcador", "Situação", "Ações"]}
+          gridClassName="lg:grid-cols-[minmax(14rem,1.6fr)_9rem_minmax(8rem,1fr)_8rem_9rem]"
+        >
           {filteredCategories.map((category) => {
             const processing = actionId === category.id;
 
             return (
-              <article
+              <FinanceCompactRow
                 key={category.id}
-                className={[
-                  "rounded-[1.5rem] border p-5 transition",
+                gridClassName="lg:grid-cols-[minmax(14rem,1.6fr)_9rem_minmax(8rem,1fr)_8rem_9rem]"
+                className={
                   category.active
-                    ? "border-white/10 bg-white/[0.035]"
-                    : "border-white/[0.06] bg-white/[0.015] opacity-60",
-                ].join(" ")}
+                    ? undefined
+                    : "bg-white/[0.012] opacity-70"
+                }
               >
-                <div className="flex items-start justify-between gap-4">
+                <FinanceCell>
                   <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/10"
+                    <span
+                      className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/10 text-xs text-zinc-400"
                       style={{
                         backgroundColor: category.color
                           ? `${category.color}20`
@@ -230,30 +239,39 @@ export function FinanceCategories() {
                         color: category.color ?? undefined,
                       }}
                     >
-                      <FolderTree className="size-5" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-white">
-                        {category.name}
-                      </h3>
-
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {category.type === "EXPENSE"
-                          ? "Despesa"
-                          : "Receita"}
-                        {!category.active ? " • Inativa" : ""}
-                      </p>
-                    </div>
+                      {category.icon ? category.icon.slice(0, 2) : <FolderTree className="size-3.5" />}
+                    </span>
+                    <p className="truncate text-sm font-medium text-white">
+                      {category.name}
+                    </p>
                   </div>
+                </FinanceCell>
 
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {category.type === "EXPENSE" ? "Despesa" : "Receita"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 truncate font-mono text-xs text-zinc-600 lg:mt-0">
+                  {category.icon ?? "Sem ícone"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 lg:mt-0">
+                  <FinanceStatusPill tone={category.active ? "positive" : "muted"}>
+                    {category.active ? "Ativa" : "Inativa"}
+                  </FinanceStatusPill>
+                </FinanceCell>
+
+                <FinanceCell className="mt-3 lg:mt-0">
                   {processing ? (
-                    <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    <div className="flex size-9 items-center justify-end">
+                      <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    </div>
                   ) : (
-                    <div className="flex gap-1">
+                    <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         title="Editar"
+                        aria-label="Editar categoria"
                         onClick={() => {
                           setEditing(category);
                           setFormOpen(true);
@@ -265,20 +283,13 @@ export function FinanceCategories() {
 
                       <button
                         type="button"
-                        title={
-                          category.active
-                            ? "Desativar"
-                            : "Ativar"
-                        }
+                        title={category.active ? "Desativar" : "Ativar"}
+                        aria-label={category.active ? "Desativar categoria" : "Ativar categoria"}
                         onClick={() =>
                           void executeAction(category.id, () =>
                             category.active
-                              ? financeService.categories.deactivate(
-                                  category.id,
-                                )
-                              : financeService.categories.activate(
-                                  category.id,
-                                ),
+                              ? financeService.categories.deactivate(category.id)
+                              : financeService.categories.activate(category.id),
                           )
                         }
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
@@ -289,6 +300,7 @@ export function FinanceCategories() {
                       <button
                         type="button"
                         title="Excluir"
+                        aria-label="Excluir categoria"
                         onClick={() => removeCategory(category)}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                       >
@@ -296,19 +308,12 @@ export function FinanceCategories() {
                       </button>
                     </div>
                   )}
-                </div>
-
-                {category.icon ? (
-                  <p className="mt-4 truncate rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2 font-mono text-xs text-zinc-600">
-                    {category.icon}
-                  </p>
-                ) : null}
-              </article>
+                </FinanceCell>
+              </FinanceCompactRow>
             );
           })}
-        </div>
+        </FinanceCompactList>
       ) : null}
-
       {formOpen ? (
         <FinancialCategoryForm
           key={editing?.id ?? "new-category"}

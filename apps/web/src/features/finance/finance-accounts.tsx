@@ -14,6 +14,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialAccountForm } from "./financial-account-form";
 
 import type {
@@ -243,55 +249,92 @@ export function FinanceAccounts() {
       ) : null}
 
       {!loading && accounts.length > 0 ? (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <FinanceCompactList
+          columns={[
+            "Conta",
+            "Tipo",
+            "Saldo atual",
+            "Saldo inicial",
+            "Consolidado",
+            "Situação",
+            "Ações",
+          ]}
+          gridClassName="lg:grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,1fr)_9rem_9rem_9rem_7rem_11rem]"
+        >
           {accounts.map((account) => {
             const processing = actionId === account.id;
+            const participation =
+              totalBalance === 0 || !account.includeInTotal
+                ? 0
+                : (account.currentBalance / totalBalance) * 100;
 
             return (
-              <article
+              <FinanceCompactRow
                 key={account.id}
-                className={[
-                  "rounded-[1.5rem] border p-5 transition",
+                gridClassName="lg:grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,1fr)_9rem_9rem_9rem_7rem_11rem]"
+                className={
                   account.active
-                    ? "border-white/10 bg-white/[0.035]"
-                    : "border-white/[0.06] bg-white/[0.015] opacity-65",
-                ].join(" ")}
+                    ? undefined
+                    : "bg-white/[0.012] opacity-70"
+                }
               >
-                <div className="flex items-start justify-between gap-4">
+                <FinanceCell>
                   <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-white/10"
-                      style={{
-                        backgroundColor: account.color
-                          ? `${account.color}20`
-                          : undefined,
-                        color: account.color ?? undefined,
-                      }}
-                    >
-                      <Landmark className="size-5" />
-                    </div>
-
+                    <span
+                      className="size-2.5 shrink-0 rounded-full border border-white/20"
+                      style={{ backgroundColor: account.color ?? undefined }}
+                    />
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-white">
+                      <p className="truncate text-sm font-medium text-white">
                         {account.name}
-                      </h3>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {accountTypeLabels[account.type]}
-                        {!account.active ? " • Inativa" : ""}
                       </p>
+                      {!account.includeInTotal ? (
+                        <p className="mt-1 text-xs text-zinc-600">
+                          Fora do saldo consolidado
+                        </p>
+                      ) : null}
                     </div>
                   </div>
+                </FinanceCell>
 
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {accountTypeLabels[account.type]}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 text-sm font-semibold text-white tabular-nums lg:mt-0 lg:text-right">
+                  {currencyFormatter.format(account.currentBalance)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-xs text-zinc-500 tabular-nums lg:mt-0 lg:text-right lg:text-sm lg:text-zinc-400">
+                  {currencyFormatter.format(account.initialBalance)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-right lg:text-sm lg:text-zinc-400">
+                  {account.includeInTotal
+                    ? `${participation.toLocaleString("pt-BR", {
+                        maximumFractionDigits: 1,
+                      })}%`
+                    : "Não participa"}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 lg:mt-0">
+                  <FinanceStatusPill tone={account.active ? "positive" : "muted"}>
+                    {account.active ? "Ativa" : "Inativa"}
+                  </FinanceStatusPill>
+                </FinanceCell>
+
+                <FinanceCell className="mt-3 lg:mt-0">
                   {processing ? (
-                    <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    <div className="flex size-9 items-center justify-end">
+                      <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    </div>
                   ) : (
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                       <button
                         type="button"
                         title="Ajustar saldo inicial"
-                        onClick={() =>
-                          changeInitialBalance(account)
-                        }
+                        aria-label="Ajustar saldo inicial"
+                        onClick={() => changeInitialBalance(account)}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
                       >
                         <RefreshCw className="size-4" />
@@ -300,6 +343,7 @@ export function FinanceAccounts() {
                       <button
                         type="button"
                         title="Editar"
+                        aria-label="Editar conta"
                         onClick={() => {
                           setEditing(account);
                           setFormOpen(true);
@@ -311,20 +355,13 @@ export function FinanceAccounts() {
 
                       <button
                         type="button"
-                        title={
-                          account.active
-                            ? "Desativar"
-                            : "Ativar"
-                        }
+                        title={account.active ? "Desativar" : "Ativar"}
+                        aria-label={account.active ? "Desativar conta" : "Ativar conta"}
                         onClick={() =>
                           void executeAction(account.id, () =>
                             account.active
-                              ? financeService.accounts.deactivate(
-                                  account.id,
-                                )
-                              : financeService.accounts.activate(
-                                  account.id,
-                                ),
+                              ? financeService.accounts.deactivate(account.id)
+                              : financeService.accounts.activate(account.id),
                           )
                         }
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
@@ -335,6 +372,7 @@ export function FinanceAccounts() {
                       <button
                         type="button"
                         title="Excluir"
+                        aria-label="Excluir conta"
                         onClick={() => removeAccount(account)}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                       >
@@ -342,43 +380,12 @@ export function FinanceAccounts() {
                       </button>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Saldo atual
-                    </p>
-                    <p className="mt-1 font-semibold text-white">
-                      {currencyFormatter.format(
-                        account.currentBalance,
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Saldo inicial
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {currencyFormatter.format(
-                        account.initialBalance,
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {!account.includeInTotal ? (
-                  <p className="mt-4 text-xs text-zinc-600">
-                    Esta conta não participa do saldo consolidado.
-                  </p>
-                ) : null}
-              </article>
+                </FinanceCell>
+              </FinanceCompactRow>
             );
           })}
-        </div>
+        </FinanceCompactList>
       ) : null}
-
       {formOpen ? (
         <FinancialAccountForm
           key={editing?.id ?? "new-account"}

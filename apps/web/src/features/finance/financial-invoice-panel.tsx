@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Check,
   ChevronDown,
-  CreditCard,
   LoaderCircle,
   Lock,
   ReceiptText,
@@ -31,6 +30,12 @@ import type {
 } from "@/types/finance";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 
 interface FinancialInvoicePanelProps {
   card: FinancialCreditCard;
@@ -665,80 +670,87 @@ export function FinancialInvoicePanel({
 
                   {expanded ? (
                     <div className="border-t border-white/[0.06]">
-                      <div className="space-y-2 p-4 sm:p-5">
-                        {invoice.installments.length ===
-                          0 ? (
+                      <div className="p-4 sm:p-5">
+                        {invoice.installments.length === 0 ? (
                           <div className="rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm text-zinc-500">
                             Esta fatura não possui
                             lançamentos.
                           </div>
                         ) : (
-                          invoice.installments.map(
-                            (installment) => (
-                              <div
-                                key={
-                                  installment.id
+                          <FinanceCompactList
+                            columns={[
+                              "Data",
+                              "Descrição",
+                              "Categoria",
+                              "Parcela",
+                              "Valor",
+                              "Situação",
+                            ]}
+                            gridClassName="lg:grid-cols-[6.5rem_minmax(12rem,1.5fr)_minmax(8rem,1fr)_7rem_8rem_7rem]"
+                          >
+                            {invoice.installments.map((installment) => (
+                              <FinanceCompactRow
+                                key={installment.id}
+                                gridClassName="lg:grid-cols-[6.5rem_minmax(12rem,1.5fr)_minmax(8rem,1fr)_7rem_8rem_7rem]"
+                                className={
+                                  installment.status === "CANCELLED"
+                                    ? "bg-white/[0.012] opacity-70"
+                                    : undefined
                                 }
-                                className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-4"
                               >
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.055] text-zinc-400">
-                                  <CreditCard className="size-4" />
-                                </div>
+                                <FinanceCell className="hidden text-sm text-zinc-400 lg:block">
+                                  {formatDate(installment.invoiceDueDate)}
+                                </FinanceCell>
 
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-zinc-200">
-                                    {
-                                      installment.purchaseDescription
-                                    }
-                                  </p>
+                                <FinanceCell>
+                                  <div className="flex items-start justify-between gap-3 lg:block">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-medium text-zinc-200">
+                                        {installment.purchaseDescription}
+                                      </p>
+                                      <p className="mt-1 text-xs text-zinc-500 lg:hidden">
+                                        {formatDate(installment.invoiceDueDate)}
+                                        {" · "}
+                                        {installment.categoryName ?? "Sem categoria"}
+                                      </p>
+                                    </div>
+                                    <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
+                                      {currencyFormatter.format(installment.amount)}
+                                    </p>
+                                  </div>
+                                </FinanceCell>
 
-                                  <p className="mt-1 text-xs text-zinc-500">
-                                    Parcela{" "}
-                                    {
-                                      installment.installmentNumber
-                                    }
-                                    /
-                                    {
-                                      installment.totalInstallments
-                                    }
-                                    {" • "}
-                                    {installment.categoryName ??
-                                      "Sem categoria"}
-                                  </p>
-                                </div>
+                                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                                  {installment.categoryName ?? "Sem categoria"}
+                                </FinanceCell>
 
-                                <div className="shrink-0 text-right">
-                                  <p className="text-sm font-semibold text-white">
-                                    {currencyFormatter.format(
-                                      installment.amount,
-                                    )}
-                                  </p>
+                                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                                  Parcela {installment.installmentNumber}/
+                                  {installment.totalInstallments}
+                                </FinanceCell>
 
-                                  <p
-                                    className={[
-                                      "mt-1 text-xs",
-                                      installment.status ===
-                                        "CANCELLED"
-                                        ? "text-zinc-600"
-                                        : installment.paid
-                                          ? "text-emerald-400"
-                                          : "text-zinc-500",
-                                    ].join(" ")}
-                                  >
-                                    {installment.status ===
-                                      "CANCELLED"
-                                      ? "Cancelada"
-                                      : installment.paid
-                                        ? "Paga"
-                                        : "Em aberto"}
-                                  </p>
-                                </div>
-                              </div>
-                            ),
-                          )
+                                <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
+                                  {currencyFormatter.format(installment.amount)}
+                                </FinanceCell>
+
+                                <FinanceCell className="mt-2 lg:mt-0">
+                                  {installment.status === "CANCELLED" ? (
+                                    <FinanceStatusPill tone="danger">
+                                      Cancelada
+                                    </FinanceStatusPill>
+                                  ) : installment.paid ? (
+                                    <FinanceStatusPill tone="positive">
+                                      Paga
+                                    </FinanceStatusPill>
+                                  ) : (
+                                    <FinanceStatusPill>Aberta</FinanceStatusPill>
+                                  )}
+                                </FinanceCell>
+                              </FinanceCompactRow>
+                            ))}
+                          </FinanceCompactList>
                         )}
                       </div>
-
                       <div className="border-t border-white/[0.06] p-4 sm:p-5">
                         {deleteConfirmationId ===
                           invoice.id ? (

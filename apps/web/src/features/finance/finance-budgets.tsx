@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialBudgetForm } from "./financial-budget-form";
 
 import type {
@@ -275,13 +281,35 @@ export function FinanceBudgets() {
       ) : null}
 
       {!loading && budgets.length > 0 ? (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <FinanceCompactList
+          columns={[
+            "Categoria",
+            "Planejado",
+            "Consumido",
+            "%",
+            "Saldo",
+            "Situação",
+            "Ações",
+          ]}
+          gridClassName="lg:grid-cols-[minmax(13rem,1.5fr)_9rem_9rem_6rem_9rem_8rem_7rem]"
+        >
           {budgets.map((budget) => {
             const percentage = Math.min(
               Math.max(budget.consumptionPercentage, 0),
               100,
             );
-
+            const statusTone =
+              budget.status === "EXCEEDED"
+                ? "danger"
+                : budget.status === "ALERT"
+                  ? "warning"
+                  : "positive";
+            const statusLabel =
+              budget.status === "EXCEEDED"
+                ? "Excedido"
+                : budget.status === "ALERT"
+                  ? "Alerta"
+                  : "Ok";
             const accent =
               budget.status === "EXCEEDED"
                 ? "bg-rose-400"
@@ -290,28 +318,67 @@ export function FinanceBudgets() {
                   : "bg-white";
 
             return (
-              <article
+              <FinanceCompactRow
                 key={budget.id}
-                className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5"
+                gridClassName="lg:grid-cols-[minmax(13rem,1.5fr)_9rem_9rem_6rem_9rem_8rem_7rem]"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-white">
+                <FinanceCell>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
                       {budget.categoryName}
-                    </h3>
-
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Alerta em {budget.alertPercentage}%
                     </p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06] lg:max-w-xs">
+                      <div
+                        className={`h-full rounded-full ${accent}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
                   </div>
+                </FinanceCell>
 
+                <FinanceCell className="mt-3 text-xs text-zinc-500 tabular-nums lg:mt-0 lg:text-right lg:text-sm lg:text-zinc-400">
+                  {currencyFormatter.format(budget.limitAmount)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-sm font-semibold text-white tabular-nums lg:mt-0 lg:text-right">
+                  {currencyFormatter.format(budget.committedAmount)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-1 text-xs text-zinc-500 tabular-nums lg:mt-0 lg:text-right lg:text-sm lg:text-zinc-400">
+                  {budget.consumptionPercentage.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 1,
+                  })}
+                  %
+                </FinanceCell>
+
+                <FinanceCell
+                  className={[
+                    "mt-1 text-xs tabular-nums lg:mt-0 lg:text-right lg:text-sm",
+                    budget.remainingAmount < 0
+                      ? "text-rose-300"
+                      : "text-zinc-400",
+                  ].join(" ")}
+                >
+                  {currencyFormatter.format(budget.remainingAmount)}
+                </FinanceCell>
+
+                <FinanceCell className="mt-2 lg:mt-0">
+                  <FinanceStatusPill tone={statusTone}>
+                    {statusLabel}
+                  </FinanceStatusPill>
+                </FinanceCell>
+
+                <FinanceCell className="mt-3 lg:mt-0">
                   {actionId === budget.id ? (
-                    <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    <div className="flex size-9 items-center justify-end">
+                      <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                    </div>
                   ) : (
-                    <div className="flex gap-1">
+                    <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         title="Editar"
+                        aria-label="Editar orçamento"
                         onClick={() => {
                           setEditing(budget);
                           setFormOpen(true);
@@ -324,6 +391,7 @@ export function FinanceBudgets() {
                       <button
                         type="button"
                         title="Excluir"
+                        aria-label="Excluir orçamento"
                         onClick={() => removeBudget(budget)}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                       >
@@ -331,65 +399,12 @@ export function FinanceBudgets() {
                       </button>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-5 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-zinc-600">
-                      Comprometido
-                    </p>
-                    <p className="mt-1 font-semibold text-white">
-                      {currencyFormatter.format(
-                        budget.committedAmount,
-                      )}
-                    </p>
-                  </div>
-
-                  <p className="text-sm text-zinc-500">
-                    de{" "}
-                    {currencyFormatter.format(
-                      budget.limitAmount,
-                    )}
-                  </p>
-                </div>
-
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div
-                    className={`h-full rounded-full ${accent}`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-xs">
-                  <span className="text-zinc-500">
-                    {budget.consumptionPercentage.toLocaleString(
-                      "pt-BR",
-                      {
-                        maximumFractionDigits: 1,
-                      },
-                    )}
-                    %
-                  </span>
-
-                  <span
-                    className={
-                      budget.remainingAmount < 0
-                        ? "text-rose-300"
-                        : "text-zinc-400"
-                    }
-                  >
-                    {currencyFormatter.format(
-                      budget.remainingAmount,
-                    )}{" "}
-                    restantes
-                  </span>
-                </div>
-              </article>
+                </FinanceCell>
+              </FinanceCompactRow>
             );
           })}
-        </div>
+        </FinanceCompactList>
       ) : null}
-
       {formOpen ? (
         <FinancialBudgetForm
           key={editing?.id ?? "new-budget"}

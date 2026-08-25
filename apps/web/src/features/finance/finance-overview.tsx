@@ -18,6 +18,12 @@ import {
 } from "lucide-react";
 
 import { FinanceSummaryCard } from "./finance-summary-card";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { useFinanceDashboard } from "./use-finance-dashboard";
 
 import type {
@@ -156,100 +162,109 @@ function Invoices({ invoices }: { invoices: FinancialInvoiceProjection[] }) {
       {invoices.length === 0 ? (
         <Empty>Nenhuma fatura com lançamentos neste horizonte.</Empty>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <FinanceCompactList
+          columns={["Cartão", "Mês", "Vencimento", "Itens", "Situação", "Total"]}
+          gridClassName="lg:grid-cols-[minmax(10rem,1.3fr)_minmax(8rem,1fr)_8rem_5rem_7rem_9rem]"
+        >
           {invoices.map((invoice) => (
-            <article
+            <FinanceCompactRow
               key={invoice.invoiceId}
-              className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
+              gridClassName="lg:grid-cols-[minmax(10rem,1.3fr)_minmax(8rem,1fr)_8rem_5rem_7rem_9rem]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">
-                    {invoice.creditCardName}
-                  </p>
-                  <p className="mt-1 text-xs capitalize text-zinc-500">
-                    {formatMonth(invoice.referenceMonth)}
+              <FinanceCell>
+                <div className="flex items-start justify-between gap-3 lg:block">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {invoice.creditCardName}
+                    </p>
+                    <p className="mt-1 text-xs capitalize text-zinc-500 lg:hidden">
+                      {formatMonth(invoice.referenceMonth)} · vence {formatDate(invoice.dueDate)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
+                    {formatCurrency(invoice.totalAmount)}
                   </p>
                 </div>
-                <span className="rounded-full border border-white/10 px-2 py-1 text-[0.65rem] text-zinc-400">
+              </FinanceCell>
+              <FinanceCell className="hidden text-sm capitalize text-zinc-400 lg:block">
+                {formatMonth(invoice.referenceMonth)}
+              </FinanceCell>
+              <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                {formatDate(invoice.dueDate)}
+              </FinanceCell>
+              <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                {invoice.installmentCount}
+              </FinanceCell>
+              <FinanceCell className="mt-2 lg:mt-0">
+                <FinanceStatusPill>
                   {statusLabel[invoice.status]}
-                </span>
-              </div>
-              <p className="mt-5 text-xl font-semibold text-white">
+                </FinanceStatusPill>
+              </FinanceCell>
+              <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
                 {formatCurrency(invoice.totalAmount)}
-              </p>
-              <p className="mt-2 text-xs text-zinc-500">
-                Vence {formatDate(invoice.dueDate)} · {invoice.installmentCount} item(ns)
-              </p>
-            </article>
+              </FinanceCell>
+            </FinanceCompactRow>
           ))}
-        </div>
+        </FinanceCompactList>
       )}
     </Section>
   );
 }
-
 function Projection({ months }: { months: FinancialMonthlyProjection[] }) {
   return (
     <Section
       title="Compromissos dos próximos 3 meses"
       description="Soma lançamentos pendentes, parcelas já criadas e recorrências ainda não geradas, sem duplicar valores."
     >
-      <div className="grid gap-3 lg:grid-cols-3">
+      <FinanceCompactList
+        columns={[
+          "Mês",
+          "Receitas",
+          "Contas",
+          "Cartões",
+          "Recorrências",
+          "Resultado",
+        ]}
+        gridClassName="lg:grid-cols-[minmax(9rem,1fr)_9rem_9rem_9rem_9rem_9rem]"
+      >
         {months.map((month) => (
-          <article
+          <FinanceCompactRow
             key={month.referenceMonth}
-            className="rounded-2xl border border-white/[0.08] bg-black/20 p-4"
+            gridClassName="lg:grid-cols-[minmax(9rem,1fr)_9rem_9rem_9rem_9rem_9rem]"
           >
-            <p className="text-sm font-medium capitalize text-white">
-              {formatMonth(month.referenceMonth)}
-            </p>
-            <dl className="mt-4 space-y-2 text-xs">
-              <ValueRow label="Receitas previstas" value={month.expectedIncome} positive />
-              <ValueRow label="Contas pendentes" value={month.accountExpenses} />
-              <ValueRow label="Cartões" value={month.creditCardExpenses} />
-              <ValueRow label="Recorrências a gerar" value={month.recurrenceForecast} />
-            </dl>
-            <div className="mt-4 border-t border-white/[0.08] pt-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-zinc-500">Resultado projetado</span>
-                <strong
-                  className={
-                    month.projectedResult >= 0
-                      ? "text-sm text-emerald-300"
-                      : "text-sm text-rose-300"
-                  }
-                >
-                  {formatCurrency(month.projectedResult)}
-                </strong>
-              </div>
-            </div>
-          </article>
+            <FinanceCell>
+              <p className="text-sm font-medium capitalize text-white">
+                {formatMonth(month.referenceMonth)}
+              </p>
+            </FinanceCell>
+            <FinanceCell className="mt-2 text-xs text-emerald-300 tabular-nums lg:mt-0 lg:text-right lg:text-sm">
+              {formatCurrency(month.expectedIncome)}
+            </FinanceCell>
+            <FinanceCell className="mt-1 text-xs text-zinc-400 tabular-nums lg:mt-0 lg:text-right lg:text-sm">
+              {formatCurrency(month.accountExpenses)}
+            </FinanceCell>
+            <FinanceCell className="mt-1 text-xs text-zinc-400 tabular-nums lg:mt-0 lg:text-right lg:text-sm">
+              {formatCurrency(month.creditCardExpenses)}
+            </FinanceCell>
+            <FinanceCell className="mt-1 text-xs text-zinc-400 tabular-nums lg:mt-0 lg:text-right lg:text-sm">
+              {formatCurrency(month.recurrenceForecast)}
+            </FinanceCell>
+            <FinanceCell
+              className={[
+                "mt-2 text-sm font-semibold tabular-nums lg:mt-0 lg:text-right",
+                month.projectedResult >= 0
+                  ? "text-emerald-300"
+                  : "text-rose-300",
+              ].join(" ")}
+            >
+              {formatCurrency(month.projectedResult)}
+            </FinanceCell>
+          </FinanceCompactRow>
         ))}
-      </div>
+      </FinanceCompactList>
     </Section>
   );
 }
-
-function ValueRow({
-  label,
-  value,
-  positive = false,
-}: {
-  label: string;
-  value: number;
-  positive?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className={positive ? "text-emerald-300" : "text-zinc-300"}>
-        {formatCurrency(value)}
-      </dd>
-    </div>
-  );
-}
-
 function Recurrences({ items }: { items: FinancialDashboardRecurrence[] }) {
   return (
     <Section title="Recorrências e assinaturas" description="Próximas gerações automáticas ativas.">

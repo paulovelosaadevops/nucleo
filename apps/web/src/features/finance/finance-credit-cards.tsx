@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
 import { FinancialCreditCardForm } from "./financial-credit-card-form";
 import { FinancialInvoicePanel } from "./financial-invoice-panel";
@@ -425,102 +431,158 @@ export function FinanceCreditCards() {
             </p>
           </div>
 
-          {purchases.map((purchase) => (
-            <article
-              key={purchase.id}
-              className="flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-white">
-                  {purchase.description}
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {purchase.creditCardName} •{" "}
-                  {purchase.totalInstallments}x •{" "}
-                  {purchase.categoryName ?? "Sem categoria"}
-                </p>
-              </div>
+          <FinanceCompactList
+            columns={[
+              "Data",
+              "Descrição",
+              "Cartão",
+              "Categoria",
+              "Parcela",
+              "Valor",
+              "Ações",
+            ]}
+            gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_7rem_9rem_9rem]"
+          >
+            {purchases.map((purchase) => {
+              const cancelled = purchase.status === "CANCELLED";
 
-              <p className="font-semibold text-white">
-                {currencyFormatter.format(purchase.totalAmount)}
-              </p>
+              return (
+                <FinanceCompactRow
+                  key={purchase.id}
+                  gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_7rem_9rem_9rem]"
+                  className={cancelled ? "bg-white/[0.012] opacity-70" : undefined}
+                >
+                  <FinanceCell className="hidden text-sm text-zinc-400 lg:block">
+                    {new Intl.DateTimeFormat("pt-BR").format(
+                      new Date(`${purchase.purchaseDate}T00:00:00`),
+                    )}
+                  </FinanceCell>
 
-              {actionId === purchase.id ? (
-                <LoaderCircle className="size-4 animate-spin text-zinc-500" />
-              ) : (
-                <div className="flex gap-1">
-                  {purchase.status === "ACTIVE" ? (
-                    <>
-                      <button
-                        type="button"
-                        title="Editar"
-                        onClick={() => {
-                          setEditingPurchase(purchase);
-                          setPurchaseFormOpen(true);
-                        }}
-                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
-                      >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Cancelar"
-                        onClick={() =>
-                          void executeAction(purchase.id, () =>
-                            financeService.cardPurchases.cancel(
-                              purchase.id,
-                            ),
-                          )
-                        }
-                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-amber-400/10 hover:text-amber-300"
-                      >
-                        <CircleX className="size-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      title="Restaurar"
-                      onClick={() =>
-                        void executeAction(purchase.id, () =>
-                          financeService.cardPurchases.restore(
-                            purchase.id,
-                          ),
-                        )
-                      }
-                      className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
-                    >
-                      <RotateCcw className="size-4" />
-                    </button>
-                  )}
+                  <FinanceCell>
+                    <div className="flex items-start justify-between gap-3 lg:block">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">
+                          {purchase.description}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500 lg:hidden">
+                          {new Intl.DateTimeFormat("pt-BR").format(
+                            new Date(`${purchase.purchaseDate}T00:00:00`),
+                          )}
+                          {" · "}
+                          {purchase.creditCardName}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
+                        {currencyFormatter.format(purchase.totalAmount)}
+                      </p>
+                    </div>
+                  </FinanceCell>
 
-                  <button
-                    type="button"
-                    title="Excluir"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Deseja excluir a compra "${purchase.description}"?`,
-                        )
-                      ) {
-                        void executeAction(purchase.id, () =>
-                          financeService.cardPurchases.remove(
-                            purchase.id,
-                          ),
-                        );
-                      }
-                    }}
-                    className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              )}
-            </article>
-          ))}
+                  <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                    {purchase.creditCardName}
+                  </FinanceCell>
+
+                  <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                    {purchase.categoryName ?? "Sem categoria"}
+                  </FinanceCell>
+
+                  <FinanceCell className="mt-2 flex items-center gap-2 text-xs text-zinc-500 lg:mt-0 lg:block lg:text-sm lg:text-zinc-400">
+                    {purchase.totalInstallments}x
+                    {cancelled ? (
+                      <span className="lg:hidden">
+                        <FinanceStatusPill tone="danger">Cancelada</FinanceStatusPill>
+                      </span>
+                    ) : null}
+                  </FinanceCell>
+
+                  <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
+                    {currencyFormatter.format(purchase.totalAmount)}
+                    {cancelled ? (
+                      <span className="mt-1 block">
+                        <FinanceStatusPill tone="danger">Cancelada</FinanceStatusPill>
+                      </span>
+                    ) : null}
+                  </FinanceCell>
+
+                  <FinanceCell className="mt-3 lg:mt-0">
+                    {actionId === purchase.id ? (
+                      <div className="flex size-9 items-center justify-end">
+                        <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-1">
+                        {purchase.status === "ACTIVE" ? (
+                          <>
+                            <button
+                              type="button"
+                              title="Editar"
+                              aria-label="Editar compra"
+                              onClick={() => {
+                                setEditingPurchase(purchase);
+                                setPurchaseFormOpen(true);
+                              }}
+                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Cancelar"
+                              aria-label="Cancelar compra"
+                              onClick={() =>
+                                void executeAction(purchase.id, () =>
+                                  financeService.cardPurchases.cancel(purchase.id),
+                                )
+                              }
+                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-amber-400/10 hover:text-amber-300"
+                            >
+                              <CircleX className="size-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            title="Restaurar"
+                            aria-label="Restaurar compra"
+                            onClick={() =>
+                              void executeAction(purchase.id, () =>
+                                financeService.cardPurchases.restore(purchase.id),
+                              )
+                            }
+                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                          >
+                            <RotateCcw className="size-4" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          title="Excluir"
+                          aria-label="Excluir compra"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Deseja excluir a compra "${purchase.description}"?`,
+                              )
+                            ) {
+                              void executeAction(purchase.id, () =>
+                                financeService.cardPurchases.remove(purchase.id),
+                              );
+                            }
+                          }}
+                          className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </FinanceCell>
+                </FinanceCompactRow>
+              );
+            })}
+          </FinanceCompactList>
         </section>
       ) : null}
-
       {cardFormOpen ? (
         <FinancialCreditCardForm
           key={editingCard?.id ?? "new-card"}

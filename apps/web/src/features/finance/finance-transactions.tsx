@@ -15,6 +15,12 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import {
+  FinanceCell,
+  FinanceCompactList,
+  FinanceCompactRow,
+  FinanceStatusPill,
+} from "./finance-compact-list";
 import { FinancialTransactionForm } from "./financial-transaction-form";
 
 import type {
@@ -460,192 +466,221 @@ export function FinanceTransactions() {
       ) : null}
 
       {!loading && transactions.length > 0 ? (
-        <div className="space-y-3">
+        <FinanceCompactList
+          columns={[
+            "Data",
+            "Descrição",
+            "Conta",
+            "Categoria",
+            "Situação",
+            "Valor",
+            "Ações",
+          ]}
+          gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_8rem_9rem_10rem]"
+        >
           {transactions.map((transaction) => {
             const processing = actionId === transaction.id;
+            const statusTone =
+              transaction.status === "CANCELLED"
+                ? "danger"
+                : transaction.status === "PAID"
+                  ? "positive"
+                  : transaction.overdue
+                    ? "warning"
+                    : "muted";
 
             return (
-              <article
+              <FinanceCompactRow
                 key={transaction.id}
-                className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.05]"
+                gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_8rem_9rem_10rem]"
+                className={
+                  transaction.status === "CANCELLED"
+                    ? "bg-white/[0.012]"
+                    : undefined
+                }
               >
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div
-                      className={[
-                        "mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl",
-                        transaction.type === "INCOME"
-                          ? "bg-emerald-400/10 text-emerald-300"
-                          : "bg-rose-400/10 text-rose-300",
-                      ].join(" ")}
-                    >
-                      <ReceiptText className="size-4" />
-                    </div>
+                <FinanceCell className="hidden text-sm text-zinc-400 lg:block">
+                  {formatDate(transaction.transactionDate)}
+                </FinanceCell>
 
+                <FinanceCell>
+                  <div className="flex items-start justify-between gap-3 lg:block">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-white">
+                      <p className="truncate text-sm font-medium text-white">
                         {transaction.description}
                       </p>
-
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {transaction.accountName}
-                        {transaction.categoryName
-                          ? ` • ${transaction.categoryName}`
-                          : ""}
-                        {" • "}
+                      <p className="mt-1 text-xs text-zinc-500 lg:hidden">
                         {formatDate(transaction.transactionDate)}
+                        {" · "}
+                        {transaction.accountName}
                       </p>
-
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="rounded-lg border border-white/10 px-2 py-1 text-[11px] text-zinc-400">
-                          {statusLabel(transaction.status)}
-                        </span>
-
-                        {transaction.overdue ? (
-                          <span className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-2 py-1 text-[11px] text-amber-300">
-                            Vencido
-                          </span>
-                        ) : null}
-
-                        {transaction.recurrenceId ? (
-                          <span className="rounded-lg border border-white/10 px-2 py-1 text-[11px] text-zinc-400">
-                            Recorrente
-                          </span>
-                        ) : null}
-                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 xl:justify-end">
                     <p
                       className={[
-                        "whitespace-nowrap text-base font-semibold",
+                        "shrink-0 text-right text-sm font-semibold tabular-nums lg:hidden",
                         transaction.type === "INCOME"
                           ? "text-emerald-300"
                           : "text-rose-300",
                       ].join(" ")}
                     >
-                      {transaction.type === "INCOME"
-                        ? "+"
-                        : "-"}{" "}
+                      {transaction.type === "INCOME" ? "+" : "-"}{" "}
                       {currencyFormatter.format(transaction.amount)}
                     </p>
+                  </div>
+                </FinanceCell>
 
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {processing ? (
-                        <div className="flex size-9 items-center justify-center">
-                          <LoaderCircle className="size-4 animate-spin text-zinc-500" />
-                        </div>
-                      ) : (
-                        <>
-                          {transaction.status === "PENDING" ? (
-                            <button
-                              type="button"
-                              title="Marcar como pago"
-                              onClick={() =>
-                                void executeAction(
-                                  transaction.id,
-                                  () =>
-                                    financeService.transactions.pay(
-                                      transaction.id,
-                                    ),
-                                )
-                              }
-                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-emerald-400/10 hover:text-emerald-300"
-                            >
-                              <Check className="size-4" />
-                            </button>
-                          ) : null}
+                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {transaction.accountName}
+                </FinanceCell>
 
-                          {transaction.status === "PAID" ? (
-                            <button
-                              type="button"
-                              title="Retornar para pendente"
-                              onClick={() =>
-                                void executeAction(
-                                  transaction.id,
-                                  () =>
-                                    financeService.transactions.markPending(
-                                      transaction.id,
-                                    ),
-                                )
-                              }
-                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
-                            >
-                              <RotateCcw className="size-4" />
-                            </button>
-                          ) : null}
+                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
+                  {transaction.categoryName ?? "Sem categoria"}
+                </FinanceCell>
 
-                          {transaction.status !== "CANCELLED" ? (
-                            <>
-                              <button
-                                type="button"
-                                title="Editar"
-                                onClick={() =>
-                                  openEditForm(transaction)
-                                }
-                                className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
-                              >
-                                <Pencil className="size-4" />
-                              </button>
+                <FinanceCell className="mt-2 lg:mt-0">
+                  <div className="flex flex-wrap gap-2">
+                    <FinanceStatusPill tone={statusTone}>
+                      {statusLabel(transaction.status)}
+                    </FinanceStatusPill>
+                    {transaction.overdue ? (
+                      <FinanceStatusPill tone="warning">
+                        Vencido
+                      </FinanceStatusPill>
+                    ) : null}
+                    {transaction.recurrenceId ? (
+                      <FinanceStatusPill>Recorrente</FinanceStatusPill>
+                    ) : null}
+                  </div>
+                </FinanceCell>
 
-                              <button
-                                type="button"
-                                title="Cancelar lançamento"
-                                onClick={() =>
-                                  void executeAction(
-                                    transaction.id,
-                                    () =>
-                                      financeService.transactions.cancel(
-                                        transaction.id,
-                                      ),
-                                  )
-                                }
-                                className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-amber-400/10 hover:text-amber-300"
-                              >
-                                <CircleX className="size-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              title="Restaurar lançamento"
-                              onClick={() =>
-                                void executeAction(
-                                  transaction.id,
-                                  () =>
-                                    financeService.transactions.restore(
-                                      transaction.id,
-                                    ),
-                                )
-                              }
-                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
-                            >
-                              <RotateCcw className="size-4" />
-                            </button>
-                          )}
+                <FinanceCell
+                  className={[
+                    "hidden text-right text-sm font-semibold tabular-nums lg:block",
+                    transaction.type === "INCOME"
+                      ? "text-emerald-300"
+                      : "text-rose-300",
+                  ].join(" ")}
+                >
+                  {transaction.type === "INCOME" ? "+" : "-"}{" "}
+                  {currencyFormatter.format(transaction.amount)}
+                </FinanceCell>
 
+                <FinanceCell className="mt-3 lg:mt-0">
+                  <div className="flex flex-wrap justify-end gap-1">
+                    {processing ? (
+                      <div className="flex size-9 items-center justify-center">
+                        <LoaderCircle className="size-4 animate-spin text-zinc-500" />
+                      </div>
+                    ) : (
+                      <>
+                        {transaction.status === "PENDING" ? (
                           <button
                             type="button"
-                            title="Excluir"
+                            title="Marcar como pago"
+                            aria-label="Marcar como pago"
                             onClick={() =>
-                              removeTransaction(transaction)
+                              void executeAction(
+                                transaction.id,
+                                () =>
+                                  financeService.transactions.pay(
+                                    transaction.id,
+                                  ),
+                              )
                             }
-                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-rose-400/10 hover:text-rose-300"
+                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-emerald-400/10 hover:text-emerald-300"
                           >
-                            <Trash2 className="size-4" />
+                            <Check className="size-4" />
                           </button>
-                        </>
-                      )}
-                    </div>
+                        ) : null}
+
+                        {transaction.status === "PAID" ? (
+                          <button
+                            type="button"
+                            title="Retornar para pendente"
+                            aria-label="Retornar para pendente"
+                            onClick={() =>
+                              void executeAction(
+                                transaction.id,
+                                () =>
+                                  financeService.transactions.markPending(
+                                    transaction.id,
+                                  ),
+                              )
+                            }
+                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
+                          >
+                            <RotateCcw className="size-4" />
+                          </button>
+                        ) : null}
+
+                        {transaction.status !== "CANCELLED" ? (
+                          <>
+                            <button
+                              type="button"
+                              title="Editar"
+                              aria-label="Editar lançamento"
+                              onClick={() => openEditForm(transaction)}
+                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              title="Cancelar lançamento"
+                              aria-label="Cancelar lançamento"
+                              onClick={() =>
+                                void executeAction(
+                                  transaction.id,
+                                  () =>
+                                    financeService.transactions.cancel(
+                                      transaction.id,
+                                    ),
+                                )
+                              }
+                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-amber-400/10 hover:text-amber-300"
+                            >
+                              <CircleX className="size-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            title="Restaurar lançamento"
+                            aria-label="Restaurar lançamento"
+                            onClick={() =>
+                              void executeAction(
+                                transaction.id,
+                                () =>
+                                  financeService.transactions.restore(
+                                    transaction.id,
+                                  ),
+                              )
+                            }
+                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"
+                          >
+                            <RotateCcw className="size-4" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          title="Excluir"
+                          aria-label="Excluir lançamento"
+                          onClick={() => removeTransaction(transaction)}
+                          className="flex size-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-rose-400/10 hover:text-rose-300"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
-                </div>
-              </article>
+                </FinanceCell>
+              </FinanceCompactRow>
             );
           })}
-        </div>
+        </FinanceCompactList>
       ) : null}
-
       {formOpen ? (
         <FinancialTransactionForm
           key={editing?.id ?? "new"}
