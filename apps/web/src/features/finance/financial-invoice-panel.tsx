@@ -71,6 +71,15 @@ function formatDate(value: string) {
   );
 }
 
+function formatShortDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(year, month - 1, day));
+}
+
 function formatMonth(value: string) {
   const formatted = new Intl.DateTimeFormat("pt-BR", {
     month: "long",
@@ -152,7 +161,13 @@ function invoiceStatusDetails(invoice: FinancialCreditCardInvoice) {
 }
 
 function installmentDate(installment: FinancialCreditCardInstallment) {
-  return installment.invoiceReferenceMonth;
+  return installment.purchaseDate;
+}
+
+function installmentAmount(installment: FinancialCreditCardInstallment) {
+  return installment.purchaseType === "CREDIT"
+    ? -installment.amount
+    : installment.amount;
 }
 
 export function FinancialInvoicePanel({
@@ -736,8 +751,18 @@ function PurchaseRow({
   onDelete: () => void;
 }) {
   const showInstallment =
-    installment.totalInstallments > 1 ||
-    installment.installmentNumber > 1;
+    installment.purchaseType === "DEBIT" &&
+    (installment.totalInstallments > 1 ||
+      installment.installmentNumber > 1);
+  const signedAmount = installmentAmount(installment);
+  const amountClassName =
+    installment.purchaseType === "CREDIT"
+      ? "text-emerald-300"
+      : "text-white";
+  const formattedAmount =
+    installment.purchaseType === "CREDIT"
+      ? `- ${currencyFormatter.format(installment.amount)}`
+      : currencyFormatter.format(signedAmount);
 
   return (
     <div
@@ -747,7 +772,7 @@ function PurchaseRow({
       ].join(" ")}
     >
       <p className="hidden text-xs text-zinc-500 sm:block">
-        {formatDate(installmentDate(installment))}
+        {formatShortDate(installmentDate(installment))}
       </p>
 
       <div className="min-w-0">
@@ -759,13 +784,21 @@ function PurchaseRow({
             {installment.purchaseDescription}
           </p>
 
-          <p className="shrink-0 text-sm font-semibold text-white tabular-nums sm:hidden">
-            {currencyFormatter.format(installment.amount)}
+          <p
+            className={[
+              "shrink-0 text-sm font-semibold tabular-nums sm:hidden",
+              amountClassName,
+            ].join(" ")}
+          >
+            {formattedAmount}
           </p>
         </div>
 
         <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-zinc-500">
-          <span className="sm:hidden">{formatDate(installmentDate(installment))}</span>
+          <span className="sm:hidden">{formatShortDate(installmentDate(installment))}</span>
+          {installment.purchaseType === "CREDIT" ? (
+            <span className="text-emerald-300">Credito</span>
+          ) : null}
           <span className="truncate">{installment.categoryName ?? "Sem categoria"}</span>
           {showInstallment ? (
             <span>
@@ -777,8 +810,13 @@ function PurchaseRow({
         </div>
       </div>
 
-      <p className="hidden text-right text-sm font-semibold text-white tabular-nums sm:block">
-        {currencyFormatter.format(installment.amount)}
+      <p
+        className={[
+          "hidden text-right text-sm font-semibold tabular-nums sm:block",
+          amountClassName,
+        ].join(" ")}
+      >
+        {formattedAmount}
       </p>
 
       <button

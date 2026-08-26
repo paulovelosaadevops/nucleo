@@ -200,6 +200,13 @@ public class FinancialCreditCardInstallment {
         return amount;
     }
 
+    public BigDecimal getSignedAmount() {
+        return FinancialCreditCardInvoiceAmounts.signedAmount(
+                purchase.getPurchaseType(),
+                amount
+        );
+    }
+
     public FinancialCreditCardInstallmentStatus getStatus() {
         return status;
     }

@@ -252,7 +252,7 @@ public class FinancialBudgetService {
                             == FinancialCreditCardInvoiceStatus.PAID
             ) {
                 paidAmount = paidAmount.add(
-                        installment.getAmount()
+                        installment.getSignedAmount()
                 );
             } else if (
                     invoiceStatus
@@ -261,7 +261,7 @@ public class FinancialBudgetService {
                             == FinancialCreditCardInvoiceStatus.CLOSED
             ) {
                 pendingAmount = pendingAmount.add(
-                        installment.getAmount()
+                        installment.getSignedAmount()
                 );
             }
         }

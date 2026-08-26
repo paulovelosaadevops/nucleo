@@ -162,11 +162,11 @@ public class FinancialDashboardService {
         BigDecimal currentInvoiceAmount = openCommitments.stream()
                 .filter(item -> item.getInvoice().getReferenceMonth()
                         .equals(invoiceAnchor))
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal remainingInstallmentAmount = openCommitments.stream()
                 .filter(item -> item.getPurchase().getTotalInstallments() > 1)
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         long activeInstallmentPurchaseCount = openCommitments.stream()
                 .filter(item -> item.getPurchase().getTotalInstallments() > 1)
@@ -262,7 +262,7 @@ public class FinancialDashboardService {
                             invoice.getDueDate(),
                             invoice.getStatus(),
                             items.stream()
-                                    .map(FinancialCreditCardInstallment::getAmount)
+                                    .map(FinancialCreditCardInstallment::getSignedAmount)
                                     .reduce(BigDecimal.ZERO, BigDecimal::add),
                             items.size()
                     );
@@ -305,7 +305,7 @@ public class FinancialDashboardService {
                             .isBefore(monthStart))
                     .filter(item -> !item.getInvoice().getDueDate()
                             .isAfter(monthEnd))
-                    .map(FinancialCreditCardInstallment::getAmount)
+                    .map(FinancialCreditCardInstallment::getSignedAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal recurrenceExpenses = forecastRecurrences(
                     recurrences,
@@ -400,7 +400,7 @@ public class FinancialDashboardService {
                             next.getInstallmentNumber(),
                             next.getPurchase().getTotalInstallments(),
                             items.size(),
-                            next.getAmount(),
+                            next.getSignedAmount(),
                             sumInstallmentAmounts(items),
                             next.getInvoice().getDueDate()
                     );
@@ -448,7 +448,7 @@ public class FinancialDashboardService {
                 .filter(item -> item.getPurchase().getCategory() != null)
                 .filter(item -> item.getPurchase().getCategory().getId()
                         .equals(budget.getCategory().getId()))
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal committed = transactionAmount.add(cardAmount);
         BigDecimal percentage = committed
@@ -503,7 +503,7 @@ public class FinancialDashboardService {
                                 + item.getPurchase().getTotalInstallments(),
                         item.getPurchase().getCreditCard().getName(),
                         item.getInvoice().getDueDate(),
-                        item.getAmount(),
+                        item.getSignedAmount(),
                         item.getInvoice().getDueDate().isBefore(today)
                 )
         ));
@@ -588,7 +588,7 @@ public class FinancialDashboardService {
     ) {
         return installments.stream()
                 .filter(item -> item.getInvoice().isPaid())
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -597,7 +597,7 @@ public class FinancialDashboardService {
     ) {
         return installments.stream()
                 .filter(this::isPendingInstallment)
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -615,7 +615,7 @@ public class FinancialDashboardService {
     private BigDecimal sumInstallmentAmounts(
             List<FinancialCreditCardInstallment> items
     ) {
-        return items.stream().map(FinancialCreditCardInstallment::getAmount)
+        return items.stream().map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -662,7 +662,7 @@ public class FinancialDashboardService {
                 .forEach(item -> addCategoryAmount(
                         grouped,
                         item.getPurchase().getCategory(),
-                        item.getAmount()
+                        item.getSignedAmount()
                 ));
         return buildCategorySummaries(
                 grouped, FinancialTransactionType.EXPENSE, totalExpense

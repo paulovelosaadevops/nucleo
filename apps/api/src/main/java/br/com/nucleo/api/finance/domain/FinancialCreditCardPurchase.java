@@ -61,6 +61,10 @@ public class FinancialCreditCardPurchase {
     )
     private BigDecimal totalAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchase_type", nullable = false, length = 20)
+    private FinancialCreditCardPurchaseType purchaseType;
+
     @Column(name = "purchase_date", nullable = false)
     private LocalDate purchaseDate;
 
@@ -99,6 +103,7 @@ public class FinancialCreditCardPurchase {
             Integer recurrenceSequence,
             String description,
             BigDecimal totalAmount,
+            FinancialCreditCardPurchaseType purchaseType,
             LocalDate purchaseDate,
             int totalInstallments,
             String notes,
@@ -117,6 +122,10 @@ public class FinancialCreditCardPurchase {
         this.recurrenceSequence = recurrenceSequence;
         this.description = normalizeDescription(description);
         this.totalAmount = validatePositiveMoney(totalAmount);
+        this.purchaseType = Objects.requireNonNullElse(
+                purchaseType,
+                FinancialCreditCardPurchaseType.DEBIT
+        );
         this.purchaseDate = Objects.requireNonNull(
                 purchaseDate,
                 "Purchase date cannot be null"
@@ -139,6 +148,7 @@ public class FinancialCreditCardPurchase {
             FinancialCategory category,
             String description,
             BigDecimal totalAmount,
+            FinancialCreditCardPurchaseType purchaseType,
             LocalDate purchaseDate,
             int totalInstallments,
             String notes,
@@ -152,6 +162,7 @@ public class FinancialCreditCardPurchase {
                 null,
                 description,
                 totalAmount,
+                purchaseType,
                 purchaseDate,
                 totalInstallments,
                 notes,
@@ -192,6 +203,7 @@ public class FinancialCreditCardPurchase {
                 recurrenceSequence,
                 source.getDescription(),
                 source.getAmount(),
+                FinancialCreditCardPurchaseType.DEBIT,
                 purchaseDate,
                 1,
                 source.getNotes(),
@@ -271,6 +283,10 @@ public class FinancialCreditCardPurchase {
         if (status == null) {
             status =
                     FinancialCreditCardPurchaseStatus.ACTIVE;
+        }
+
+        if (purchaseType == null) {
+            purchaseType = FinancialCreditCardPurchaseType.DEBIT;
         }
     }
 
@@ -430,6 +446,10 @@ public class FinancialCreditCardPurchase {
 
     public BigDecimal getTotalAmount() {
         return totalAmount;
+    }
+
+    public FinancialCreditCardPurchaseType getPurchaseType() {
+        return purchaseType;
     }
 
     public LocalDate getPurchaseDate() {

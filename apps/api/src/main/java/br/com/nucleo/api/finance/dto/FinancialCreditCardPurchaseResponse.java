@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase;
 import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseStatus;
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseType;
 
 public record FinancialCreditCardPurchaseResponse(
         UUID id,
@@ -19,6 +20,7 @@ public record FinancialCreditCardPurchaseResponse(
         Integer recurrenceSequence,
         String description,
         BigDecimal totalAmount,
+        FinancialCreditCardPurchaseType purchaseType,
         LocalDate purchaseDate,
         int totalInstallments,
         FinancialCreditCardPurchaseStatus status,
@@ -57,6 +59,7 @@ public record FinancialCreditCardPurchaseResponse(
                 purchase.getRecurrenceSequence(),
                 purchase.getDescription(),
                 purchase.getTotalAmount(),
+                purchase.getPurchaseType(),
                 purchase.getPurchaseDate(),
                 purchase.getTotalInstallments(),
                 purchase.getStatus(),

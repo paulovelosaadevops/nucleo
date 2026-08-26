@@ -201,7 +201,7 @@ public class FinancialBudgetAlertService {
                             || status
                             == FinancialCreditCardInvoiceStatus.PAID;
                 })
-                .map(FinancialCreditCardInstallment::getAmount)
+                .map(FinancialCreditCardInstallment::getSignedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

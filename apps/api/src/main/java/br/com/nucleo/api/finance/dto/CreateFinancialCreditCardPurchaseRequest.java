@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseType;
+
 public record CreateFinancialCreditCardPurchaseRequest(
 
         @NotNull(message = "Informe o cartão")
@@ -26,6 +28,8 @@ public record CreateFinancialCreditCardPurchaseRequest(
         @DecimalMin(value = "0.01")
         @Digits(integer = 16, fraction = 2)
         BigDecimal totalAmount,
+
+        FinancialCreditCardPurchaseType purchaseType,
 
         @NotNull(message = "Informe a data da compra")
         LocalDate purchaseDate,

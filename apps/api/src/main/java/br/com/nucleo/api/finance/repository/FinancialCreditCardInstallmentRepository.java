@@ -100,7 +100,14 @@ public interface FinancialCreditCardInstallmentRepository
     );
 
     @Query("""
-            select coalesce(sum(installment.amount), 0)
+            select coalesce(sum(
+                case
+                    when installment.purchase.purchaseType =
+                        br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseType.CREDIT
+                    then -installment.amount
+                    else installment.amount
+                end
+            ), 0)
             from FinancialCreditCardInstallment installment
             where installment.invoice.id = :invoiceId
               and installment.status =
@@ -111,7 +118,14 @@ public interface FinancialCreditCardInstallmentRepository
     BigDecimal calculateInvoiceTotal(@Param("invoiceId") UUID invoiceId);
 
     @Query("""
-            select coalesce(sum(installment.amount), 0)
+            select coalesce(sum(
+                case
+                    when installment.purchase.purchaseType =
+                        br.com.nucleo.api.finance.domain.FinancialCreditCardPurchaseType.CREDIT
+                    then -installment.amount
+                    else installment.amount
+                end
+            ), 0)
             from FinancialCreditCardInstallment installment
             where installment.invoice.creditCard.id = :cardId
               and installment.status =

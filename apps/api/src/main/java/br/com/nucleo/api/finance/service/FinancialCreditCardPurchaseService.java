@@ -135,6 +135,7 @@ public class FinancialCreditCardPurchaseService {
                         category,
                         request.description(),
                         request.totalAmount(),
+                        request.purchaseType(),
                         request.purchaseDate(),
                         request.totalInstallments(),
                         request.notes(),
