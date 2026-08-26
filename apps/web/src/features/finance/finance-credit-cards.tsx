@@ -3,25 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  CircleX,
   CreditCard,
   FileText,
   LoaderCircle,
   Pencil,
   Plus,
   Power,
-  RotateCcw,
   ShoppingBag,
   Trash2,
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
-import {
-  FinanceCell,
-  FinanceCompactList,
-  FinanceCompactRow,
-  FinanceStatusPill,
-} from "./finance-compact-list";
 import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
 import { FinancialCreditCardForm } from "./financial-credit-card-form";
 import { FinancialInvoicePanel } from "./financial-invoice-panel";
@@ -32,6 +24,7 @@ import type {
   FinancialAccount,
   FinancialCategory,
   FinancialCreditCard,
+  FinancialCreditCardInvoice,
   FinancialCreditCardPurchase,
   UpdateFinancialCardPurchaseRequest,
   UpdateFinancialCreditCardRequest,
@@ -42,19 +35,44 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-function purchasePeriod() {
-  const today = new Date();
+const shortMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+});
 
-  return {
-    from: `${today.getFullYear()}-01-01`,
-    to: `${today.getFullYear()}-12-31`,
+const longMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
+  month: "long",
+  year: "numeric",
+});
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR");
+
+function date(value: string) {
+  return new Date(`${value}T00:00:00`);
+}
+
+function invoiceYear(invoice: FinancialCreditCardInvoice) {
+  return date(invoice.referenceMonth).getFullYear();
+}
+
+function invoiceMonthIndex(invoice: FinancialCreditCardInvoice) {
+  return date(invoice.referenceMonth).getMonth();
+}
+
+function invoiceStatusLabel(status: FinancialCreditCardInvoice["status"]) {
+  const labels = {
+    OPEN: "Aberta",
+    CLOSED: "Fechada",
+    PAID: "Paga",
+    CANCELLED: "Cancelada",
   };
+
+  return labels[status];
 }
 
 export function FinanceCreditCards() {
   const [cards, setCards] = useState<FinancialCreditCard[]>([]);
-  const [purchases, setPurchases] = useState<
-    FinancialCreditCardPurchase[]
+  const [invoices, setInvoices] = useState<
+    FinancialCreditCardInvoice[]
   >([]);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [categories, setCategories] = useState<
@@ -67,6 +85,8 @@ export function FinanceCreditCards() {
     useState<FinancialCreditCardPurchase | null>(null);
   const [invoiceCard, setInvoiceCard] =
     useState<FinancialCreditCard | null>(null);
+  const [initialInvoiceId, setInitialInvoiceId] =
+    useState<string | null>(null);
 
   const [cardFormOpen, setCardFormOpen] = useState(false);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
@@ -74,6 +94,9 @@ export function FinanceCreditCards() {
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(() =>
+    new Date().getFullYear(),
+  );
 
   const totalLimit = useMemo(
     () =>
@@ -94,27 +117,70 @@ export function FinanceCreditCards() {
     [cards],
   );
 
+  const availableYears = useMemo(() => {
+    const years = Array.from(
+      new Set(invoices.map((invoice) => invoiceYear(invoice))),
+    ).sort((left, right) => left - right);
+
+    return years.length > 0 ? years : [selectedYear];
+  }, [invoices, selectedYear]);
+
+  const invoiceChartMonths = useMemo(() => {
+    return Array.from({ length: 12 }, (_, monthIndex) => {
+      const monthInvoices = invoices.filter(
+        (item) =>
+          invoiceYear(item) === selectedYear &&
+          invoiceMonthIndex(item) === monthIndex,
+      );
+      const invoice = monthInvoices[0] ?? null;
+      const monthDate = new Date(selectedYear, monthIndex, 1);
+
+      return {
+        monthIndex,
+        invoice,
+        invoices: monthInvoices,
+        label: shortMonthFormatter
+          .format(monthDate)
+          .replace(".", ""),
+        fullLabel: longMonthFormatter.format(monthDate),
+        amount: monthInvoices.reduce(
+          (total, item) => total + item.totalAmount,
+          0,
+        ),
+      };
+    });
+  }, [invoices, selectedYear]);
+
+  const maxInvoiceAmount = Math.max(
+    ...invoiceChartMonths.map((month) => month.amount),
+    1,
+  );
+
+  const selectedYearIndex = availableYears.indexOf(selectedYear);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const period = purchasePeriod();
-
       const [
         cardsResult,
-        purchasesResult,
         accountsResult,
         categoriesResult,
       ] = await Promise.all([
         financeService.creditCards.list(),
-        financeService.cardPurchases.list(period),
         financeService.accounts.list(),
         financeService.categories.list("EXPENSE"),
       ]);
 
+      const invoiceResults = await Promise.all(
+        cardsResult.map((card) =>
+          financeService.invoices.list(card.id),
+        ),
+      );
+
       setCards(cardsResult);
-      setPurchases(purchasesResult);
+      setInvoices(invoiceResults.flat());
       setAccounts(accountsResult);
       setCategories(categoriesResult);
     } catch (requestError) {
@@ -129,8 +195,51 @@ export function FinanceCreditCards() {
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let active = true;
+
+    Promise.all([
+      financeService.creditCards.list(),
+      financeService.accounts.list(),
+      financeService.categories.list("EXPENSE"),
+    ])
+      .then(async ([cardsResult, accountsResult, categoriesResult]) => {
+        const invoiceResults = await Promise.all(
+          cardsResult.map((card) =>
+            financeService.invoices.list(card.id),
+          ),
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setCards(cardsResult);
+        setInvoices(invoiceResults.flat());
+        setAccounts(accountsResult);
+        setCategories(categoriesResult);
+        setError(null);
+      })
+      .catch((requestError: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "NÃ£o foi possÃ­vel carregar os cartÃµes.",
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submitCard(
     request:
@@ -420,167 +529,97 @@ export function FinanceCreditCards() {
         </div>
       ) : null}
 
-      {!loading && purchases.length > 0 ? (
-        <section className="space-y-3">
-          <div>
-            <h2 className="font-semibold text-white">
-              Compras do ano
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              {purchases.length} registradas
-            </p>
+      {!loading && cards.length > 0 ? (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-white">
+                Evolução das faturas
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Totais reais por mês, sem compras futuras não geradas
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Ano anterior"
+                disabled={selectedYearIndex <= 0}
+                onClick={() =>
+                  setSelectedYear(availableYears[selectedYearIndex - 1])
+                }
+                className="flex size-9 items-center justify-center rounded-xl border border-white/10 text-zinc-400 disabled:opacity-40"
+              >
+                {"<"}
+              </button>
+              <span className="min-w-16 text-center text-sm font-semibold text-white">
+                {selectedYear}
+              </span>
+              <button
+                type="button"
+                aria-label="Próximo ano"
+                disabled={selectedYearIndex >= availableYears.length - 1}
+                onClick={() =>
+                  setSelectedYear(availableYears[selectedYearIndex + 1])
+                }
+                className="flex size-9 items-center justify-center rounded-xl border border-white/10 text-zinc-400 disabled:opacity-40"
+              >
+                {">"}
+              </button>
+            </div>
           </div>
 
-          <FinanceCompactList
-            columns={[
-              "Data",
-              "Descrição",
-              "Cartão",
-              "Categoria",
-              "Parcela",
-              "Valor",
-              "Ações",
-            ]}
-            gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_7rem_9rem_9rem]"
-          >
-            {purchases.map((purchase) => {
-              const cancelled = purchase.status === "CANCELLED";
+          <div className="mt-5 grid h-48 grid-cols-12 items-end gap-1.5 border-b border-white/10 pb-6 sm:gap-3">
+            {invoiceChartMonths.map((month) => {
+              const height = `${Math.max(
+                (month.amount / maxInvoiceAmount) * 100,
+                month.amount > 0 ? 8 : 2,
+              )}%`;
+              const relatedCard = month.invoice
+                ? cards.find((card) => card.id === month.invoice?.creditCardId)
+                : null;
+              const title = month.invoice
+                ? `${month.fullLabel}: ${currencyFormatter.format(month.amount)} em ${month.invoices.length} fatura(s). Vence ${dateFormatter.format(date(month.invoice.dueDate))}. ${invoiceStatusLabel(month.invoice.status)}.`
+                : `${month.fullLabel}: ${currencyFormatter.format(0)}`;
 
               return (
-                <FinanceCompactRow
-                  key={purchase.id}
-                  gridClassName="lg:grid-cols-[7rem_minmax(12rem,1.4fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_7rem_9rem_9rem]"
-                  className={cancelled ? "bg-white/[0.012] opacity-70" : undefined}
+                <button
+                  key={month.monthIndex}
+                  type="button"
+                  title={title}
+                  aria-label={title}
+                  disabled={!month.invoice || !relatedCard}
+                  onClick={() => {
+                    if (!month.invoice || !relatedCard) {
+                      return;
+                    }
+
+                    setInitialInvoiceId(month.invoice.id);
+                    setInvoiceCard(relatedCard);
+                  }}
+                  className="group flex h-full min-w-0 flex-col items-center justify-end gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white/45 disabled:cursor-default"
                 >
-                  <FinanceCell className="hidden text-sm text-zinc-400 lg:block">
-                    {new Intl.DateTimeFormat("pt-BR").format(
-                      new Date(`${purchase.purchaseDate}T00:00:00`),
-                    )}
-                  </FinanceCell>
-
-                  <FinanceCell>
-                    <div className="flex items-start justify-between gap-3 lg:block">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-white">
-                          {purchase.description}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500 lg:hidden">
-                          {new Intl.DateTimeFormat("pt-BR").format(
-                            new Date(`${purchase.purchaseDate}T00:00:00`),
-                          )}
-                          {" · "}
-                          {purchase.creditCardName}
-                        </p>
-                      </div>
-                      <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
-                        {currencyFormatter.format(purchase.totalAmount)}
-                      </p>
-                    </div>
-                  </FinanceCell>
-
-                  <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
-                    {purchase.creditCardName}
-                  </FinanceCell>
-
-                  <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
-                    {purchase.categoryName ?? "Sem categoria"}
-                  </FinanceCell>
-
-                  <FinanceCell className="mt-2 flex items-center gap-2 text-xs text-zinc-500 lg:mt-0 lg:block lg:text-sm lg:text-zinc-400">
-                    {purchase.totalInstallments}x
-                    {cancelled ? (
-                      <span className="lg:hidden">
-                        <FinanceStatusPill tone="danger">Cancelada</FinanceStatusPill>
-                      </span>
-                    ) : null}
-                  </FinanceCell>
-
-                  <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
-                    {currencyFormatter.format(purchase.totalAmount)}
-                    {cancelled ? (
-                      <span className="mt-1 block">
-                        <FinanceStatusPill tone="danger">Cancelada</FinanceStatusPill>
-                      </span>
-                    ) : null}
-                  </FinanceCell>
-
-                  <FinanceCell className="mt-3 lg:mt-0">
-                    {actionId === purchase.id ? (
-                      <div className="flex size-9 items-center justify-end">
-                        <LoaderCircle className="size-4 animate-spin text-zinc-500" />
-                      </div>
-                    ) : (
-                      <div className="flex justify-end gap-1">
-                        {purchase.status === "ACTIVE" ? (
-                          <>
-                            <button
-                              type="button"
-                              title="Editar"
-                              aria-label="Editar compra"
-                              onClick={() => {
-                                setEditingPurchase(purchase);
-                                setPurchaseFormOpen(true);
-                              }}
-                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              title="Cancelar"
-                              aria-label="Cancelar compra"
-                              onClick={() =>
-                                void executeAction(purchase.id, () =>
-                                  financeService.cardPurchases.cancel(purchase.id),
-                                )
-                              }
-                              className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-amber-400/10 hover:text-amber-300"
-                            >
-                              <CircleX className="size-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            title="Restaurar"
-                            aria-label="Restaurar compra"
-                            onClick={() =>
-                              void executeAction(purchase.id, () =>
-                                financeService.cardPurchases.restore(purchase.id),
-                              )
-                            }
-                            className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
-                          >
-                            <RotateCcw className="size-4" />
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          title="Excluir"
-                          aria-label="Excluir compra"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Deseja excluir a compra "${purchase.description}"?`,
-                              )
-                            ) {
-                              void executeAction(purchase.id, () =>
-                                financeService.cardPurchases.remove(purchase.id),
-                              );
-                            }
-                          }}
-                          className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                    )}
-                  </FinanceCell>
-                </FinanceCompactRow>
+                  <span
+                    className={[
+                      "w-full rounded-t-md border border-white/10 transition group-hover:border-white/30",
+                      month.invoice?.status === "PAID"
+                        ? "bg-emerald-300/70"
+                        : month.invoice?.status === "CANCELLED"
+                          ? "bg-zinc-700/60"
+                          : month.invoice
+                            ? "bg-zinc-100"
+                            : "bg-white/[0.08]",
+                    ].join(" ")}
+                    style={{ height }}
+                  />
+                  <span className="text-[0.62rem] uppercase text-zinc-500 sm:text-xs">
+                    {month.label}
+                  </span>
+                </button>
               );
             })}
-          </FinanceCompactList>
+          </div>
         </section>
       ) : null}
       {cardFormOpen ? (
@@ -620,8 +659,12 @@ export function FinanceCreditCards() {
         <FinancialInvoicePanel
           card={invoiceCard}
           accounts={accounts}
+          initialInvoiceId={initialInvoiceId}
           onChanged={loadData}
-          onClose={() => setInvoiceCard(null)}
+          onClose={() => {
+            setInvoiceCard(null);
+            setInitialInvoiceId(null);
+          }}
         />
       ) : null}
     </div>

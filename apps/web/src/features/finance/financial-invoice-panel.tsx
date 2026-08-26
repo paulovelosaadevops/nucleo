@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import type {
   FinancialAccount,
   FinancialCreditCard,
+  FinancialCreditCardInstallment,
   FinancialCreditCardInvoice,
   FinancialPaymentMethod,
 } from "@/types/finance";
@@ -40,6 +41,7 @@ import {
 interface FinancialInvoicePanelProps {
   card: FinancialCreditCard;
   accounts: FinancialAccount[];
+  initialInvoiceId?: string | null;
   onChanged?: () => void;
   onClose: () => void;
 }
@@ -200,6 +202,7 @@ function invoiceStatusDetails(
 export function FinancialInvoicePanel({
   card,
   accounts,
+  initialInvoiceId,
   onChanged,
   onClose,
 }: FinancialInvoicePanelProps) {
@@ -225,6 +228,14 @@ export function FinancialInvoicePanel({
     deleteConfirmationId,
     setDeleteConfirmationId,
   ] = useState<string | null>(null);
+
+  const [
+    purchaseActionId,
+    setPurchaseActionId,
+  ] = useState<string | null>(null);
+
+  const [message, setMessage] =
+    useState<string | null>(null);
 
   const [accountId, setAccountId] =
     useState(
@@ -265,6 +276,7 @@ export function FinancialInvoicePanel({
 
         setExpandedInvoiceId(
           (current) =>
+            initialInvoiceId ??
             current ??
             ordered[0]?.id ??
             null,
@@ -278,7 +290,7 @@ export function FinancialInvoicePanel({
       } finally {
         setLoading(false);
       }
-    }, [card.id]);
+    }, [card.id, initialInvoiceId]);
 
   useEffect(() => {
     let active = true;
@@ -296,6 +308,7 @@ export function FinancialInvoicePanel({
 
         setExpandedInvoiceId(
           (current) =>
+            initialInvoiceId ??
             current ??
             ordered[0]?.id ??
             null,
@@ -321,7 +334,7 @@ export function FinancialInvoicePanel({
     return () => {
       active = false;
     };
-  }, [card.id]);
+  }, [card.id, initialInvoiceId]);
 
   const summary = useMemo(() => {
     return invoices.reduce(
@@ -442,6 +455,45 @@ export function FinancialInvoicePanel({
     }
   }
 
+  async function deletePurchase(
+    installment: FinancialCreditCardInstallment,
+  ) {
+    if (purchaseActionId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      installment.totalInstallments > 1
+        ? `Esta compra possui ${installment.totalInstallments} parcelas vinculadas. A exclusÃ£o removerÃ¡ a compra e todas as parcelas permitidas pelas regras atuais, incluindo faturas futuras. Deseja continuar?`
+        : "Excluir esta compra da fatura?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPurchaseActionId(installment.purchaseId);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await financeService.cardPurchases.remove(
+        installment.purchaseId,
+      );
+      await loadInvoices();
+      onChanged?.();
+      setMessage("Compra excluÃ­da da fatura.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "NÃ£o foi possÃ­vel excluir a compra.",
+      );
+    } finally {
+      setPurchaseActionId(null);
+    }
+  }
+
   function retryLoad() {
     setLoading(true);
     setError(null);
@@ -459,7 +511,7 @@ export function FinancialInvoicePanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="invoice-panel-title"
-        className="h-full w-full overflow-y-auto border-l border-white/10 bg-[#090909] shadow-2xl sm:max-w-[760px] xl:max-w-[840px]"
+        className="h-full w-full overflow-y-auto border-l border-white/10 bg-[#090909] shadow-2xl sm:max-w-[860px] xl:max-w-[980px]"
       >
         <header className="sticky top-0 z-20 flex items-start justify-between border-b border-white/10 bg-[#090909]/95 p-5 backdrop-blur-xl sm:px-7">
           <div>
@@ -487,43 +539,48 @@ export function FinancialInvoicePanel({
           </Button>
         </header>
 
-        <div className="space-y-4 p-4 sm:p-6">
+        <div className="space-y-4 p-4 sm:p-5">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-xs uppercase tracking-wider text-zinc-600">
                 Em aberto
               </p>
 
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-1 text-base font-semibold text-white tabular-nums">
                 {currencyFormatter.format(
                   summary.outstanding,
                 )}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-xs uppercase tracking-wider text-zinc-600">
                 Já pago
               </p>
 
-              <p className="mt-2 text-lg font-semibold text-emerald-300">
+              <p className="mt-1 text-base font-semibold text-emerald-300 tabular-nums">
                 {currencyFormatter.format(
                   summary.paid,
                 )}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-xs uppercase tracking-wider text-zinc-600">
                 Parcelas
               </p>
 
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-1 text-base font-semibold text-white tabular-nums">
                 {summary.installments}
               </p>
             </div>
           </div>
 
+          {message ? (
+            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 text-sm text-emerald-200">
+              {message}
+            </div>
+          ) : null}
           {error ? (
             <div
               role="alert"
@@ -679,75 +736,96 @@ export function FinancialInvoicePanel({
                         ) : (
                           <FinanceCompactList
                             columns={[
-                              "Data",
                               "Descrição",
-                              "Categoria",
-                              "Parcela",
+                              "Detalhes",
                               "Valor",
-                              "Situação",
+                              "Ações",
                             ]}
-                            gridClassName="lg:grid-cols-[6.5rem_minmax(12rem,1.5fr)_minmax(8rem,1fr)_7rem_8rem_7rem]"
+                            gridClassName="lg:grid-cols-[minmax(12rem,1.5fr)_minmax(10rem,1fr)_8rem_3rem]"
+                            className="rounded-xl"
+                            headerClassName="px-3 py-1.5"
                           >
-                            {invoice.installments.map((installment) => (
-                              <FinanceCompactRow
-                                key={installment.id}
-                                gridClassName="lg:grid-cols-[6.5rem_minmax(12rem,1.5fr)_minmax(8rem,1fr)_7rem_8rem_7rem]"
-                                className={
-                                  installment.status === "CANCELLED"
-                                    ? "bg-white/[0.012] opacity-70"
-                                    : undefined
-                                }
-                              >
-                                <FinanceCell className="hidden text-sm text-zinc-400 lg:block">
-                                  {formatDate(installment.invoiceDueDate)}
-                                </FinanceCell>
+                            {invoice.installments.map((installment) => {
+                              const deleting =
+                                purchaseActionId === installment.purchaseId;
+                              const showStatus =
+                                installment.status === "CANCELLED" ||
+                                installment.paid;
 
-                                <FinanceCell>
-                                  <div className="flex items-start justify-between gap-3 lg:block">
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm font-medium text-zinc-200">
+                              return (
+                                <FinanceCompactRow
+                                  key={installment.id}
+                                  compact
+                                  gridClassName="lg:grid-cols-[minmax(12rem,1.5fr)_minmax(10rem,1fr)_8rem_3rem]"
+                                  className={
+                                    installment.status === "CANCELLED"
+                                      ? "bg-white/[0.012] opacity-70"
+                                      : undefined
+                                  }
+                                >
+                                  <FinanceCell>
+                                    <div className="flex items-start justify-between gap-3 lg:block">
+                                      <p
+                                        title={installment.purchaseDescription}
+                                        className="truncate text-sm font-medium text-zinc-200"
+                                      >
                                         {installment.purchaseDescription}
                                       </p>
-                                      <p className="mt-1 text-xs text-zinc-500 lg:hidden">
-                                        {formatDate(installment.invoiceDueDate)}
-                                        {" · "}
-                                        {installment.categoryName ?? "Sem categoria"}
+                                      <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
+                                        {currencyFormatter.format(installment.amount)}
                                       </p>
                                     </div>
-                                    <p className="shrink-0 text-right text-sm font-semibold text-white tabular-nums lg:hidden">
-                                      {currencyFormatter.format(installment.amount)}
-                                    </p>
-                                  </div>
-                                </FinanceCell>
+                                  </FinanceCell>
 
-                                <FinanceCell className="mt-2 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
-                                  {installment.categoryName ?? "Sem categoria"}
-                                </FinanceCell>
+                                  <FinanceCell className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 lg:mt-0">
+                                    <span className="truncate">
+                                      {installment.categoryName ?? "Sem categoria"}
+                                    </span>
+                                    <span className="text-zinc-700">·</span>
+                                    <span>
+                                      Parcela {installment.installmentNumber}/
+                                      {installment.totalInstallments}
+                                    </span>
+                                    {showStatus ? (
+                                      <FinanceStatusPill
+                                        tone={
+                                          installment.status === "CANCELLED"
+                                            ? "danger"
+                                            : "positive"
+                                        }
+                                      >
+                                        {installment.status === "CANCELLED"
+                                          ? "Cancelada"
+                                          : "Paga"}
+                                      </FinanceStatusPill>
+                                    ) : null}
+                                  </FinanceCell>
 
-                                <FinanceCell className="mt-1 text-xs text-zinc-500 lg:mt-0 lg:text-sm lg:text-zinc-400">
-                                  Parcela {installment.installmentNumber}/
-                                  {installment.totalInstallments}
-                                </FinanceCell>
+                                  <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
+                                    {currencyFormatter.format(installment.amount)}
+                                  </FinanceCell>
 
-                                <FinanceCell className="hidden text-right text-sm font-semibold text-white tabular-nums lg:block">
-                                  {currencyFormatter.format(installment.amount)}
-                                </FinanceCell>
-
-                                <FinanceCell className="mt-2 lg:mt-0">
-                                  {installment.status === "CANCELLED" ? (
-                                    <FinanceStatusPill tone="danger">
-                                      Cancelada
-                                    </FinanceStatusPill>
-                                  ) : installment.paid ? (
-                                    <FinanceStatusPill tone="positive">
-                                      Paga
-                                    </FinanceStatusPill>
-                                  ) : (
-                                    <FinanceStatusPill>Aberta</FinanceStatusPill>
-                                  )}
-                                </FinanceCell>
-                              </FinanceCompactRow>
-                            ))}
+                                  <FinanceCell className="mt-2 lg:mt-0">
+                                    <div className="flex justify-end">
+                                      <button
+                                        type="button"
+                                        title="Excluir compra"
+                                        aria-label={`Excluir compra ${installment.purchaseDescription}`}
+                                        disabled={deleting || Boolean(purchaseActionId)}
+                                        onClick={() => void deletePurchase(installment)}
+                                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 outline-none transition hover:bg-rose-400/10 hover:text-rose-300 focus-visible:ring-2 focus-visible:ring-white/45 disabled:opacity-45"
+                                      >
+                                        {deleting ? (
+                                          <LoaderCircle className="size-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="size-4" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </FinanceCell>
+                                </FinanceCompactRow>
+                              );
+                            })}
                           </FinanceCompactList>
                         )}
                       </div>

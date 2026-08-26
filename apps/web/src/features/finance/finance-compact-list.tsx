@@ -5,20 +5,30 @@ import { cn } from "@/lib/cn";
 interface FinanceCompactListProps {
   columns: string[];
   gridClassName: string;
+  className?: string;
+  headerClassName?: string;
   children: ReactNode;
 }
 
 export function FinanceCompactList({
   columns,
   gridClassName,
+  className,
+  headerClassName,
   children,
 }: FinanceCompactListProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]",
+        className,
+      )}
+    >
       <div
         className={cn(
           "hidden border-b border-white/[0.07] bg-white/[0.035] px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-wider text-zinc-500 lg:grid",
           gridClassName,
+          headerClassName,
         )}
       >
         {columns.map((column) => (
@@ -34,18 +44,21 @@ export function FinanceCompactList({
 interface FinanceCompactRowProps {
   gridClassName: string;
   className?: string;
+  compact?: boolean;
   children: ReactNode;
 }
 
 export function FinanceCompactRow({
   gridClassName,
   className,
+  compact = false,
   children,
 }: FinanceCompactRowProps) {
   return (
     <div
       className={cn(
-        "px-4 py-3 transition hover:bg-white/[0.035] lg:grid lg:min-h-14 lg:items-center lg:gap-4",
+        "px-4 transition hover:bg-white/[0.035] lg:grid lg:items-center lg:gap-4",
+        compact ? "py-2 lg:min-h-11" : "py-3 lg:min-h-14",
         gridClassName,
         className,
       )}
