@@ -15,6 +15,8 @@ import {
 
 import { FamilyInvitationForm } from "./family-invitation-form";
 
+import { confirmDialog } from "@/lib/feedback";
+
 import type {
   CreateFamilyInvitationRequest,
   FamilyInvitation,
@@ -221,13 +223,16 @@ export function FamilyInvitations({
                           type="button"
                           title="Revogar convite"
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                `Deseja revogar o convite enviado para ${invitation.email}?`,
-                              )
-                            ) {
-                              void onRevoke(invitation.id);
-                            }
+                            void confirmDialog({
+                              title: "Revogar convite",
+                              description: `Deseja revogar o convite enviado para ${invitation.email}?`,
+                              confirmLabel: "Revogar",
+                              variant: "danger",
+                            }).then((confirmed) => {
+                              if (confirmed) {
+                                void onRevoke(invitation.id);
+                              }
+                            });
                           }}
                           className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                         >

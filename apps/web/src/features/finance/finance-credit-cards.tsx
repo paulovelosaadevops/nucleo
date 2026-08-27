@@ -17,6 +17,7 @@ import { financeService } from "./finance-service";
 import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
 import { FinancialCreditCardForm } from "./financial-credit-card-form";
 import { FinancialInvoicePanel } from "./financial-invoice-panel";
+import { confirmDialog } from "@/lib/feedback";
 
 import type {
   CreateFinancialCardPurchaseRequest,
@@ -472,17 +473,20 @@ export function FinanceCreditCards() {
                         type="button"
                         title="Excluir"
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Deseja excluir o cartão "${card.name}"?`,
-                            )
-                          ) {
+                          void confirmDialog({
+                            title: "Excluir cartao",
+                            description: `Deseja excluir o cartao "${card.name}"?`,
+                            confirmLabel: "Excluir",
+                            variant: "danger",
+                          }).then((confirmed) => {
+                            if (confirmed) {
                             void executeAction(card.id, () =>
                               financeService.creditCards.remove(
                                 card.id,
                               ),
                             );
                           }
+                          });
                         }}
                         className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"
                       >

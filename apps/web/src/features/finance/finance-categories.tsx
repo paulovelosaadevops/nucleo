@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import { confirmDialog } from "@/lib/feedback";
 import {
   FinanceCell,
   FinanceCompactList,
@@ -123,10 +124,13 @@ export function FinanceCategories() {
     }
   }
 
-  function removeCategory(category: FinancialCategory) {
-    const confirmed = window.confirm(
-      `Deseja excluir a categoria "${category.name}"?`,
-    );
+  async function removeCategory(category: FinancialCategory) {
+    const confirmed = await confirmDialog({
+      title: "Excluir categoria",
+      description: `Deseja excluir a categoria "${category.name}"?`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;

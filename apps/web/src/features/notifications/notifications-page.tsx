@@ -24,6 +24,7 @@ import {
   notificationService,
 } from "@/features/notifications/notification-service";
 import { NotificationSummary } from "@/features/notifications/notification-summary";
+import { confirmDialog } from "@/lib/feedback";
 
 import type {
   NotificationItem,
@@ -337,9 +338,12 @@ export function NotificationsPage() {
   async function handleDelete(
     notification: NotificationItem,
   ) {
-    const confirmed = window.confirm(
-      `Deseja excluir a notificação “${notification.title}”?`,
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir notificacao",
+      description: `Deseja excluir a notificacao "${notification.title}"?`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;

@@ -1,6 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/cn";
+import {
+  confirmDialog,
+  promptDialog,
+  toast,
+} from "@/lib/feedback";
 import type { ShoppingItem } from "@/types/shopping";
 import {
   Check,
@@ -65,10 +70,15 @@ export function ShoppingItemRow({
         ? String(item.estimatedUnitPrice)
         : "";
 
-    const informedValue = window.prompt(
-      "Preço unitário real (opcional):",
-      initialValue,
-    );
+    const informedValue = await promptDialog({
+      title: "Confirmar compra",
+      description:
+        "Informe o preco unitario real, se quiser atualizar o valor comprado.",
+      label: "Preco unitario real",
+      defaultValue: initialValue,
+      inputMode: "decimal",
+      confirmLabel: "Confirmar",
+    });
 
     if (informedValue === null) {
       return;
@@ -88,9 +98,10 @@ export function ShoppingItemRow({
       !Number.isFinite(value) ||
       value < 0
     ) {
-      window.alert(
-        "Informe um preço válido.",
-      );
+      toast({
+        variant: "warning",
+        message: "Informe um preco valido.",
+      });
       return;
     }
 
@@ -99,9 +110,12 @@ export function ShoppingItemRow({
 
   async function remove() {
     if (
-      window.confirm(
-        `Excluir o item "${item.name}"?`,
-      )
+      await confirmDialog({
+        title: "Excluir item",
+        description: `Excluir o item "${item.name}"?`,
+        confirmLabel: "Excluir",
+        variant: "danger",
+      })
     ) {
       await onDelete();
     }

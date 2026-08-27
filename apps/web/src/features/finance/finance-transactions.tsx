@@ -22,6 +22,7 @@ import {
   FinanceStatusPill,
 } from "./finance-compact-list";
 import { FinancialTransactionForm } from "./financial-transaction-form";
+import { confirmDialog } from "@/lib/feedback";
 
 import type {
   CreateFinancialTransactionRequest,
@@ -259,10 +260,13 @@ export function FinanceTransactions() {
     }
   }
 
-  function removeTransaction(transaction: FinancialTransaction) {
-    const confirmed = window.confirm(
-      `Deseja excluir o lançamento "${transaction.description}"?`,
-    );
+  async function removeTransaction(transaction: FinancialTransaction) {
+    const confirmed = await confirmDialog({
+      title: "Excluir lancamento",
+      description: `Deseja excluir o lancamento "${transaction.description}"?`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;

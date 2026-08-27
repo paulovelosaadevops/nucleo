@@ -2,16 +2,23 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { shareAgendaIcs } from "@/features/agenda/agenda-calendar-export";
 import { apiRequest } from "@/lib/api/api-client";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { cn } from "@/lib/cn";
+import {
+  confirmDialog,
+  toast,
+} from "@/lib/feedback";
 
 import type {
   AgendaCategory,
   AgendaDayOfWeek,
   CreateAgendaEventRequest,
+  CreateAgendaEventResponse,
   RecurrenceFrequency,
 } from "@/types/agenda";
+import { useAuth } from "@/hooks/use-auth";
 
 import {
   Bell,
@@ -44,7 +51,7 @@ interface AgendaEventFormProps {
   onClose: () => void;
   onCreate: (
     request: CreateAgendaEventRequest,
-  ) => Promise<unknown>;
+  ) => Promise<CreateAgendaEventResponse>;
 }
 
 const categories: Array<{
@@ -184,6 +191,8 @@ export function AgendaEventForm({
   onClose,
   onCreate,
 }: AgendaEventFormProps) {
+  const { session } = useAuth();
+
   const [mounted, setMounted] =
     useState(false);
 
@@ -429,7 +438,7 @@ export function AgendaEventForm({
     }
 
     try {
-      await onCreate({
+      const request: CreateAgendaEventRequest = {
         title: normalizedTitle,
         description:
           description.trim() || undefined,
@@ -458,10 +467,54 @@ export function AgendaEventForm({
                   : undefined,
               },
         remindersInMinutes: reminders,
-      });
+      };
+
+      const response = await onCreate(request);
 
       reset();
       onClose();
+
+      const shouldAddToCalendar =
+        await confirmDialog({
+          title: "Compromisso criado",
+          description:
+            "Deseja adicionar este compromisso tambem ao calendario do seu dispositivo?",
+          cancelLabel: "Agora nao",
+          confirmLabel: "Adicionar ao calendario",
+        });
+
+      if (!shouldAddToCalendar) {
+        return;
+      }
+
+      const assignedToName = members.find(
+        (member) =>
+          member.membershipId === assignedMembershipId,
+      )?.name;
+
+      try {
+        await shareAgendaIcs({
+          request,
+          response,
+          assignedToName,
+          timeZone:
+            session?.family.timeZone ??
+            "America/Sao_Paulo",
+        });
+      } catch (shareError) {
+        if (
+          shareError instanceof DOMException &&
+          shareError.name === "AbortError"
+        ) {
+          return;
+        }
+
+        toast({
+          variant: "error",
+          message:
+            "Nao foi possivel gerar ou compartilhar o arquivo do calendario.",
+        });
+      }
     } catch (error) {
       setFormError(
         getErrorMessage(error),

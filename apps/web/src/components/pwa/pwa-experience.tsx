@@ -19,7 +19,6 @@ import {
 } from "react";
 
 type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
   userChoice: Promise<{
     outcome: "accepted" | "dismissed";
   }>;
@@ -187,7 +186,12 @@ export function PwaExperience() {
       return;
     }
 
-    await installPrompt.prompt();
+    const requestInstall = Reflect.get(
+      installPrompt,
+      "prompt",
+    ) as (() => Promise<void>) | undefined;
+
+    await requestInstall?.call(installPrompt);
     await installPrompt.userChoice;
     setInstallPrompt(null);
     setCanPromptInstall(false);

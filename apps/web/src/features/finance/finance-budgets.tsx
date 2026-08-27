@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import { confirmDialog } from "@/lib/feedback";
 import {
   FinanceCell,
   FinanceCompactList,
@@ -164,10 +165,13 @@ export function FinanceBudgets() {
     }
   }
 
-  function removeBudget(budget: FinancialBudget) {
-    const confirmed = window.confirm(
-      `Deseja excluir o orçamento de "${budget.categoryName}"?`,
-    );
+  async function removeBudget(budget: FinancialBudget) {
+    const confirmed = await confirmDialog({
+      title: "Excluir orcamento",
+      description: `Deseja excluir o orcamento de "${budget.categoryName}"?`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;

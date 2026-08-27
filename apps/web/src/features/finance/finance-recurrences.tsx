@@ -15,6 +15,10 @@ import {
 
 import { financeService } from "./finance-service";
 import {
+  confirmDialog,
+  promptDialog,
+} from "@/lib/feedback";
+import {
   FinanceCell,
   FinanceCompactList,
   FinanceCompactRow,
@@ -238,10 +242,14 @@ export function FinanceRecurrences() {
   }
 
   async function generateTransactions() {
-    const until = window.prompt(
-      "Gerar lançamentos até qual data?",
-      todayAsInputValue(),
-    );
+    const until = await promptDialog({
+      title: "Gerar recorrencias",
+      description: "Gerar lancamentos ate qual data?",
+      label: "Data limite",
+      type: "date",
+      defaultValue: todayAsInputValue(),
+      confirmLabel: "Gerar",
+    });
 
     if (until === null) {
       return;
@@ -273,10 +281,13 @@ export function FinanceRecurrences() {
     }
   }
 
-  function removeRecurrence(recurrence: FinancialRecurrence) {
-    const confirmed = window.confirm(
-      `Deseja excluir a recorrência "${recurrence.description}"? Os lançamentos já gerados serão preservados.`,
-    );
+  async function removeRecurrence(recurrence: FinancialRecurrence) {
+    const confirmed = await confirmDialog({
+      title: "Excluir recorrencia",
+      description: `Deseja excluir a recorrencia "${recurrence.description}"? Os lancamentos ja gerados serao preservados.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;
@@ -288,10 +299,14 @@ export function FinanceRecurrences() {
   }
 
   async function confirmOccurrence(occurrence: FinancialRecurrenceOccurrence) {
-    const value = window.prompt(
-      `Informe o valor real de ${occurrence.description}`,
-      String(occurrence.estimatedAmount),
-    );
+    const value = await promptDialog({
+      title: "Confirmar valor",
+      description: `Informe o valor real de ${occurrence.description}.`,
+      label: "Valor real",
+      defaultValue: String(occurrence.estimatedAmount),
+      inputMode: "decimal",
+      confirmLabel: "Continuar",
+    });
 
     if (value === null) return;
 
@@ -302,14 +317,24 @@ export function FinanceRecurrences() {
       return;
     }
 
-    const chargedDate = window.prompt(
-      "Informe a data real da cobranca",
-      occurrence.scheduledDate,
-    );
+    const chargedDate = await promptDialog({
+      title: "Data da cobranca",
+      description: "Informe a data real da cobranca.",
+      label: "Data da cobranca",
+      type: "date",
+      defaultValue: occurrence.scheduledDate,
+      confirmLabel: "Continuar",
+    });
 
     if (!chargedDate) return;
 
-    const notes = window.prompt("Observacao opcional", occurrence.notes ?? "");
+    const notes = await promptDialog({
+      title: "Observacao",
+      description: "Inclua uma observacao opcional.",
+      label: "Observacao",
+      defaultValue: occurrence.notes ?? "",
+      confirmLabel: "Confirmar",
+    });
 
     setActionId(occurrence.id);
     setError(null);
@@ -339,9 +364,11 @@ export function FinanceRecurrences() {
   }
 
   async function skipOccurrence(occurrence: FinancialRecurrenceOccurrence) {
-    const confirmed = window.confirm(
-      `Nao havera cobranca de ${occurrence.description} neste mes?`,
-    );
+    const confirmed = await confirmDialog({
+      title: "Ignorar cobranca",
+      description: `Nao havera cobranca de ${occurrence.description} neste mes?`,
+      confirmLabel: "Ignorar",
+    });
 
     if (!confirmed) return;
 
@@ -367,10 +394,14 @@ export function FinanceRecurrences() {
   }
 
   async function postponeOccurrence(occurrence: FinancialRecurrenceOccurrence) {
-    const reminderDate = window.prompt(
-      "Adiar lembrete para qual data?",
-      occurrence.reminderDate ?? occurrence.scheduledDate,
-    );
+    const reminderDate = await promptDialog({
+      title: "Adiar lembrete",
+      description: "Adiar lembrete para qual data?",
+      label: "Nova data",
+      type: "date",
+      defaultValue: occurrence.reminderDate ?? occurrence.scheduledDate,
+      confirmLabel: "Adiar",
+    });
 
     if (!reminderDate) return;
 

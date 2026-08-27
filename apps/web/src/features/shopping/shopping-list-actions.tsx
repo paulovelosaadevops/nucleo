@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { confirmDialog } from "@/lib/feedback";
 import type { ShoppingListDetails } from "@/types/shopping";
 import {
   Archive,
@@ -31,9 +32,11 @@ export function ShoppingListActions({
 }: ShoppingListActionsProps) {
   async function archive() {
     if (
-      window.confirm(
-        "Arquivar esta lista?",
-      )
+      await confirmDialog({
+        title: "Arquivar lista",
+        description: "Arquivar esta lista?",
+        confirmLabel: "Arquivar",
+      })
     ) {
       await onArchive();
     }
@@ -41,9 +44,13 @@ export function ShoppingListActions({
 
   async function remove() {
     if (
-      window.confirm(
-        "Excluir esta lista e todos os seus itens?",
-      )
+      await confirmDialog({
+        title: "Excluir lista",
+        description:
+          "Excluir esta lista e todos os seus itens?",
+        confirmLabel: "Excluir",
+        variant: "danger",
+      })
     ) {
       await onDelete();
     }

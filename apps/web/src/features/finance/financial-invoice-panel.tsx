@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { confirmDialog } from "@/lib/feedback";
 import type {
   FinancialAccount,
   FinancialCreditCard,
@@ -395,11 +396,15 @@ export function FinancialInvoicePanel({
   async function deletePurchase(installment: FinancialCreditCardInstallment) {
     if (purchaseActionId) return;
 
-    const confirmed = window.confirm(
-      installment.totalInstallments > 1
-        ? `Esta compra possui ${installment.totalInstallments} parcelas vinculadas. A exclusao removera a compra e todas as parcelas permitidas pelas regras atuais, incluindo faturas futuras. Deseja continuar?`
-        : "Excluir esta compra da fatura?",
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir compra",
+      description:
+        installment.totalInstallments > 1
+          ? `Esta compra possui ${installment.totalInstallments} parcelas vinculadas. A exclusao removera a compra e todas as parcelas permitidas pelas regras atuais, incluindo faturas futuras. Deseja continuar?`
+          : "Excluir esta compra da fatura?",
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) return;
 
@@ -533,9 +538,16 @@ export function FinancialInvoicePanel({
                     )
                   }
                   onDeleteInvoice={() => {
-                    if (window.confirm("Deseja excluir esta fatura vazia?")) {
-                      void deleteInvoice(selectedInvoice.id);
-                    }
+                    void confirmDialog({
+                      title: "Excluir fatura",
+                      description: "Deseja excluir esta fatura vazia?",
+                      confirmLabel: "Excluir",
+                      variant: "danger",
+                    }).then((confirmed) => {
+                      if (confirmed) {
+                        void deleteInvoice(selectedInvoice.id);
+                      }
+                    });
                   }}
                 />
               </div>

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/features/agenda/whatsapp-icon";
+import { confirmDialog } from "@/lib/feedback";
 import type { AgendaOccurrenceDetails } from "@/types/agenda";
 import {
   Ban,
@@ -58,11 +59,14 @@ export function AgendaActionMenu({
   }
 
   async function deleteOccurrence() {
-    if (
-      !window.confirm(
-        "Excluir somente esta ocorrência?",
-      )
-    ) {
+    const confirmed = await confirmDialog({
+      title: "Excluir ocorrencia",
+      description: "Excluir somente esta ocorrencia?",
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -70,11 +74,15 @@ export function AgendaActionMenu({
   }
 
   async function deleteSeries() {
-    if (
-      !window.confirm(
-        "Excluir toda a série recorrente? Esta ação não poderá ser desfeita.",
-      )
-    ) {
+    const confirmed = await confirmDialog({
+      title: "Excluir serie",
+      description:
+        "Excluir toda a serie recorrente? Esta acao nao podera ser desfeita.",
+      confirmLabel: "Excluir serie",
+      variant: "danger",
+    });
+
+    if (!confirmed) {
       return;
     }
 

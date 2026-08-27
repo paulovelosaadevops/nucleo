@@ -15,6 +15,10 @@ import {
 
 import { financeService } from "./finance-service";
 import {
+  confirmDialog,
+  promptDialog,
+} from "@/lib/feedback";
+import {
   FinanceCell,
   FinanceCompactList,
   FinanceCompactRow,
@@ -150,11 +154,15 @@ export function FinanceAccounts() {
     }
   }
 
-  function changeInitialBalance(account: FinancialAccount) {
-    const value = window.prompt(
-      `Novo saldo inicial para "${account.name}":`,
-      String(account.initialBalance),
-    );
+  async function changeInitialBalance(account: FinancialAccount) {
+    const value = await promptDialog({
+      title: "Alterar saldo inicial",
+      description: `Novo saldo inicial para "${account.name}".`,
+      label: "Saldo inicial",
+      defaultValue: String(account.initialBalance),
+      inputMode: "decimal",
+      confirmLabel: "Salvar",
+    });
 
     if (value === null) {
       return;
@@ -176,10 +184,13 @@ export function FinanceAccounts() {
     );
   }
 
-  function removeAccount(account: FinancialAccount) {
-    const confirmed = window.confirm(
-      `Deseja excluir a conta "${account.name}"?`,
-    );
+  async function removeAccount(account: FinancialAccount) {
+    const confirmed = await confirmDialog({
+      title: "Excluir conta",
+      description: `Deseja excluir a conta "${account.name}"?`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
 
     if (!confirmed) {
       return;
