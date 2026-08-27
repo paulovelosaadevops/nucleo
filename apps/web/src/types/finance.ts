@@ -26,6 +26,7 @@ export interface FinancialCategory { id: string; name: string; type: FinancialCa
 export interface FinancialCategorySummary { categoryId: string | null; categoryName: string; color: string | null; icon: string | null; type: FinancialCategoryType; transactionCount: number; total: number; percentage: number; }
 
 export interface FinancialInvoiceProjection { invoiceId: string; creditCardId: string; creditCardName: string; lastFour: string | null; referenceMonth: string; closingDate: string; dueDate: string; status: FinancialCreditCardInvoiceStatus; totalAmount: number; installmentCount: number; }
+export interface FinancialUpcomingInvoiceTotal { referenceMonth: string; totalAmount: number; invoiceCount: number; }
 export interface FinancialMonthlyProjection { referenceMonth: string; expectedIncome: number; accountExpenses: number; creditCardExpenses: number; recurrenceForecast: number; totalCommitted: number; projectedResult: number; }
 export interface FinancialDashboardRecurrence { id: string; description: string; amount: number; type: FinancialTransactionType; frequency: FinancialRecurrenceFrequency; interval: number; nextGenerationDate: string; sourceName: string; creditCard: boolean; }
 export interface FinancialInstallmentCommitment { purchaseId: string; description: string; creditCardName: string; currentInstallment: number; totalInstallments: number; remainingInstallments: number; installmentAmount: number; remainingAmount: number; nextDueDate: string; }
@@ -42,7 +43,7 @@ export interface FinancialDashboard {
   recurringExpenseNext30Days: number; activeRecurrenceCount: number;
   investmentSummary: FinancialInvestmentDashboard;
   incomeByCategory: FinancialCategorySummary[]; expenseByCategory: FinancialCategorySummary[];
-  invoices: FinancialInvoiceProjection[]; nextThreeMonths: FinancialMonthlyProjection[];
+  invoices: FinancialInvoiceProjection[]; upcomingInvoices: FinancialUpcomingInvoiceTotal[]; nextThreeMonths: FinancialMonthlyProjection[];
   recurrences: FinancialDashboardRecurrence[]; installmentCommitments: FinancialInstallmentCommitment[];
   budgets: FinancialBudgetProgress[]; upcomingItems: FinancialUpcomingItem[];
 }

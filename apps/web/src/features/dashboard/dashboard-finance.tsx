@@ -82,20 +82,20 @@ export function DashboardFinance({
             <FinancialValue label="Recorrências · 30d" value={finance.recurringExpenseNext30Days} icon={Repeat2} />
           </div>
 
-          {finance.nextThreeMonths.length > 0 ? (
+          {finance.upcomingInvoices.length > 0 ? (
             <div className="mt-3 rounded-2xl border border-white/[0.065] bg-white/[0.025] p-3">
               <div className="flex items-center gap-2 text-zinc-500">
                 <CalendarClock className="size-3.5" />
-                <p className="text-[0.68rem] uppercase tracking-[0.1em]">Próximos meses</p>
+                <p className="text-[0.68rem] uppercase tracking-[0.1em]">Próximas faturas</p>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {finance.nextThreeMonths.map((month) => (
+                {finance.upcomingInvoices.map((month) => (
                   <div key={month.referenceMonth} className="min-w-0">
                     <p className="truncate text-[0.65rem] capitalize text-zinc-600">
                       {monthFormatter.format(localDate(month.referenceMonth))}
                     </p>
                     <p className="mt-1 truncate text-xs font-medium text-zinc-300">
-                      {currencyFormatter.format(month.totalCommitted)}
+                      {currencyFormatter.format(month.totalAmount)}
                     </p>
                   </div>
                 ))}

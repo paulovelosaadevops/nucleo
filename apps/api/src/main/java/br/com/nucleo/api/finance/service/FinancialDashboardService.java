@@ -54,6 +54,7 @@ public class FinancialDashboardService {
     private final FinancialInvestmentRepository investmentRepository;
     private final FinancialTransferRepository transferRepository;
     private final FinancialInvestmentService investmentService;
+    private final FinancialUpcomingInvoiceCalculator upcomingInvoiceCalculator;
 
     public FinancialDashboardService(
             FamilyAccessService familyAccessService,
@@ -64,7 +65,8 @@ public class FinancialDashboardService {
             FinancialBudgetRepository budgetRepository,
             FinancialInvestmentRepository investmentRepository,
             FinancialTransferRepository transferRepository,
-            FinancialInvestmentService investmentService
+            FinancialInvestmentService investmentService,
+            FinancialUpcomingInvoiceCalculator upcomingInvoiceCalculator
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
@@ -75,6 +77,7 @@ public class FinancialDashboardService {
         this.investmentRepository = investmentRepository;
         this.transferRepository = transferRepository;
         this.investmentService = investmentService;
+        this.upcomingInvoiceCalculator = upcomingInvoiceCalculator;
     }
 
     @Transactional(readOnly = true)
@@ -197,6 +200,8 @@ public class FinancialDashboardService {
                 today.plusDays(30),
                 FinancialTransactionType.EXPENSE
         );
+        List<FinancialDashboardResponse.InvoiceProjection> invoices =
+                buildInvoices(invoiceAnchor, installments, openCommitments);
 
         return new FinancialDashboardResponse(
                 from,
@@ -224,7 +229,8 @@ public class FinancialDashboardService {
                         installments,
                         totalExpense
                 ),
-                buildInvoices(invoiceAnchor, installments, openCommitments),
+                invoices,
+                upcomingInvoiceCalculator.nextThreeInvoices(referenceMonth, invoices),
                 buildMonthlyProjections(
                         referenceMonth,
                         horizonTransactions,

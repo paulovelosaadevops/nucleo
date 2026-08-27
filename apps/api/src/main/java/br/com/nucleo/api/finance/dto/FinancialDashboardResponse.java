@@ -33,6 +33,7 @@ public record FinancialDashboardResponse(
         List<FinancialCategorySummaryResponse> incomeByCategory,
         List<FinancialCategorySummaryResponse> expenseByCategory,
         List<InvoiceProjection> invoices,
+        List<UpcomingInvoiceTotal> upcomingInvoices,
         List<MonthlyProjection> nextThreeMonths,
         List<RecurrenceItem> recurrences,
         List<InstallmentCommitment> installmentCommitments,
@@ -62,6 +63,13 @@ public record FinancialDashboardResponse(
             BigDecimal recurrenceForecast,
             BigDecimal totalCommitted,
             BigDecimal projectedResult
+    ) {
+    }
+
+    public record UpcomingInvoiceTotal(
+            LocalDate referenceMonth,
+            BigDecimal totalAmount,
+            long invoiceCount
     ) {
     }
 
