@@ -7,6 +7,7 @@ import {
   Landmark,
   ListRestart,
   ReceiptText,
+  TrendingUp,
   WalletCards,
 } from "lucide-react";
 
@@ -56,6 +57,11 @@ const items: Array<{
     value: "credit-cards",
     label: "Cartões",
     icon: CreditCard,
+  },
+  {
+    value: "investments",
+    label: "Investimentos",
+    icon: TrendingUp,
   },
 ];
 

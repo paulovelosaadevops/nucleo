@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { FinanceAccounts } from "./finance-accounts";
 import { FinanceBudgets } from "./finance-budgets";
 import { FinanceCategories } from "./finance-categories";
 import { FinanceCreditCards } from "./finance-credit-cards";
+import { FinanceInvestments } from "./finance-investments";
 import { FinanceNavigation } from "./finance-navigation";
 import { FinanceOverview } from "./finance-overview";
 import { FinanceRecurrences } from "./finance-recurrences";
@@ -16,17 +17,16 @@ import type { FinanceSection } from "@/types/finance";
 
 export function FinancePage() {
   const [activeSection, setActiveSection] =
-    useState<FinanceSection>("overview");
+    useState<FinanceSection>(() => {
+      if (typeof window === "undefined") {
+        return "overview";
+      }
 
-  useEffect(() => {
-    const parameters = new URLSearchParams(
-      window.location.search,
-    );
-
-    if (parameters.get("novo") === "true") {
-      setActiveSection("transactions");
-    }
-  }, []);
+      return new URLSearchParams(window.location.search)
+        .get("novo") === "true"
+        ? "transactions"
+        : "overview";
+    });
 
   function handleSectionChange(section: FinanceSection) {
     setActiveSection(section);
@@ -89,7 +89,7 @@ export function FinancePage() {
       />
 
       {activeSection === "overview" ? (
-        <FinanceOverview />
+        <FinanceOverview onOpenInvestments={() => handleSectionChange("investments")} />
       ) : activeSection === "transactions" ? (
         <FinanceTransactions />
       ) : activeSection === "accounts" ? (
@@ -100,8 +100,10 @@ export function FinancePage() {
         <FinanceBudgets />
       ) : activeSection === "recurrences" ? (
         <FinanceRecurrences />
-      ) : (
+      ) : activeSection === "credit-cards" ? (
         <FinanceCreditCards />
+      ) : (
+        <FinanceInvestments />
       )}
     </div>
   );

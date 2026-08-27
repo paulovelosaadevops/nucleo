@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialAccount;
+import br.com.nucleo.api.finance.domain.FinancialAccountType;
 import br.com.nucleo.api.finance.domain.FinancialBudget;
 import br.com.nucleo.api.finance.domain.FinancialBudgetStatus;
 import br.com.nucleo.api.finance.domain.FinancialCategory;
@@ -33,8 +34,10 @@ import br.com.nucleo.api.finance.dto.FinancialDashboardResponse;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialBudgetRepository;
 import br.com.nucleo.api.finance.repository.FinancialCreditCardInstallmentRepository;
+import br.com.nucleo.api.finance.repository.FinancialInvestmentRepository;
 import br.com.nucleo.api.finance.repository.FinancialRecurrenceRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
+import br.com.nucleo.api.finance.repository.FinancialTransferRepository;
 
 @Service
 public class FinancialDashboardService {
@@ -48,6 +51,9 @@ public class FinancialDashboardService {
     private final FinancialCreditCardInstallmentRepository installmentRepository;
     private final FinancialRecurrenceRepository recurrenceRepository;
     private final FinancialBudgetRepository budgetRepository;
+    private final FinancialInvestmentRepository investmentRepository;
+    private final FinancialTransferRepository transferRepository;
+    private final FinancialInvestmentService investmentService;
 
     public FinancialDashboardService(
             FamilyAccessService familyAccessService,
@@ -55,7 +61,10 @@ public class FinancialDashboardService {
             FinancialTransactionRepository transactionRepository,
             FinancialCreditCardInstallmentRepository installmentRepository,
             FinancialRecurrenceRepository recurrenceRepository,
-            FinancialBudgetRepository budgetRepository
+            FinancialBudgetRepository budgetRepository,
+            FinancialInvestmentRepository investmentRepository,
+            FinancialTransferRepository transferRepository,
+            FinancialInvestmentService investmentService
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
@@ -63,6 +72,9 @@ public class FinancialDashboardService {
         this.installmentRepository = installmentRepository;
         this.recurrenceRepository = recurrenceRepository;
         this.budgetRepository = budgetRepository;
+        this.investmentRepository = investmentRepository;
+        this.transferRepository = transferRepository;
+        this.investmentService = investmentService;
     }
 
     @Transactional(readOnly = true)
@@ -158,7 +170,13 @@ public class FinancialDashboardService {
                 .add(sumInstallmentAmounts(overdueInstallments));
         long overdueCount = overdueTransactions.size()
                 + overdueInstallments.size();
-        BigDecimal totalAccountBalance = calculateTotalAccountBalance(familyId);
+        BigDecimal availableAccountBalance = calculateAvailableAccountBalance(familyId);
+        BigDecimal investmentBalance =
+                zeroIfNull(investmentRepository.calculateInvestedBalance(familyId));
+        BigDecimal totalAccountBalance =
+                availableAccountBalance.add(investmentBalance);
+        var investmentSummary =
+                investmentService.dashboardForFamily(familyId, YearMonth.from(referenceMonth));
         BigDecimal currentInvoiceAmount = openCommitments.stream()
                 .filter(item -> item.getInvoice().getReferenceMonth()
                         .equals(invoiceAnchor))
@@ -184,7 +202,9 @@ public class FinancialDashboardService {
                 from,
                 to,
                 totalAccountBalance,
-                totalAccountBalance.add(pendingIncome).subtract(pendingExpense),
+                availableAccountBalance,
+                investmentBalance,
+                availableAccountBalance.add(pendingIncome).subtract(pendingExpense),
                 totalIncome,
                 totalExpense,
                 totalIncome.subtract(totalExpense),
@@ -197,6 +217,7 @@ public class FinancialDashboardService {
                 activeInstallmentPurchaseCount,
                 recurringExpenseNext30Days,
                 activeRecurrences.size(),
+                investmentSummary,
                 summarizeIncomeByCategory(transactions, totalIncome),
                 summarizeExpenseByCategory(
                         transactions,
@@ -558,16 +579,18 @@ public class FinancialDashboardService {
         };
     }
 
-    private BigDecimal calculateTotalAccountBalance(UUID familyId) {
+    private BigDecimal calculateAvailableAccountBalance(UUID familyId) {
         return accountRepository
                 .findAllByFamily_IdOrderByActiveDescNameAsc(familyId)
                 .stream()
                 .filter(FinancialAccount::isActive)
                 .filter(FinancialAccount::isIncludeInTotal)
+                .filter(account -> account.getType() != FinancialAccountType.INVESTMENT)
                 .map(account -> account.getInitialBalance().add(
                         zeroIfNull(accountRepository
                                 .calculatePaidMovementBalance(account.getId()))
-                ))
+                ).add(zeroIfNull(transferRepository
+                        .calculateCompletedTransferBalance(account.getId()))))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

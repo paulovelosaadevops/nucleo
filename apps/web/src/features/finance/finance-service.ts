@@ -7,6 +7,7 @@ import type {
   CreateFinancialCardPurchaseRequest,
   CreateFinancialCategoryRequest,
   CreateFinancialCreditCardRequest,
+  CreateFinancialInvestmentRequest,
   CreateFinancialRecurrenceRequest,
   CreateFinancialTransactionRequest,
   FinancialAccount,
@@ -18,11 +19,15 @@ import type {
   FinancialCreditCardInvoice,
   FinancialCreditCardPurchase,
   FinancialDashboard,
+  FinancialInvestment,
+  FinancialInvestmentDashboard,
   FinancialRecurrence,
   FinancialRecurrenceGenerationResult,
   FinancialTransaction,
   FinancialTransactionFilters,
+  InvestmentTransferRequest,
   PayFinancialInvoiceRequest,
+  ReconcileInvestmentRequest,
   UpdateFinancialAccountRequest,
   UpdateFinancialBudgetRequest,
   UpdateFinancialCardPurchaseRequest,
@@ -212,6 +217,77 @@ export const financeService = {
 
       return apiRequest<FinancialDashboard>(
         `${FINANCE_BASE_PATH}/dashboard${query}`,
+      );
+    },
+  },
+
+  investments: {
+    dashboard(): Promise<FinancialInvestmentDashboard> {
+      return apiRequest<FinancialInvestmentDashboard>(
+        `${FINANCE_BASE_PATH}/investments/dashboard`,
+      );
+    },
+
+    list(): Promise<FinancialInvestment[]> {
+      return apiRequest<FinancialInvestment[]>(
+        `${FINANCE_BASE_PATH}/investments`,
+      );
+    },
+
+    get(investmentId: string): Promise<FinancialInvestment> {
+      return apiRequest<FinancialInvestment>(
+        `${FINANCE_BASE_PATH}/investments/${investmentId}`,
+      );
+    },
+
+    create(
+      request: CreateFinancialInvestmentRequest,
+    ): Promise<FinancialInvestment> {
+      return apiRequest<FinancialInvestment>(
+        `${FINANCE_BASE_PATH}/investments`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    contribute(
+      investmentId: string,
+      request: InvestmentTransferRequest,
+    ): Promise<FinancialInvestment> {
+      return apiRequest<FinancialInvestment>(
+        `${FINANCE_BASE_PATH}/investments/${investmentId}/contributions`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    redeem(
+      investmentId: string,
+      request: InvestmentTransferRequest,
+    ): Promise<FinancialInvestment> {
+      return apiRequest<FinancialInvestment>(
+        `${FINANCE_BASE_PATH}/investments/${investmentId}/redemptions`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    reconcile(
+      investmentId: string,
+      request: ReconcileInvestmentRequest,
+    ): Promise<FinancialInvestment> {
+      return apiRequest<FinancialInvestment>(
+        `${FINANCE_BASE_PATH}/investments/${investmentId}/reconciliations`,
+        {
+          method: "POST",
+          body: request,
+        },
       );
     },
   },

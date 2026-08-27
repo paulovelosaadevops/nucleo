@@ -12,7 +12,6 @@ import {
   LoaderCircle,
   RefreshCw,
   Repeat2,
-  Scale,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -378,7 +377,11 @@ function DashboardSkeleton() {
   return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="h-36 animate-pulse rounded-[1.75rem] border border-white/10 bg-white/[0.035]" />)}</div>;
 }
 
-export function FinanceOverview() {
+export function FinanceOverview({
+  onOpenInvestments,
+}: {
+  onOpenInvestments?: () => void;
+}) {
   const { dashboard, error, loading, refreshing, periodLabel, previousMonth, nextMonth, currentMonth, refresh } = useFinanceDashboard();
 
   return (
@@ -409,11 +412,13 @@ export function FinanceOverview() {
       {!loading && !error && dashboard ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <FinanceSummaryCard label="Saldo disponível" value={formatCurrency(dashboard.totalAccountBalance)} description="Saldo realizado das contas" icon={Wallet} />
+            <FinanceSummaryCard label="Saldo disponível" value={formatCurrency(dashboard.availableAccountBalance ?? dashboard.totalAccountBalance)} description="Saldo realizado das contas" icon={Wallet} />
             <FinanceSummaryCard label="Saldo projetado" value={formatCurrency(dashboard.projectedBalance)} description="Após compromissos pendentes do período" icon={TrendingUp} emphasis={dashboard.projectedBalance >= 0 ? "positive" : "negative"} />
             <FinanceSummaryCard label="Receitas realizadas" value={formatCurrency(dashboard.totalIncome)} description={`${formatCurrency(dashboard.pendingIncome)} a receber`} icon={ArrowUpRight} emphasis="positive" />
             <FinanceSummaryCard label="Despesas realizadas" value={formatCurrency(dashboard.totalExpense)} description={`${formatCurrency(dashboard.pendingExpense)} comprometidos`} icon={ArrowDownLeft} emphasis="negative" />
-            <FinanceSummaryCard label="Resultado do período" value={formatCurrency(dashboard.periodBalance)} description="Receitas menos despesas realizadas" icon={Scale} emphasis={dashboard.periodBalance >= 0 ? "positive" : "negative"} />
+            <button type="button" onClick={onOpenInvestments} className="text-left">
+              <FinanceSummaryCard label="Investimentos" value={formatCurrency(dashboard.investmentBalance ?? dashboard.investmentSummary?.investedBalance ?? 0)} description={dashboard.investmentSummary?.valuationStatus === "RECONCILED" ? "Conciliado" : "Estimado"} icon={TrendingUp} emphasis={(dashboard.investmentSummary?.gainOrLossThisMonth ?? 0) >= 0 ? "positive" : "negative"} />
+            </button>
             <FinanceSummaryCard label="Fatura atual" value={formatCurrency(dashboard.currentInvoiceAmount)} description="Cartões no mês selecionado" icon={CreditCard} />
             <FinanceSummaryCard label="Parcelamentos restantes" value={formatCurrency(dashboard.remainingInstallmentAmount)} description={`${dashboard.activeInstallmentPurchaseCount} compra(s) parcelada(s)`} icon={Layers3} />
             <FinanceSummaryCard label="Recorrências · 30 dias" value={formatCurrency(dashboard.recurringExpenseNext30Days)} description={`${dashboard.activeRecurrenceCount} recorrência(s) ativa(s)`} icon={Repeat2} />

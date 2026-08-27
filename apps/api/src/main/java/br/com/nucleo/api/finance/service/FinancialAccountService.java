@@ -1,6 +1,5 @@
 package br.com.nucleo.api.finance.service;
 
-import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialAccount;
 import br.com.nucleo.api.finance.dto.ChangeInitialBalanceRequest;
 import br.com.nucleo.api.finance.dto.CreateFinancialAccountRequest;
@@ -8,6 +7,7 @@ import br.com.nucleo.api.finance.dto.FinancialAccountResponse;
 import br.com.nucleo.api.finance.dto.UpdateFinancialAccountRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
+import br.com.nucleo.api.finance.repository.FinancialTransferRepository;
 
 import br.com.nucleo.api.common.error.ResourceNotFoundException;
 import br.com.nucleo.api.family.service.FamilyAccessService;
@@ -24,15 +24,18 @@ public class FinancialAccountService {
     private final FamilyAccessService familyAccessService;
     private final FinancialAccountRepository accountRepository;
     private final FinancialTransactionRepository transactionRepository;
+    private final FinancialTransferRepository transferRepository;
 
     public FinancialAccountService(
             FamilyAccessService familyAccessService,
             FinancialAccountRepository accountRepository,
-            FinancialTransactionRepository transactionRepository
+            FinancialTransactionRepository transactionRepository,
+            FinancialTransferRepository transferRepository
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.transferRepository = transferRepository;
     }
 
     @Transactional
@@ -220,7 +223,11 @@ public class FinancialAccountService {
                 membership.getFamily().getId()
         );
 
-        if (transactionRepository.existsByAccount_Id(accountId)) {
+        if (transactionRepository.existsByAccount_Id(accountId)
+                || transferRepository.existsBySourceAccount_IdOrDestinationAccount_Id(
+                        accountId,
+                        accountId
+                )) {
             throw new IllegalArgumentException(
                     "A conta possui lançamentos e não pode ser excluída. Desative-a."
             );
@@ -245,15 +252,19 @@ public class FinancialAccountService {
     private FinancialAccountResponse toResponse(
             FinancialAccount account
     ) {
-        BigDecimal movements =
-                accountRepository.calculatePaidMovementBalance(
-                        account.getId()
-                );
+        BigDecimal movements = zeroIfNull(accountRepository
+                .calculatePaidMovementBalance(account.getId()));
+        BigDecimal transfers = zeroIfNull(transferRepository
+                .calculateCompletedTransferBalance(account.getId()));
 
         return FinancialAccountResponse.from(
                 account,
-                movements
+                movements.add(transfers)
         );
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private void ensureNameAvailable(

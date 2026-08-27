@@ -62,8 +62,31 @@ public interface FinancialAccountRepository
             where transaction.account.id = :accountId
               and transaction.status =
                   br.com.nucleo.api.finance.domain.FinancialTransactionStatus.PAID
+              and transaction.account.type <>
+                  br.com.nucleo.api.finance.domain.FinancialAccountType.INVESTMENT
             """)
     BigDecimal calculatePaidMovementBalance(
+            @Param("accountId") UUID accountId
+    );
+
+    @Query("""
+            select coalesce(
+                sum(
+                    case
+                        when transaction.type =
+                            br.com.nucleo.api.finance.domain.FinancialTransactionType.INCOME
+                            then transaction.amount
+                        else -transaction.amount
+                    end
+                ),
+                0
+            )
+            from FinancialTransaction transaction
+            where transaction.account.id = :accountId
+              and transaction.status =
+                  br.com.nucleo.api.finance.domain.FinancialTransactionStatus.PAID
+            """)
+    BigDecimal calculatePaidMovementBalanceIncludingInvestments(
             @Param("accountId") UUID accountId
     );
 }

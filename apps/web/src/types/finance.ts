@@ -10,6 +10,10 @@ export type FinancialCreditCardPurchaseStatus = "ACTIVE" | "CANCELLED";
 export type FinancialCreditCardPurchaseType = "DEBIT" | "CREDIT";
 export type FinancialCreditCardInstallmentStatus = "OPEN" | "CANCELLED";
 export type FinancialCreditCardInvoiceStatus = "OPEN" | "CLOSED" | "PAID" | "CANCELLED";
+export type FinancialInvestmentModality = "PERCENT_CDI" | "CDI_PLUS" | "PERCENT_SELIC" | "FIXED_RATE" | "IPCA_PLUS" | "SAVINGS" | "MANUAL" | "NO_YIELD";
+export type FinancialInvestmentAccrualStartRule = "SAME_BUSINESS_DAY" | "NEXT_BUSINESS_DAY" | "SETTLEMENT_DATE";
+export type FinancialInvestmentMovementType = "INITIAL_BALANCE" | "CONTRIBUTION" | "REDEMPTION" | "YIELD" | "VALUATION_ADJUSTMENT" | "RECONCILIATION" | "CONFIGURATION_CHANGE";
+export type FinancialInvestmentValuationStatus = "ESTIMATED" | "RECONCILED";
 
 export interface CreateFinancialAccountRequest { name: string; type: FinancialAccountType; initialBalance: number; color: string | null; includeInTotal: boolean; }
 export interface UpdateFinancialAccountRequest { name: string; type: FinancialAccountType; color: string | null; includeInTotal: boolean; }
@@ -27,14 +31,16 @@ export interface FinancialDashboardRecurrence { id: string; description: string;
 export interface FinancialInstallmentCommitment { purchaseId: string; description: string; creditCardName: string; currentInstallment: number; totalInstallments: number; remainingInstallments: number; installmentAmount: number; remainingAmount: number; nextDueDate: string; }
 export interface FinancialBudgetProgress { budgetId: string; categoryId: string; categoryName: string; limitAmount: number; committedAmount: number; remainingAmount: number; consumptionPercentage: number; status: FinancialBudgetStatus; }
 export interface FinancialUpcomingItem { kind: "TRANSACTION" | "INVOICE_INSTALLMENT"; id: string; description: string; sourceName: string; dueDate: string; amount: number; overdue: boolean; }
+export interface FinancialInvestmentDashboard { investedBalance: number; contributedThisMonth: number; gainOrLossThisMonth: number; monthlyReturnPercentage: number; valuationStatus: FinancialInvestmentValuationStatus; lastUpdatedAt: string | null; }
 
 export interface FinancialDashboard {
-  from: string; to: string; totalAccountBalance: number; projectedBalance: number;
+  from: string; to: string; totalAccountBalance: number; availableAccountBalance: number; investmentBalance: number; projectedBalance: number;
   totalIncome: number; totalExpense: number; periodBalance: number;
   pendingIncome: number; pendingExpense: number; overdueExpense: number;
   overdueTransactionCount: number; currentInvoiceAmount: number;
   remainingInstallmentAmount: number; activeInstallmentPurchaseCount: number;
   recurringExpenseNext30Days: number; activeRecurrenceCount: number;
+  investmentSummary: FinancialInvestmentDashboard;
   incomeByCategory: FinancialCategorySummary[]; expenseByCategory: FinancialCategorySummary[];
   invoices: FinancialInvoiceProjection[]; nextThreeMonths: FinancialMonthlyProjection[];
   recurrences: FinancialDashboardRecurrence[]; installmentCommitments: FinancialInstallmentCommitment[];
@@ -66,4 +72,10 @@ export interface FinancialCardPurchaseFilters { from: string; to: string; }
 export interface FinancialCreditCardInvoice { id: string; creditCardId: string; creditCardName: string; referenceMonth: string; closingDate: string; dueDate: string; status: FinancialCreditCardInvoiceStatus; totalAmount: number; paidAt: string | null; installments: FinancialCreditCardInstallment[]; createdAt: string; updatedAt: string; }
 export interface PayFinancialInvoiceRequest { accountId: string; paymentDate: string; paymentMethod: FinancialPaymentMethod; }
 
-export type FinanceSection = "overview" | "transactions" | "accounts" | "categories" | "budgets" | "recurrences" | "credit-cards";
+export interface CreateFinancialInvestmentRequest { name: string; institution: string; modality: FinancialInvestmentModality; startDate: string; initialAmount: number; maturityDate: string | null; liquidity: string | null; benchmarkPercentage: number | null; annualFixedRate: number | null; annualSpreadRate: number | null; taxExempt: boolean; autoCalculate: boolean; accrualStartRule: FinancialInvestmentAccrualStartRule; notes: string | null; }
+export interface InvestmentTransferRequest { accountId: string; amount: number; date: string; notes: string | null; }
+export interface ReconcileInvestmentRequest { realBalance: number; referenceDate: string; notes: string | null; }
+export interface FinancialInvestmentMovement { id: string; movementType: FinancialInvestmentMovementType; movementDate: string; amount: number; balanceAfter: number; notes: string | null; }
+export interface FinancialInvestment { id: string; accountId: string; name: string; institution: string; modality: FinancialInvestmentModality; benchmarkPercentage: number | null; annualFixedRate: number | null; annualSpreadRate: number | null; currentBalance: number; totalContributed: number; totalRedeemed: number; accumulatedYield: number; accumulatedReturnPercentage: number; valuationStatus: FinancialInvestmentValuationStatus; lastUpdatedAt: string | null; taxExempt: boolean; autoCalculate: boolean; movements: FinancialInvestmentMovement[]; }
+
+export type FinanceSection = "overview" | "transactions" | "accounts" | "categories" | "budgets" | "recurrences" | "credit-cards" | "investments";
