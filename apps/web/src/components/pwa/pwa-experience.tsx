@@ -232,7 +232,7 @@ export function PwaExperience() {
         >
           <WifiOff className="size-4 shrink-0 text-zinc-400" />
           <span>
-            Voc\u00ea est\u00e1 sem conex\u00e3o. Reconecte-se para acessar os dados atualizados do N\u00facleo.
+            Você está sem conexão. Reconecte-se para acessar os dados atualizados do Núcleo.
           </span>
         </div>
       ) : null}
@@ -265,7 +265,7 @@ export function PwaExperience() {
         >
           <RefreshCcw className="size-4 shrink-0 text-zinc-400" />
           <span className="min-w-0 flex-1">
-            Uma nova vers\u00e3o do N\u00facleo est\u00e1 dispon\u00edvel.
+            Uma nova versão do Núcleo está disponível.
           </span>
           <button
             type="button"
@@ -290,7 +290,7 @@ export function PwaExperience() {
       {canPromptInstall || showIosGuide ? (
         <div
           role="dialog"
-          aria-label="Instalar N\u00facleo"
+          aria-label="Instalar Núcleo"
           className="
             fixed
             inset-x-4
@@ -314,18 +314,18 @@ export function PwaExperience() {
             <Download className="mt-0.5 size-4 shrink-0 text-zinc-300" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-white">
-                Instalar N\u00facleo
+                Instalar Núcleo
               </p>
 
               {showIosGuide ? (
                 <ol className="mt-2 space-y-1 text-xs leading-5 text-zinc-400">
                   <li>1. Toque em Compartilhar.</li>
-                  <li>2. Escolha Adicionar \u00e0 Tela de In\u00edcio.</li>
+                  <li>2. Escolha Adicionar à Tela de Início.</li>
                   <li>3. Confirme em Adicionar.</li>
                 </ol>
               ) : (
                 <p className="mt-1 text-xs leading-5 text-zinc-400">
-                  Adicione o N\u00facleo \u00e0 tela inicial para abrir em modo de aplicativo.
+                  Adicione o Núcleo à tela inicial para abrir em modo de aplicativo.
                 </p>
               )}
             </div>
@@ -347,7 +347,7 @@ export function PwaExperience() {
                 hover:bg-white/[0.06]
                 hover:text-white
               "
-              aria-label="Dispensar instala\u00e7\u00e3o do N\u00facleo"
+              aria-label="Dispensar instalação do Núcleo"
             >
               <X className="size-4" />
             </button>
@@ -371,7 +371,7 @@ export function PwaExperience() {
                 hover:bg-zinc-200
               "
             >
-              Instalar N\u00facleo
+              Instalar Núcleo
             </button>
           ) : null}
         </div>

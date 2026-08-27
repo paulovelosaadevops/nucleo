@@ -214,7 +214,7 @@ export function FinancialInvoicePanel({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel carregar as faturas.",
+          : "Não foi possível carregar as faturas.",
       );
     } finally {
       setLoading(false);
@@ -243,7 +243,7 @@ export function FinancialInvoicePanel({
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "Nao foi possivel carregar as faturas.",
+            : "Não foi possível carregar as faturas.",
         );
       })
       .finally(() => {
@@ -343,7 +343,7 @@ export function FinancialInvoicePanel({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel realizar a acao.",
+          : "Não foi possível realizar a ação.",
       );
 
       return false;
@@ -421,7 +421,7 @@ export function FinancialInvoicePanel({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel excluir a compra.",
+          : "Não foi possível excluir a compra.",
       );
     } finally {
       setPurchaseActionId(null);
@@ -595,7 +595,7 @@ export function FinancialInvoicePanel({
                 </p>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
                   As faturas serao criadas automaticamente quando uma compra for
-                  registrada neste cartao.
+                  registrada neste cartão.
                 </p>
               </div>
             ) : null}
@@ -604,7 +604,7 @@ export function FinancialInvoicePanel({
               <div className="flex min-h-40 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 p-6 text-center">
                 <ReceiptText className="size-6 text-zinc-600" />
                 <p className="mt-3 text-sm font-medium text-zinc-300">
-                  Esta fatura nao possui lancamentos.
+                  Esta fatura não possui lançamentos.
                 </p>
               </div>
             ) : null}

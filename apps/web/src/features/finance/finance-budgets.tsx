@@ -167,8 +167,8 @@ export function FinanceBudgets() {
 
   async function removeBudget(budget: FinancialBudget) {
     const confirmed = await confirmDialog({
-      title: "Excluir orcamento",
-      description: `Deseja excluir o orcamento de "${budget.categoryName}"?`,
+      title: "Excluir orçamento",
+      description: `Deseja excluir o orçamento de "${budget.categoryName}"?`,
       confirmLabel: "Excluir",
       variant: "danger",
     });

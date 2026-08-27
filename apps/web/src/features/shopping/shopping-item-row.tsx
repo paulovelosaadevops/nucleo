@@ -73,8 +73,8 @@ export function ShoppingItemRow({
     const informedValue = await promptDialog({
       title: "Confirmar compra",
       description:
-        "Informe o preco unitario real, se quiser atualizar o valor comprado.",
-      label: "Preco unitario real",
+        "Informe o preço unitário real, se quiser atualizar o valor comprado.",
+      label: "Preço unitário real",
       defaultValue: initialValue,
       inputMode: "decimal",
       confirmLabel: "Confirmar",
@@ -100,7 +100,7 @@ export function ShoppingItemRow({
     ) {
       toast({
         variant: "warning",
-        message: "Informe um preco valido.",
+        message: "Informe um preço válido.",
       });
       return;
     }

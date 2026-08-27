@@ -60,8 +60,8 @@ export function AgendaActionMenu({
 
   async function deleteOccurrence() {
     const confirmed = await confirmDialog({
-      title: "Excluir ocorrencia",
-      description: "Excluir somente esta ocorrencia?",
+      title: "Excluir ocorrência",
+      description: "Excluir somente esta ocorrência?",
       confirmLabel: "Excluir",
       variant: "danger",
     });
@@ -75,10 +75,10 @@ export function AgendaActionMenu({
 
   async function deleteSeries() {
     const confirmed = await confirmDialog({
-      title: "Excluir serie",
+      title: "Excluir série",
       description:
-        "Excluir toda a serie recorrente? Esta acao nao podera ser desfeita.",
-      confirmLabel: "Excluir serie",
+        "Excluir toda a série recorrente? Esta ação não poderá ser desfeita.",
+      confirmLabel: "Excluir série",
       variant: "danger",
     });
 

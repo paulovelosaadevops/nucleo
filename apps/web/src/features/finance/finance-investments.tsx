@@ -95,7 +95,7 @@ export function FinanceInvestments() {
       setInvestments(investmentItems);
       setAccounts(accountItems);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Nao foi possivel carregar os investimentos.");
+      setError(exception instanceof Error ? exception.message : "Não foi possível carregar os investimentos.");
     } finally {
       setLoading(false);
     }
@@ -140,7 +140,7 @@ export function FinanceInvestments() {
       setInvestments((current) => [created, ...current]);
       setModal(null);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Nao foi possivel cadastrar o investimento.");
+      setError(exception instanceof Error ? exception.message : "Não foi possível cadastrar o investimento.");
     } finally {
       setSaving(false);
     }
@@ -166,7 +166,7 @@ export function FinanceInvestments() {
       replaceInvestment(updated);
       setTransfer(null);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Nao foi possivel registrar a movimentacao.");
+      setError(exception instanceof Error ? exception.message : "Não foi possível registrar a movimentação.");
     } finally {
       setSaving(false);
     }
@@ -187,7 +187,7 @@ export function FinanceInvestments() {
       replaceInvestment(await financeService.investments.reconcile(selected.id, request));
       setModal("details");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Nao foi possivel conciliar o investimento.");
+      setError(exception instanceof Error ? exception.message : "Não foi possível conciliar o investimento.");
     } finally {
       setSaving(false);
     }
@@ -200,7 +200,7 @@ export function FinanceInvestments() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">Investimentos</h2>
-          <p className="mt-1 text-sm text-zinc-500">Aportes, resgates, rendimento estimado e conciliacao manual.</p>
+          <p className="mt-1 text-sm text-zinc-500">Aportes, resgates, rendimento estimado e conciliação manual.</p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => void load()} className="flex size-10 items-center justify-center rounded-xl border border-white/10 text-zinc-400 transition hover:bg-white/[0.06] hover:text-white">
@@ -233,7 +233,7 @@ export function FinanceInvestments() {
       ) : investments.length === 0 ? (
         <div className="flex min-h-60 flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
           <p className="text-sm font-medium text-zinc-200">Nenhum investimento cadastrado.</p>
-          <p className="mt-2 max-w-md text-sm text-zinc-500">Cadastre uma caixinha, CDB ou aplicacao manual para acompanhar patrimonio investido separado do saldo disponivel.</p>
+          <p className="mt-2 max-w-md text-sm text-zinc-500">Cadastre uma caixinha, CDB ou aplicação manual para acompanhar patrimônio investido separado do saldo disponível.</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
@@ -364,7 +364,7 @@ function DetailsModal({ investment, onClose, onReconcile }: { investment: Financ
         </div>
         <div className="mt-6 divide-y divide-white/[0.07]">
           {investment.movements.length === 0 ? (
-            <p className="py-8 text-center text-sm text-zinc-500">Nenhuma movimentacao registrada.</p>
+            <p className="py-8 text-center text-sm text-zinc-500">Nenhuma movimentação registrada.</p>
           ) : investment.movements.map((movement) => (
             <div key={movement.id} className="flex items-center justify-between gap-4 py-3">
               <div className="min-w-0">

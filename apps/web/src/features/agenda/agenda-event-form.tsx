@@ -478,9 +478,9 @@ export function AgendaEventForm({
         await confirmDialog({
           title: "Compromisso criado",
           description:
-            "Deseja adicionar este compromisso tambem ao calendario do seu dispositivo?",
-          cancelLabel: "Agora nao",
-          confirmLabel: "Adicionar ao calendario",
+            "Deseja adicionar este compromisso ao calendário do seu dispositivo?",
+          cancelLabel: "Agora não",
+          confirmLabel: "Adicionar ao calendário",
         });
 
       if (!shouldAddToCalendar) {
@@ -512,7 +512,7 @@ export function AgendaEventForm({
         toast({
           variant: "error",
           message:
-            "Nao foi possivel gerar ou compartilhar o arquivo do calendario.",
+            "Não foi possível gerar ou compartilhar o arquivo do calendário.",
         });
       }
     } catch (error) {

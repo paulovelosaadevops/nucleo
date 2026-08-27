@@ -149,7 +149,7 @@ function safeFileName(value: string) {
   return (
     value
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\p{M}/gu, "")
       .replace(/[^a-zA-Z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .toLowerCase() || "compromisso"
@@ -179,7 +179,7 @@ export async function shareAgendaIcs(
   ) {
     await navigator.share({
       title: event.request.title,
-      text: "Adicionar compromisso ao calendario.",
+      text: "Adicionar compromisso ao calendário.",
       files: [file],
     });
     return;

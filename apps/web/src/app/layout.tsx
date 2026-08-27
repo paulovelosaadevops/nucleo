@@ -23,12 +23,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "N\u00facleo",
-    template: "%s | N\u00facleo",
+    default: "Núcleo",
+    template: "%s | Núcleo",
   },
   description:
-    "Central familiar privada para agenda, compras, finan\u00e7as e rotina da fam\u00edlia.",
-  applicationName: "N\u00facleo | Central Familiar",
+    "Central familiar privada para agenda, compras, finanças e rotina da família.",
+  applicationName: "Núcleo | Central Familiar",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "N\u00facleo",
+    title: "Núcleo",
   },
   formatDetection: {
     telephone: false,

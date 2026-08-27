@@ -228,7 +228,7 @@ export function FinanceCreditCards() {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "NÃ£o foi possÃ­vel carregar os cartÃµes.",
+            : "Não foi possível carregar os cartões.",
         );
       })
       .finally(() => {
@@ -474,8 +474,8 @@ export function FinanceCreditCards() {
                         title="Excluir"
                         onClick={() => {
                           void confirmDialog({
-                            title: "Excluir cartao",
-                            description: `Deseja excluir o cartao "${card.name}"?`,
+                            title: "Excluir cartão",
+                            description: `Deseja excluir o cartão "${card.name}"?`,
                             confirmLabel: "Excluir",
                             variant: "danger",
                           }).then((confirmed) => {

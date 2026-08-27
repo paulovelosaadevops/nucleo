@@ -7,30 +7,30 @@ const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
 const statusLabels: Record<AgendaOccurrenceDetails["status"], string> = {
   SCHEDULED: "Agendado",
-  COMPLETED: "Conclu\u00eddo",
+  COMPLETED: "Concluído",
   CANCELLED: "Cancelado",
 };
 
 const recurrenceLabels: Record<RecurrenceFrequency, string> = {
-  NONE: "N\u00e3o se repete",
-  DAILY: "Di\u00e1ria",
+  NONE: "Não se repete",
+  DAILY: "Diária",
   WEEKLY: "Semanal",
   MONTHLY: "Mensal",
   YEARLY: "Anual",
 };
 
 const whatsappEmoji = {
-  calendar: "\u{1F4C5}",
-  note: "\u{1F4DD}",
-  date: "\u{1F5D3}\u{FE0F}",
-  time: "\u{1F550}",
-  location: "\u{1F4CD}",
-  responsible: "\u{1F464}",
-  recurrence: "\u{1F501}",
-  status: "\u{1F4CC}",
-  observations: "\u{1F4AC}",
-  completed: "\u{2705}",
-  cancelled: "\u{274C}",
+  calendar: "📅",
+  note: "📝",
+  date: "🗓️",
+  time: "🕐",
+  location: "📍",
+  responsible: "👤",
+  recurrence: "🔁",
+  status: "📌",
+  observations: "💬",
+  completed: "✅",
+  cancelled: "❌",
 } as const;
 
 function formatter(
@@ -123,7 +123,7 @@ export function occurrenceTimeLabel(
     return start;
   }
 
-  return `${start} \u00e0s ${formatAgendaTime(occurrence.endsAt, timeZone)}`;
+  return `${start} às ${formatAgendaTime(occurrence.endsAt, timeZone)}`;
 }
 
 function addLine(
@@ -148,7 +148,7 @@ function ensureTerminalPunctuation(value: string): string {
     return trimmed;
   }
 
-  return /[.!?\u2026]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
 export function buildAgendaWhatsAppMessage(
@@ -156,7 +156,7 @@ export function buildAgendaWhatsAppMessage(
   timeZone?: string,
 ): string {
   const lines = [
-    `${whatsappEmoji.calendar} *COMPROMISSO \u2014 N\u00daCLEO*`,
+    `${whatsappEmoji.calendar} *COMPROMISSO — NÚCLEO*`,
     "",
   ];
 
@@ -167,17 +167,17 @@ export function buildAgendaWhatsAppMessage(
   }
 
   addLine(lines, whatsappEmoji.date, "Data", formatAgendaDate(occurrence.startsAt, timeZone));
-  addLine(lines, whatsappEmoji.time, "Hor\u00e1rio", occurrenceTimeLabel(occurrence, timeZone));
+  addLine(lines, whatsappEmoji.time, "Horário", occurrenceTimeLabel(occurrence, timeZone));
   addLine(lines, whatsappEmoji.location, "Local", occurrence.location);
-  addLine(lines, whatsappEmoji.responsible, "Respons\u00e1vel", occurrence.assignedTo?.name);
-  addLine(lines, whatsappEmoji.recurrence, "Recorr\u00eancia", recurrenceLabel(occurrence.recurrence));
+  addLine(lines, whatsappEmoji.responsible, "Responsável", occurrence.assignedTo?.name);
+  addLine(lines, whatsappEmoji.recurrence, "Recorrência", recurrenceLabel(occurrence.recurrence));
   addLine(lines, whatsappEmoji.status, "Status", statusLabels[occurrence.status]);
 
   if (occurrence.completedAt) {
     addLine(
       lines,
       whatsappEmoji.completed,
-      "Conclu\u00eddo em",
+      "Concluído em",
       formatAgendaDateTime(occurrence.completedAt, timeZone),
     );
   }
@@ -200,12 +200,12 @@ export function buildAgendaWhatsAppMessage(
   if (observation) {
     lines.push(
       "",
-      `${whatsappEmoji.observations} *Observa\u00e7\u00f5es:*`,
+      `${whatsappEmoji.observations} *Observações:*`,
       ensureTerminalPunctuation(observation),
     );
   }
 
-  lines.push("", "_Enviado pelo N\u00facleo | Central Familiar_");
+  lines.push("", "_Enviado pelo Núcleo | Central Familiar_");
 
   return lines.join("\n");
 }

@@ -243,8 +243,8 @@ export function FinanceRecurrences() {
 
   async function generateTransactions() {
     const until = await promptDialog({
-      title: "Gerar recorrencias",
-      description: "Gerar lancamentos ate qual data?",
+      title: "Gerar recorrências",
+      description: "Gerar lançamentos até qual data?",
       label: "Data limite",
       type: "date",
       defaultValue: todayAsInputValue(),
@@ -266,7 +266,7 @@ export function FinanceRecurrences() {
         );
 
       setMessage(
-        `${result.processedRecurrences} recorrencia(s) processada(s). As cobrancas vencidas agora aguardam confirmacao do valor real.`,
+        `${result.processedRecurrences} recorrência(s) processada(s). As cobranças vencidas agora aguardam confirmação do valor real.`,
       );
 
       await loadRecurrences();
@@ -283,8 +283,8 @@ export function FinanceRecurrences() {
 
   async function removeRecurrence(recurrence: FinancialRecurrence) {
     const confirmed = await confirmDialog({
-      title: "Excluir recorrencia",
-      description: `Deseja excluir a recorrencia "${recurrence.description}"? Os lancamentos ja gerados serao preservados.`,
+      title: "Excluir recorrência",
+      description: `Deseja excluir a recorrência "${recurrence.description}"? Os lançamentos já gerados serão preservados.`,
       confirmLabel: "Excluir",
       variant: "danger",
     });
@@ -318,9 +318,9 @@ export function FinanceRecurrences() {
     }
 
     const chargedDate = await promptDialog({
-      title: "Data da cobranca",
-      description: "Informe a data real da cobranca.",
-      label: "Data da cobranca",
+      title: "Data da cobrança",
+      description: "Informe a data real da cobrança.",
+      label: "Data da cobrança",
       type: "date",
       defaultValue: occurrence.scheduledDate,
       confirmLabel: "Continuar",
@@ -329,9 +329,9 @@ export function FinanceRecurrences() {
     if (!chargedDate) return;
 
     const notes = await promptDialog({
-      title: "Observacao",
-      description: "Inclua uma observacao opcional.",
-      label: "Observacao",
+      title: "Observação",
+      description: "Inclua uma observação opcional.",
+      label: "Observação",
       defaultValue: occurrence.notes ?? "",
       confirmLabel: "Confirmar",
     });
@@ -350,13 +350,13 @@ export function FinanceRecurrences() {
         paymentMethod: occurrence.paymentMethod,
         notes: notes || null,
       });
-      setMessage("Valor confirmado e lancamento criado.");
+      setMessage("Valor confirmado e lançamento criado.");
       await loadRecurrences();
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel confirmar a pendencia.",
+          : "Não foi possível confirmar a pendência.",
       );
     } finally {
       setActionId(null);
@@ -365,8 +365,8 @@ export function FinanceRecurrences() {
 
   async function skipOccurrence(occurrence: FinancialRecurrenceOccurrence) {
     const confirmed = await confirmDialog({
-      title: "Ignorar cobranca",
-      description: `Nao havera cobranca de ${occurrence.description} neste mes?`,
+      title: "Ignorar cobrança",
+      description: `Não haverá cobrança de ${occurrence.description} neste mês?`,
       confirmLabel: "Ignorar",
     });
 
@@ -378,15 +378,15 @@ export function FinanceRecurrences() {
 
     try {
       await financeService.recurrences.skipOccurrence(occurrence.id, {
-        notes: "Sem cobranca neste mes.",
+        notes: "Sem cobrança neste mês.",
       });
-      setMessage("Mes ignorado sem gerar lancamento.");
+      setMessage("Mês ignorado sem gerar lançamento.");
       await loadRecurrences();
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel ignorar a pendencia.",
+          : "Não foi possível ignorar a pendência.",
       );
     } finally {
       setActionId(null);
@@ -419,7 +419,7 @@ export function FinanceRecurrences() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel adiar o lembrete.",
+          : "Não foi possível adiar o lembrete.",
       );
     } finally {
       setActionId(null);
@@ -542,7 +542,7 @@ export function FinanceRecurrences() {
                     onClick={() => void skipOccurrence(occurrence)}
                     className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 disabled:opacity-50"
                   >
-                    Sem cobranca
+                    Sem cobrança
                   </button>
                   <button
                     type="button"

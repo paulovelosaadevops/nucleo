@@ -200,7 +200,7 @@ export function FeedbackProvider({
 
       {confirmState ? (
         <ModalShell
-          eyebrow="Confirma\u00e7\u00e3o"
+          eyebrow="Confirmação"
           title={confirmState.title}
           titleId="confirm-dialog-title"
           size="small"
@@ -241,7 +241,7 @@ export function FeedbackProvider({
 
       {promptState ? (
         <ModalShell
-          eyebrow="Informa\u00e7\u00e3o"
+          eyebrow="Informação"
           title={promptState.title}
           titleId="prompt-dialog-title"
           size="small"

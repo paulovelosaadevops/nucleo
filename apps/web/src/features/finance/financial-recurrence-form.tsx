@@ -590,8 +590,8 @@ export function FinancialRecurrenceForm({
                 </p>
 
                 <p className="mt-1 text-xs text-zinc-500">
-                  Defina quando as pendencias de confirmacao serao criadas.
-                  Nada entra na fatura antes da confirmacao do valor real.
+                  Defina quando as pendências de confirmação serão criadas.
+                  Nada entra na fatura antes da confirmação do valor real.
                 </p>
               </div>
 

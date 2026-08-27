@@ -10,15 +10,15 @@ import {
   recurrenceLabel,
 } from "./agenda-whatsapp";
 
-const replacementCharacter = "\uFFFD";
+const replacementCharacter = String.fromCharCode(0xfffd);
 
 const baseOccurrence: AgendaOccurrenceDetails = {
   occurrenceId: "occurrence-1",
   eventId: "event-1",
   title: "Consulta do Bernardo",
-  description: "Levar carteira de vacina\u00e7\u00e3o e exames.",
+  description: "Levar carteira de vacinação e exames.",
   category: "HEALTH",
-  location: "Cl\u00ednica Infantil",
+  location: "Clínica Infantil",
   allDay: false,
   startsAt: "2026-08-28T17:30:00Z",
   endsAt: "2026-08-28T18:30:00Z",
@@ -52,18 +52,18 @@ describe("agenda WhatsApp sharing", () => {
       "America/Sao_Paulo",
     );
 
-    expect(message).toContain("\u{1F4C5} *COMPROMISSO \u2014 N\u00daCLEO*");
-    expect(message).toContain("\u{1F4DD} *Consulta do Bernardo*");
-    expect(message).toContain("\u{1F5D3}\u{FE0F} *Data:* 28/08/2026");
-    expect(message).toContain("\u{1F550} *Hor\u00e1rio:* 14:30 \u00e0s 15:30");
-    expect(message).toContain("\u{1F4CD} *Local:* Cl\u00ednica Infantil");
-    expect(message).toContain("\u{1F464} *Respons\u00e1vel:* Paulo");
-    expect(message).toContain("\u{1F501} *Recorr\u00eancia:* N\u00e3o se repete");
-    expect(message).toContain("\u{1F4CC} *Status:* Agendado");
+    expect(message).toContain("📅 *COMPROMISSO — NÚCLEO*");
+    expect(message).toContain("📝 *Consulta do Bernardo*");
+    expect(message).toContain("🗓️ *Data:* 28/08/2026");
+    expect(message).toContain("🕐 *Horário:* 14:30 às 15:30");
+    expect(message).toContain("📍 *Local:* Clínica Infantil");
+    expect(message).toContain("👤 *Responsável:* Paulo");
+    expect(message).toContain("🔁 *Recorrência:* Não se repete");
+    expect(message).toContain("📌 *Status:* Agendado");
     expect(message).toContain(
-      "\u{1F4AC} *Observa\u00e7\u00f5es:*\nLevar carteira",
+      "💬 *Observações:*\nLevar carteira",
     );
-    expect(message).toContain("_Enviado pelo N\u00facleo | Central Familiar_");
+    expect(message).toContain("_Enviado pelo Núcleo | Central Familiar_");
   });
 
   it("omits empty optional fields", () => {
@@ -76,8 +76,8 @@ describe("agenda WhatsApp sharing", () => {
     });
 
     expect(message).not.toContain("*Local:*");
-    expect(message).not.toContain("*Respons\u00e1vel:*");
-    expect(message).not.toContain("*Observa\u00e7\u00f5es:*");
+    expect(message).not.toContain("*Responsável:*");
+    expect(message).not.toContain("*Observações:*");
   });
 
   it("shows all day instead of time range", () => {
@@ -89,15 +89,15 @@ describe("agenda WhatsApp sharing", () => {
 
     expect(occurrenceTimeLabel(occurrence)).toBe("Dia inteiro");
     expect(buildAgendaWhatsAppMessage(occurrence)).toContain(
-      "\u{1F550} *Hor\u00e1rio:* Dia inteiro",
+      "🕐 *Horário:* Dia inteiro",
     );
   });
 
   it("preserves accents and line breaks in the encoded URL", () => {
     const occurrence = {
       ...baseOccurrence,
-      title: "Reuni\u00e3o: N\u00facleo & fam\u00edlia",
-      description: "Linha 1\nLinha 2 com a\u00e7\u00e3o",
+      title: "Reunião: Núcleo & família",
+      description: "Linha 1\nLinha 2 com ação",
     };
 
     const url = buildAgendaWhatsAppUrl(occurrence, "America/Sao_Paulo");
@@ -106,33 +106,33 @@ describe("agenda WhatsApp sharing", () => {
     expect(url).toMatch(/^https:\/\/wa\.me\/\?text=/);
     expect(url).toContain("%F0%9F%93%85");
     expect(url).toContain("%C3%A3");
-    expect(decoded).toContain("Reuni\u00e3o: N\u00facleo & fam\u00edlia");
-    expect(decoded).toContain("Linha 1\nLinha 2 com a\u00e7\u00e3o.");
+    expect(decoded).toContain("Reunião: Núcleo & família");
+    expect(decoded).toContain("Linha 1\nLinha 2 com ação.");
   });
 
   it("does not replace emojis or double-encode the WhatsApp URL", () => {
     const occurrence = {
       ...baseOccurrence,
-      title: "Nata\u00e7\u00e3o Bernardo",
-      location: "Rua Pindorama, 456, Santo Andr\u00e9 \u2013 SP",
+      title: "Natação Bernardo",
+      location: "Rua Pindorama, 456, Santo André – SP",
       assignedTo: {
         membershipId: "membership-2",
         userId: "user-2",
-        name: "Gabriela De Marqui Nascimento Bert\u00e3o",
+        name: "Gabriela De Marqui Nascimento Bertão",
       },
       startsAt: "2026-09-02T13:30:00Z",
       endsAt: "2026-09-02T14:20:00Z",
-      description: "Nata\u00e7\u00e3o do Bernardo toda quarta-feira \u00e0s 10:30",
+      description: "Natação do Bernardo toda quarta-feira às 10:30",
     };
 
     const url = buildAgendaWhatsAppUrl(occurrence, "America/Sao_Paulo");
     const decoded = decodeURIComponent(url.replace("https://wa.me/?text=", ""));
 
-    expect(decoded).toContain("\u{1F4C5} *COMPROMISSO \u2014 N\u00daCLEO*");
-    expect(decoded).toContain("\u{1F4DD} *Nata\u00e7\u00e3o Bernardo*");
-    expect(decoded).toContain("\u{1F5D3}\u{FE0F} *Data:* 02/09/2026");
-    expect(decoded).toContain("\u{1F550} *Hor\u00e1rio:* 10:30 \u00e0s 11:20");
-    expect(decoded).toContain("Santo Andr\u00e9 \u2013 SP");
+    expect(decoded).toContain("📅 *COMPROMISSO — NÚCLEO*");
+    expect(decoded).toContain("📝 *Natação Bernardo*");
+    expect(decoded).toContain("🗓️ *Data:* 02/09/2026");
+    expect(decoded).toContain("🕐 *Horário:* 10:30 às 11:20");
+    expect(decoded).toContain("Santo André – SP");
     expect(decoded).not.toContain(replacementCharacter);
     expect(decoded).not.toContain("%F0%9F%93%85");
   });
@@ -144,8 +144,8 @@ describe("agenda WhatsApp sharing", () => {
     );
 
     expect(url).toMatch(/^https:\/\/web\.whatsapp\.com\/send\?text=/);
-    expect(decoded).toContain("\u{1F4C5}");
-    expect(decoded).toContain("\u{1F4DD}");
+    expect(decoded).toContain("📅");
+    expect(decoded).toContain("📝");
     expect(decoded).not.toContain(replacementCharacter);
     expect(decoded).not.toContain("%F0%9F%93%85");
   });
@@ -193,7 +193,7 @@ describe("agenda WhatsApp sharing", () => {
         },
         "America/Sao_Paulo",
       ),
-    ).toBe("23:30 \u00e0s 00:30");
+    ).toBe("23:30 às 00:30");
   });
 
   it("includes completion and cancellation dates when present", () => {
@@ -206,7 +206,7 @@ describe("agenda WhatsApp sharing", () => {
       "America/Sao_Paulo",
     );
 
-    expect(message).toContain("\u{1F4CC} *Status:* Cancelado");
-    expect(message).toContain("\u{274C} *Cancelado em:* 28/08/2026, 16:00");
+    expect(message).toContain("📌 *Status:* Cancelado");
+    expect(message).toContain("❌ *Cancelado em:* 28/08/2026, 16:00");
   });
 });

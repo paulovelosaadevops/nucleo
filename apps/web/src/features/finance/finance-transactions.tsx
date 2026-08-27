@@ -262,8 +262,8 @@ export function FinanceTransactions() {
 
   async function removeTransaction(transaction: FinancialTransaction) {
     const confirmed = await confirmDialog({
-      title: "Excluir lancamento",
-      description: `Deseja excluir o lancamento "${transaction.description}"?`,
+      title: "Excluir lançamento",
+      description: `Deseja excluir o lançamento "${transaction.description}"?`,
       confirmLabel: "Excluir",
       variant: "danger",
     });

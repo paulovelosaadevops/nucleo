@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "N\u00facleo | Central Familiar",
-    short_name: "N\u00facleo",
+    name: "Núcleo | Central Familiar",
+    short_name: "Núcleo",
     description:
-      "Central familiar privada para agenda, compras, finan\u00e7as e rotina.",
+      "Central familiar privada para agenda, compras, finanças e rotina.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -70,9 +70,9 @@ export default function manifest(): MetadataRoute.Manifest {
         ],
       },
       {
-        name: "Finan\u00e7as",
-        short_name: "Finan\u00e7as",
-        description: "Abrir o m\u00f3dulo financeiro.",
+        name: "Finanças",
+        short_name: "Finanças",
+        description: "Abrir o módulo financeiro.",
         url: "/financas",
         icons: [
           {

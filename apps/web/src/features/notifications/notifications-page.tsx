@@ -339,8 +339,8 @@ export function NotificationsPage() {
     notification: NotificationItem,
   ) {
     const confirmed = await confirmDialog({
-      title: "Excluir notificacao",
-      description: `Deseja excluir a notificacao "${notification.title}"?`,
+      title: "Excluir notificação",
+      description: `Deseja excluir a notificação "${notification.title}"?`,
       confirmLabel: "Excluir",
       variant: "danger",
     });

@@ -25,7 +25,7 @@ describe("agenda calendar export", () => {
         lastOccurrenceStartsAt: "2026-09-02T13:30:00.000Z",
       },
       request: {
-        title: "Natacao Bernardo",
+        title: "Natação Bernardo",
         description: "Levar roupa; toalha, e exame\nTudo pronto.",
         category: "APPOINTMENT",
         location: "Rua Pindorama, 456",
