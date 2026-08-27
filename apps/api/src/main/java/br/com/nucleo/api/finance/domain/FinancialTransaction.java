@@ -184,6 +184,28 @@ public class FinancialTransaction {
             int sequence,
             LocalDate generationDate
     ) {
+        return createFromRecurrence(
+                recurrence,
+                sequence,
+                generationDate,
+                recurrence.getAmount(),
+                recurrence.getCategory(),
+                recurrence.getAccount(),
+                recurrence.getPaymentMethod(),
+                recurrence.getNotes()
+        );
+    }
+
+    public static FinancialTransaction createFromRecurrence(
+            FinancialRecurrence recurrence,
+            int sequence,
+            LocalDate generationDate,
+            BigDecimal amount,
+            FinancialCategory category,
+            FinancialAccount account,
+            FinancialPaymentMethod paymentMethod,
+            String notes
+    ) {
         FinancialRecurrence source =
                 Objects.requireNonNull(recurrence);
 
@@ -195,21 +217,21 @@ public class FinancialTransaction {
 
         return new FinancialTransaction(
                 source.getFamily(),
-                source.getAccount(),
-                source.getCategory(),
+                account,
+                category,
                 source,
                 sequence,
                 null,
                 false,
                 source.getType(),
                 source.getDescription(),
-                source.getAmount(),
+                amount,
                 generationDate,
                 generationDate,
                 FinancialTransactionStatus.PENDING,
-                source.getPaymentMethod(),
+                paymentMethod,
                 source.getCreatedBy(),
-                source.getNotes()
+                notes
         );
     }
 

@@ -86,6 +86,9 @@ public class FinancialRecurrence {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(name = "requires_confirmation", nullable = false)
+    private boolean requiresConfirmation;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdBy;
@@ -161,6 +164,7 @@ public class FinancialRecurrence {
         );
         this.nextGenerationDate = startDate;
         this.active = true;
+        this.requiresConfirmation = true;
 
         validatePeriod(startDate, endDate);
     }
@@ -561,6 +565,10 @@ public class FinancialRecurrence {
 
     public boolean isActive() {
         return active;
+    }
+
+    public boolean isRequiresConfirmation() {
+        return requiresConfirmation;
     }
 
     public User getCreatedBy() {

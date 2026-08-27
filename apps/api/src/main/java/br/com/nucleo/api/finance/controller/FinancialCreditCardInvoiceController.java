@@ -1,6 +1,7 @@
 package br.com.nucleo.api.finance.controller;
 
 import br.com.nucleo.api.finance.dto.FinancialCreditCardInvoiceResponse;
+import br.com.nucleo.api.finance.dto.FinancialInvoiceCategorySummaryResponse;
 import br.com.nucleo.api.finance.dto.PayFinancialCreditCardInvoiceRequest;
 import br.com.nucleo.api.finance.service.FinancialCreditCardInvoiceService;
 import jakarta.validation.Valid;
@@ -48,6 +49,17 @@ public class FinancialCreditCardInvoiceController {
             @PathVariable UUID invoiceId
     ) {
         return invoiceService.findById(
+                userId(jwt),
+                invoiceId
+        );
+    }
+
+    @GetMapping("/{invoiceId}/category-summary")
+    public List<FinancialInvoiceCategorySummaryResponse> categorySummary(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID invoiceId
+    ) {
+        return invoiceService.categorySummary(
                 userId(jwt),
                 invoiceId
         );

@@ -26,6 +26,7 @@ import type {
   FinancialCreditCard,
   FinancialCreditCardInstallment,
   FinancialCreditCardInvoice,
+  FinancialInvoiceCategorySummary,
   FinancialPaymentMethod,
 } from "@/types/finance";
 
@@ -190,6 +191,11 @@ export function FinancialInvoicePanel({
   const [paymentMethod, setPaymentMethod] =
     useState<FinancialPaymentMethod>("PIX");
   const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [categorySummary, setCategorySummary] = useState<
+    FinancialInvoiceCategorySummary[]
+  >([]);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -265,6 +271,59 @@ export function FinancialInvoicePanel({
         : [],
     [selectedInvoice],
   );
+
+  const visibleInstallments = useMemo(
+    () =>
+      categoryFilter === null
+        ? selectedInstallments
+        : selectedInstallments.filter(
+            (installment) =>
+              (installment.categoryId ?? "uncategorized") === categoryFilter,
+          ),
+    [categoryFilter, selectedInstallments],
+  );
+
+  useEffect(() => {
+    if (!selectedInvoice) {
+      const timeout = window.setTimeout(() => {
+        setCategorySummary([]);
+        setCategoryFilter(null);
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
+    }
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      if (active) {
+        setSummaryLoading(true);
+        setCategoryFilter(null);
+      }
+    }, 0);
+
+    financeService.invoices
+      .categorySummary(selectedInvoice.id)
+      .then((summary) => {
+        if (active) {
+          setCategorySummary(summary);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCategorySummary([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setSummaryLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [selectedInvoice]);
 
   async function executeAction(
     invoiceId: string,
@@ -538,9 +597,25 @@ export function FinancialInvoicePanel({
               </div>
             ) : null}
 
+            {!loading && selectedInvoice && selectedInstallments.length > 0 ? (
+              <InvoiceCategoryChart
+                summary={categorySummary}
+                loading={summaryLoading}
+                selectedCategoryKey={categoryFilter}
+                recurrenceCount={
+                  new Set(
+                    selectedInstallments
+                      .map((installment) => installment.recurrenceId)
+                      .filter(Boolean),
+                  ).size
+                }
+                onSelectCategory={setCategoryFilter}
+              />
+            ) : null}
+
             {!loading && selectedInstallments.length > 0 ? (
               <div className="divide-y divide-white/[0.07] overflow-hidden border-y border-white/[0.07]">
-                {selectedInstallments.map((installment) => (
+                {visibleInstallments.map((installment) => (
                   <PurchaseRow
                     key={installment.id}
                     installment={installment}
@@ -736,6 +811,138 @@ function InvoiceActions({
         </Button>
       ) : null}
     </div>
+  );
+}
+
+function InvoiceCategoryChart({
+  summary,
+  loading,
+  selectedCategoryKey,
+  recurrenceCount,
+  onSelectCategory,
+}: {
+  summary: FinancialInvoiceCategorySummary[];
+  loading: boolean;
+  selectedCategoryKey: string | null;
+  recurrenceCount: number;
+  onSelectCategory: (categoryKey: string | null) => void;
+}) {
+  const total = summary.reduce((sum, item) => sum + item.amount, 0);
+  const itemCount = summary.reduce((sum, item) => sum + item.itemCount, 0);
+  const biggest = [...summary].sort(
+    (left, right) => Math.abs(right.amount) - Math.abs(left.amount),
+  )[0];
+  const palette = ["#f8fafc", "#a1a1aa", "#71717a", "#22c55e", "#f97316"];
+  const segments = summary
+    .filter((item) => item.amount > 0)
+    .reduce<{ cursor: number; values: string[] }>(
+      (state, item, index) => {
+        const start = state.cursor;
+      const share = total > 0 ? (item.amount / total) * 100 : 0;
+        const end = start + share;
+
+        return {
+          cursor: end,
+          values: [
+            ...state.values,
+            `${item.color ?? palette[index % palette.length]} ${start}% ${end}%`,
+          ],
+        };
+      },
+      { cursor: 0, values: [] },
+    )
+    .values.join(", ");
+
+  return (
+    <section className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div
+          className="relative mx-auto grid size-32 shrink-0 place-items-center rounded-full sm:mx-0"
+          style={{
+            background: segments
+              ? `conic-gradient(${segments})`
+              : "conic-gradient(rgba(255,255,255,0.12) 0 100%)",
+          }}
+          aria-label="Gastos por categoria"
+        >
+          <div className="grid size-20 place-items-center rounded-full bg-[#090909] text-center">
+            <span className="text-[0.65rem] text-zinc-500">Total</span>
+            <span className="text-xs font-semibold text-white">
+              {currencyFormatter.format(total)}
+            </span>
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-white">
+                Gastos por categoria
+              </h3>
+              <p className="text-xs text-zinc-500">
+                {loading
+                  ? "Carregando resumo"
+                  : `${itemCount} item(ns) considerados`}
+              </p>
+            </div>
+
+            {selectedCategoryKey ? (
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 px-2 py-1 text-xs text-zinc-300 hover:bg-white/[0.06]"
+                onClick={() => onSelectCategory(null)}
+              >
+                Limpar filtro
+              </button>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2 text-xs text-zinc-400 sm:grid-cols-3">
+            <span>Total considerado: {currencyFormatter.format(total)}</span>
+            <span>Maior: {biggest?.categoryName ?? "Sem dados"}</span>
+            <span>Recorrencias: {recurrenceCount}</span>
+          </div>
+
+          <div className="grid gap-1.5">
+            {summary.map((item, index) => {
+              const categoryKey = item.categoryId ?? "uncategorized";
+              const selected = selectedCategoryKey === categoryKey;
+
+              return (
+                <button
+                  key={categoryKey}
+                  type="button"
+                  className={[
+                    "flex items-center gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/[0.06]",
+                    selected ? "bg-white/[0.08]" : "",
+                  ].join(" ")}
+                  onClick={() =>
+                    onSelectCategory(selected ? null : categoryKey)
+                  }
+                >
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        item.color ?? palette[index % palette.length],
+                    }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-zinc-300">
+                    {item.categoryName}
+                  </span>
+                  <span className="text-zinc-500">
+                    {Number(item.percentage).toFixed(2)}%
+                  </span>
+                  <span className="w-24 text-right font-medium tabular-nums text-white">
+                    {currencyFormatter.format(item.amount)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

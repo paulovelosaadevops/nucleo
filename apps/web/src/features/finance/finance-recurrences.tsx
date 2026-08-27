@@ -28,6 +28,7 @@ import type {
   FinancialCategory,
   FinancialCreditCard,
   FinancialRecurrence,
+  FinancialRecurrenceOccurrence,
   FinancialRecurrenceFrequency,
   UpdateFinancialRecurrenceRequest,
 } from "@/types/finance";
@@ -71,6 +72,9 @@ export function FinanceRecurrences() {
   const [recurrences, setRecurrences] = useState<
     FinancialRecurrence[]
   >([]);
+  const [occurrences, setOccurrences] = useState<
+    FinancialRecurrenceOccurrence[]
+  >([]);
 
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [categories, setCategories] = useState<
@@ -94,9 +98,13 @@ export function FinanceRecurrences() {
     setError(null);
 
     try {
-      setRecurrences(
-        await financeService.recurrences.list(),
-      );
+      const [recurrenceResult, occurrenceResult] = await Promise.all([
+        financeService.recurrences.list(),
+        financeService.recurrences.occurrences(true),
+      ]);
+
+      setRecurrences(recurrenceResult);
+      setOccurrences(occurrenceResult);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -145,14 +153,17 @@ export function FinanceRecurrences() {
   useEffect(() => {
     let active = true;
 
-    financeService.recurrences
-      .list()
-      .then((response) => {
+    Promise.all([
+      financeService.recurrences.list(),
+      financeService.recurrences.occurrences(true),
+    ])
+      .then(([recurrenceResult, occurrenceResult]) => {
         if (!active) {
           return;
         }
 
-        setRecurrences(response);
+        setRecurrences(recurrenceResult);
+        setOccurrences(occurrenceResult);
         setError(null);
       })
       .catch((requestError: unknown) => {
@@ -247,7 +258,7 @@ export function FinanceRecurrences() {
         );
 
       setMessage(
-        `${result.createdTransactions} lançamento(s) em conta e ${result.createdCreditCardPurchases} compra(s) no cartão criados a partir de ${result.processedRecurrences} recorrência(s).`,
+        `${result.processedRecurrences} recorrencia(s) processada(s). As cobrancas vencidas agora aguardam confirmacao do valor real.`,
       );
 
       await loadRecurrences();
@@ -274,6 +285,114 @@ export function FinanceRecurrences() {
     void executeAction(recurrence.id, () =>
       financeService.recurrences.remove(recurrence.id),
     );
+  }
+
+  async function confirmOccurrence(occurrence: FinancialRecurrenceOccurrence) {
+    const value = window.prompt(
+      `Informe o valor real de ${occurrence.description}`,
+      String(occurrence.estimatedAmount),
+    );
+
+    if (value === null) return;
+
+    const amount = Number(value.replace(",", "."));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Informe um valor real maior que zero.");
+      return;
+    }
+
+    const chargedDate = window.prompt(
+      "Informe a data real da cobranca",
+      occurrence.scheduledDate,
+    );
+
+    if (!chargedDate) return;
+
+    const notes = window.prompt("Observacao opcional", occurrence.notes ?? "");
+
+    setActionId(occurrence.id);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await financeService.recurrences.confirmOccurrence(occurrence.id, {
+        amount,
+        chargedDate,
+        categoryId: occurrence.categoryId,
+        accountId: occurrence.accountId,
+        creditCardId: occurrence.creditCardId,
+        paymentMethod: occurrence.paymentMethod,
+        notes: notes || null,
+      });
+      setMessage("Valor confirmado e lancamento criado.");
+      await loadRecurrences();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Nao foi possivel confirmar a pendencia.",
+      );
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function skipOccurrence(occurrence: FinancialRecurrenceOccurrence) {
+    const confirmed = window.confirm(
+      `Nao havera cobranca de ${occurrence.description} neste mes?`,
+    );
+
+    if (!confirmed) return;
+
+    setActionId(occurrence.id);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await financeService.recurrences.skipOccurrence(occurrence.id, {
+        notes: "Sem cobranca neste mes.",
+      });
+      setMessage("Mes ignorado sem gerar lancamento.");
+      await loadRecurrences();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Nao foi possivel ignorar a pendencia.",
+      );
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function postponeOccurrence(occurrence: FinancialRecurrenceOccurrence) {
+    const reminderDate = window.prompt(
+      "Adiar lembrete para qual data?",
+      occurrence.reminderDate ?? occurrence.scheduledDate,
+    );
+
+    if (!reminderDate) return;
+
+    setActionId(occurrence.id);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await financeService.recurrences.postponeOccurrence(occurrence.id, {
+        reminderDate,
+      });
+      setMessage("Lembrete adiado.");
+      await loadRecurrences();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Nao foi possivel adiar o lembrete.",
+      );
+    } finally {
+      setActionId(null);
+    }
   }
 
   return (
@@ -335,6 +454,78 @@ export function FinanceRecurrences() {
         <div className="flex min-h-60 items-center justify-center rounded-[1.75rem] border border-white/10">
           <LoaderCircle className="size-6 animate-spin text-zinc-500" />
         </div>
+      ) : null}
+
+      {!loading && occurrences.length > 0 ? (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">
+                Pendencias de valor real
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Confirme o valor antes de entrar na conta ou fatura.
+              </p>
+            </div>
+            <FinanceStatusPill tone="warning">
+              {occurrences.length}
+            </FinanceStatusPill>
+          </div>
+
+          <div className="divide-y divide-white/[0.07] border-y border-white/[0.07]">
+            {occurrences.map((occurrence) => (
+              <div
+                key={occurrence.id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-white">
+                    {occurrence.description}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {occurrence.categoryName ?? "Sem categoria"} ·{" "}
+                    {occurrence.creditCardName ??
+                      occurrence.accountName ??
+                      "Sem origem"}{" "}
+                    · {formatDate(occurrence.scheduledDate)} · ref.{" "}
+                    {formatDate(occurrence.referenceMonth)}
+                  </p>
+                </div>
+
+                <p className="text-sm font-semibold tabular-nums text-zinc-200">
+                  {currencyFormatter.format(occurrence.estimatedAmount)}
+                </p>
+
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <button
+                    type="button"
+                    disabled={actionId === occurrence.id}
+                    onClick={() => void confirmOccurrence(occurrence)}
+                    className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-black disabled:opacity-50"
+                  >
+                    Confirmar valor
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionId === occurrence.id}
+                    onClick={() => void skipOccurrence(occurrence)}
+                    className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 disabled:opacity-50"
+                  >
+                    Sem cobranca
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionId === occurrence.id}
+                    onClick={() => void postponeOccurrence(occurrence)}
+                    className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 disabled:opacity-50"
+                  >
+                    Adiar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {!loading && recurrences.length === 0 ? (

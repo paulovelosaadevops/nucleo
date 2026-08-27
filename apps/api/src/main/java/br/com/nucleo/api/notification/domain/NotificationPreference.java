@@ -140,6 +140,7 @@ public class NotificationPreference {
 
             case FINANCIAL_BUDGET_ALERT,
                     FINANCIAL_TRANSACTION_DUE,
+                    FINANCIAL_RECURRENCE_CONFIRMATION,
                     CREDIT_CARD_INVOICE_DUE ->
                     financeEnabled;
 

@@ -441,6 +441,11 @@ export function FinancialRecurrenceForm({
                 }
                 className={inputClassName}
               />
+
+              <p className="mt-2 text-xs leading-5 text-zinc-500">
+                Valor de referencia. O valor real sera solicitado mensalmente
+                antes de entrar na conta ou fatura.
+              </p>
             </div>
 
             <div>
@@ -585,7 +590,8 @@ export function FinancialRecurrenceForm({
                 </p>
 
                 <p className="mt-1 text-xs text-zinc-500">
-                  Defina quando os lançamentos serão gerados.
+                  Defina quando as pendencias de confirmacao serao criadas.
+                  Nada entra na fatura antes da confirmacao do valor real.
                 </p>
               </div>
 

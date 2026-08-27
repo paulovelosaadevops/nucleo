@@ -192,6 +192,27 @@ public class FinancialCreditCardPurchaseService {
             int recurrenceSequence,
             LocalDate purchaseDate
     ) {
+        return createFromRecurrence(
+                recurrence,
+                recurrenceSequence,
+                purchaseDate,
+                recurrence.getAmount(),
+                recurrence.getCategory(),
+                recurrence.getCreditCard(),
+                recurrence.getNotes()
+        );
+    }
+
+    @Transactional
+    public FinancialCreditCardPurchase createFromRecurrence(
+            FinancialRecurrence recurrence,
+            int recurrenceSequence,
+            LocalDate purchaseDate,
+            BigDecimal amount,
+            FinancialCategory selectedCategory,
+            FinancialCreditCard selectedCard,
+            String notes
+    ) {
         Objects.requireNonNull(
                 recurrence,
                 "Recurrence cannot be null"
@@ -208,20 +229,20 @@ public class FinancialCreditCardPurchaseService {
             );
         }
 
-        if (recurrence.getCreditCard() == null) {
+        if (selectedCard == null) {
             throw new IllegalArgumentException(
                     "A recorrência não possui cartão de crédito"
             );
         }
 
         FinancialCreditCard card = requireActiveCard(
-                recurrence.getCreditCard().getId(),
+                selectedCard.getId(),
                 familyId
         );
 
-        UUID categoryId = recurrence.getCategory() == null
+        UUID categoryId = selectedCategory == null
                 ? null
-                : recurrence.getCategory().getId();
+                : selectedCategory.getId();
 
         FinancialCategory category = findExpenseCategory(
                 categoryId,
@@ -233,7 +254,11 @@ public class FinancialCreditCardPurchaseService {
                         .createFromRecurrence(
                                 recurrence,
                                 recurrenceSequence,
-                                purchaseDate
+                                purchaseDate,
+                                amount,
+                                category,
+                                card,
+                                notes
                         );
 
         purchaseRepository.save(purchase);
@@ -254,7 +279,7 @@ public class FinancialCreditCardPurchaseService {
                         purchase,
                         invoice,
                         1,
-                        recurrence.getAmount()
+                        amount
                 );
 
         installmentRepository.save(installment);

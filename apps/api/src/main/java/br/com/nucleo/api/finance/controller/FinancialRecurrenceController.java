@@ -1,8 +1,12 @@
 package br.com.nucleo.api.finance.controller;
 
 import br.com.nucleo.api.finance.dto.CreateFinancialRecurrenceRequest;
+import br.com.nucleo.api.finance.dto.ConfirmFinancialRecurrenceOccurrenceRequest;
+import br.com.nucleo.api.finance.dto.FinancialRecurrenceOccurrenceResponse;
 import br.com.nucleo.api.finance.dto.FinancialRecurrenceResponse;
 import br.com.nucleo.api.finance.dto.GenerateFinancialRecurrencesResponse;
+import br.com.nucleo.api.finance.dto.PostponeFinancialRecurrenceOccurrenceRequest;
+import br.com.nucleo.api.finance.dto.SkipFinancialRecurrenceOccurrenceRequest;
 import br.com.nucleo.api.finance.dto.UpdateFinancialRecurrenceRequest;
 import br.com.nucleo.api.finance.service.FinancialRecurrenceService;
 
@@ -65,6 +69,59 @@ public class FinancialRecurrenceController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return recurrenceService.list(userId(jwt));
+    }
+
+    @GetMapping("/occurrences")
+    public List<FinancialRecurrenceOccurrenceResponse> listOccurrences(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "false") boolean pendingOnly
+    ) {
+        return recurrenceService.listOccurrences(
+                userId(jwt),
+                pendingOnly
+        );
+    }
+
+    @PostMapping("/occurrences/{occurrenceId}/confirm")
+    public FinancialRecurrenceOccurrenceResponse confirmOccurrence(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid @RequestBody
+            ConfirmFinancialRecurrenceOccurrenceRequest request
+    ) {
+        return recurrenceService.confirmOccurrence(
+                userId(jwt),
+                occurrenceId,
+                request
+        );
+    }
+
+    @PatchMapping("/occurrences/{occurrenceId}/skip")
+    public FinancialRecurrenceOccurrenceResponse skipOccurrence(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid @RequestBody
+            SkipFinancialRecurrenceOccurrenceRequest request
+    ) {
+        return recurrenceService.skipOccurrence(
+                userId(jwt),
+                occurrenceId,
+                request
+        );
+    }
+
+    @PatchMapping("/occurrences/{occurrenceId}/postpone")
+    public FinancialRecurrenceOccurrenceResponse postponeOccurrence(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID occurrenceId,
+            @Valid @RequestBody
+            PostponeFinancialRecurrenceOccurrenceRequest request
+    ) {
+        return recurrenceService.postponeOccurrence(
+                userId(jwt),
+                occurrenceId,
+                request
+        );
     }
 
     @PutMapping("/{recurrenceId}")

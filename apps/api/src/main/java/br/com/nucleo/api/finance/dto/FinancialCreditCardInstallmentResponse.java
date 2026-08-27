@@ -10,6 +10,7 @@ import java.util.UUID;
 public record FinancialCreditCardInstallmentResponse(
         UUID id,
         UUID purchaseId,
+        UUID recurrenceId,
         String purchaseDescription,
         LocalDate purchaseDate,
         FinancialCreditCardPurchaseType purchaseType,
@@ -46,6 +47,9 @@ public record FinancialCreditCardInstallmentResponse(
         return new FinancialCreditCardInstallmentResponse(
                 installment.getId(),
                 installment.getPurchase().getId(),
+                installment.getPurchase().getRecurrence() == null
+                        ? null
+                        : installment.getPurchase().getRecurrence().getId(),
                 installment.getPurchase().getDescription(),
                 installment.getPurchase().getPurchaseDate(),
                 installment.getPurchase().getPurchaseType(),

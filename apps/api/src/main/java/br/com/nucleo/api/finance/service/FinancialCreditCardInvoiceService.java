@@ -10,6 +10,7 @@ import br.com.nucleo.api.finance.domain.FinancialCreditCardInvoice;
 import br.com.nucleo.api.finance.domain.FinancialTransaction;
 import br.com.nucleo.api.finance.dto.FinancialCreditCardInstallmentResponse;
 import br.com.nucleo.api.finance.dto.FinancialCreditCardInvoiceResponse;
+import br.com.nucleo.api.finance.dto.FinancialInvoiceCategorySummaryResponse;
 import br.com.nucleo.api.finance.dto.PayFinancialCreditCardInvoiceRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialCreditCardInstallmentRepository;
@@ -17,7 +18,10 @@ import br.com.nucleo.api.finance.repository.FinancialCreditCardInvoicePaymentRep
 import br.com.nucleo.api.finance.repository.FinancialCreditCardInvoiceRepository;
 import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,6 +96,83 @@ public class FinancialCreditCardInvoiceService {
                         membership.getFamily().getId()
                 )
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<FinancialInvoiceCategorySummaryResponse> categorySummary(
+            UUID currentUserId,
+            UUID invoiceId
+    ) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(
+                        currentUserId
+                );
+
+        requireInvoice(
+                invoiceId,
+                membership.getFamily().getId()
+        );
+
+        List<FinancialCreditCardInstallment> installments =
+                installmentRepository
+                        .findAllByInvoice_IdOrderByInstallmentNumberAsc(
+                                invoiceId
+                        );
+
+        Map<UUID, CategoryBucket> buckets = new LinkedHashMap<>();
+        CategoryBucket uncategorized = new CategoryBucket(
+                null,
+                "Sem categoria",
+                null,
+                true
+        );
+
+        for (FinancialCreditCardInstallment installment : installments) {
+            if (installment.isCancelled()
+                    || installment.getPurchase().isCancelled()) {
+                continue;
+            }
+
+            BigDecimal signedAmount = installment.getSignedAmount();
+            UUID categoryId = installment.getPurchase().getCategory() == null
+                    ? null
+                    : installment.getPurchase().getCategory().getId();
+            CategoryBucket bucket = categoryId == null
+                    ? uncategorized
+                    : buckets.computeIfAbsent(
+                            categoryId,
+                            ignored -> new CategoryBucket(
+                                    categoryId,
+                                    installment.getPurchase().getCategory().getName(),
+                                    installment.getPurchase().getCategory().getColor(),
+                                    false
+                            )
+                    );
+            bucket.add(signedAmount);
+        }
+
+        BigDecimal total = buckets.values().stream()
+                .map(CategoryBucket::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(uncategorized.amount());
+
+        List<FinancialInvoiceCategorySummaryResponse> categorized =
+                buckets.values().stream()
+                        .filter(CategoryBucket::hasItems)
+                        .map(bucket -> bucket.toResponse(total))
+                        .toList();
+
+        if (!uncategorized.hasItems()) {
+            return categorized;
+        }
+
+        return java.util.stream.Stream.concat(
+                        categorized.stream(),
+                        java.util.stream.Stream.of(
+                                uncategorized.toResponse(total)
+                        )
+                )
+                .toList();
     }
 
     @Transactional
@@ -398,5 +479,61 @@ public class FinancialCreditCardInvoiceService {
                 total,
                 responses
         );
+    }
+
+    private static final class CategoryBucket {
+        private final UUID categoryId;
+        private final String categoryName;
+        private final String color;
+        private final boolean uncategorized;
+        private BigDecimal amount = BigDecimal.ZERO;
+        private long itemCount;
+
+        private CategoryBucket(
+                UUID categoryId,
+                String categoryName,
+                String color,
+                boolean uncategorized
+        ) {
+            this.categoryId = categoryId;
+            this.categoryName = categoryName;
+            this.color = color;
+            this.uncategorized = uncategorized;
+        }
+
+        private void add(BigDecimal value) {
+            amount = amount.add(value);
+            itemCount++;
+        }
+
+        private boolean hasItems() {
+            return itemCount > 0;
+        }
+
+        private BigDecimal amount() {
+            return amount;
+        }
+
+        private FinancialInvoiceCategorySummaryResponse toResponse(
+                BigDecimal total
+        ) {
+            BigDecimal percentage = BigDecimal.ZERO;
+
+            if (total.compareTo(BigDecimal.ZERO) != 0) {
+                percentage = amount
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(total, 2, RoundingMode.HALF_UP);
+            }
+
+            return new FinancialInvoiceCategorySummaryResponse(
+                    categoryId,
+                    categoryName,
+                    color,
+                    amount,
+                    percentage,
+                    itemCount,
+                    uncategorized
+            );
+        }
     }
 }

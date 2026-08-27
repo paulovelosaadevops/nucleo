@@ -20,18 +20,28 @@ import br.com.nucleo.api.finance.domain.FinancialCategoryType;
 import br.com.nucleo.api.finance.domain.FinancialCreditCard;
 import br.com.nucleo.api.finance.domain.FinancialPaymentMethod;
 import br.com.nucleo.api.finance.domain.FinancialRecurrence;
+import br.com.nucleo.api.finance.domain.FinancialRecurrenceOccurrence;
+import br.com.nucleo.api.finance.domain.FinancialRecurrenceOccurrenceStatus;
 import br.com.nucleo.api.finance.domain.FinancialTransaction;
 import br.com.nucleo.api.finance.domain.FinancialTransactionType;
+import br.com.nucleo.api.finance.dto.ConfirmFinancialRecurrenceOccurrenceRequest;
 import br.com.nucleo.api.finance.dto.CreateFinancialRecurrenceRequest;
+import br.com.nucleo.api.finance.dto.FinancialRecurrenceOccurrenceResponse;
 import br.com.nucleo.api.finance.dto.FinancialRecurrenceResponse;
 import br.com.nucleo.api.finance.dto.GenerateFinancialRecurrencesResponse;
+import br.com.nucleo.api.finance.dto.PostponeFinancialRecurrenceOccurrenceRequest;
+import br.com.nucleo.api.finance.dto.SkipFinancialRecurrenceOccurrenceRequest;
 import br.com.nucleo.api.finance.dto.UpdateFinancialRecurrenceRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialCategoryRepository;
 import br.com.nucleo.api.finance.repository.FinancialCreditCardPurchaseRepository;
 import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
+import br.com.nucleo.api.finance.repository.FinancialRecurrenceOccurrenceRepository;
 import br.com.nucleo.api.finance.repository.FinancialRecurrenceRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
+import br.com.nucleo.api.notification.domain.NotificationType;
+import br.com.nucleo.api.notification.service.NotificationService;
+import java.time.YearMonth;
 
 @Service
 public class FinancialRecurrenceService {
@@ -45,8 +55,10 @@ public class FinancialRecurrenceService {
     private final FinancialCreditCardRepository cardRepository;
     private final FinancialCreditCardPurchaseRepository purchaseRepository;
     private final FinancialRecurrenceRepository recurrenceRepository;
+    private final FinancialRecurrenceOccurrenceRepository occurrenceRepository;
     private final FinancialTransactionRepository transactionRepository;
     private final FinancialCreditCardPurchaseService purchaseService;
+    private final NotificationService notificationService;
 
     public FinancialRecurrenceService(
             FamilyAccessService familyAccessService,
@@ -55,8 +67,10 @@ public class FinancialRecurrenceService {
             FinancialCreditCardRepository cardRepository,
             FinancialCreditCardPurchaseRepository purchaseRepository,
             FinancialRecurrenceRepository recurrenceRepository,
+            FinancialRecurrenceOccurrenceRepository occurrenceRepository,
             FinancialTransactionRepository transactionRepository,
-            FinancialCreditCardPurchaseService purchaseService
+            FinancialCreditCardPurchaseService purchaseService,
+            NotificationService notificationService
     ) {
         this.familyAccessService = familyAccessService;
         this.accountRepository = accountRepository;
@@ -64,8 +78,10 @@ public class FinancialRecurrenceService {
         this.cardRepository = cardRepository;
         this.purchaseRepository = purchaseRepository;
         this.recurrenceRepository = recurrenceRepository;
+        this.occurrenceRepository = occurrenceRepository;
         this.transactionRepository = transactionRepository;
         this.purchaseService = purchaseService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -345,6 +361,154 @@ public class FinancialRecurrenceService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<FinancialRecurrenceOccurrenceResponse> listOccurrences(
+            UUID currentUserId,
+            boolean pendingOnly
+    ) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(currentUserId);
+
+        List<FinancialRecurrenceOccurrence> occurrences = pendingOnly
+                ? occurrenceRepository.findAllByFamily_IdAndStatusInOrderByScheduledDateAsc(
+                        membership.getFamily().getId(),
+                        List.of(
+                                FinancialRecurrenceOccurrenceStatus.AWAITING_CONFIRMATION,
+                                FinancialRecurrenceOccurrenceStatus.OVERDUE
+                        )
+                )
+                : occurrenceRepository.findAllByFamily_IdOrderByScheduledDateDescCreatedAtDesc(
+                        membership.getFamily().getId()
+                );
+
+        return occurrences.stream()
+                .map(FinancialRecurrenceOccurrenceResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public FinancialRecurrenceOccurrenceResponse confirmOccurrence(
+            UUID currentUserId,
+            UUID occurrenceId,
+            ConfirmFinancialRecurrenceOccurrenceRequest request
+    ) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(currentUserId);
+
+        FinancialRecurrenceOccurrence occurrence = requireOccurrence(
+                occurrenceId,
+                membership.getFamily().getId()
+        );
+
+        if (occurrence.isConfirmed()) {
+            return FinancialRecurrenceOccurrenceResponse.from(occurrence);
+        }
+
+        FinancialRecurrence recurrence = occurrence.getRecurrence();
+        UUID familyId = membership.getFamily().getId();
+        FinancialCategory category = findActiveCategory(
+                request.categoryId() == null
+                        ? occurrence.getCategory() == null ? null : occurrence.getCategory().getId()
+                        : request.categoryId(),
+                recurrence.getType(),
+                familyId
+        );
+        boolean creditCardRecurrence = isCreditCardRecurrence(recurrence);
+        FinancialTransaction transaction = null;
+        br.com.nucleo.api.finance.domain.FinancialCreditCardPurchase purchase = null;
+
+        if (creditCardRecurrence) {
+            FinancialCreditCard creditCard = request.creditCardId() == null
+                    ? occurrence.getCreditCard()
+                    : requireActiveCard(request.creditCardId(), familyId);
+            int sequence = purchaseRepository.findMaximumRecurrenceSequence(recurrence.getId()) + 1;
+            purchase = purchaseService.createFromRecurrence(
+                    recurrence,
+                    sequence,
+                    request.chargedDate(),
+                    request.amount(),
+                    category,
+                    creditCard,
+                    request.notes()
+            );
+        } else {
+            FinancialAccount account = request.accountId() == null
+                    ? occurrence.getAccount()
+                    : requireActiveAccount(request.accountId(), familyId);
+            int sequence = transactionRepository.findMaximumRecurrenceSequence(recurrence.getId()) + 1;
+            transaction = FinancialTransaction.createFromRecurrence(
+                    recurrence,
+                    sequence,
+                    request.chargedDate(),
+                    request.amount(),
+                    category,
+                    account,
+                    request.paymentMethod() == null
+                            ? recurrence.getPaymentMethod()
+                            : request.paymentMethod(),
+                    request.notes()
+            );
+            transactionRepository.save(transaction);
+        }
+
+        occurrence.confirm(
+                request.amount(),
+                request.chargedDate(),
+                category,
+                transaction == null ? occurrence.getAccount() : transaction.getAccount(),
+                purchase == null ? occurrence.getCreditCard() : purchase.getCreditCard(),
+                transaction,
+                purchase,
+                request.notes(),
+                membership.getUser()
+        );
+
+        recurrence.update(
+                recurrence.getAccount(),
+                recurrence.getCreditCard(),
+                category,
+                recurrence.getType(),
+                recurrence.getDescription(),
+                request.amount(),
+                recurrence.getPaymentMethod(),
+                recurrence.getNotes()
+        );
+
+        return FinancialRecurrenceOccurrenceResponse.from(occurrence);
+    }
+
+    @Transactional
+    public FinancialRecurrenceOccurrenceResponse skipOccurrence(
+            UUID currentUserId,
+            UUID occurrenceId,
+            SkipFinancialRecurrenceOccurrenceRequest request
+    ) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(currentUserId);
+        FinancialRecurrenceOccurrence occurrence = requireOccurrence(
+                occurrenceId,
+                membership.getFamily().getId()
+        );
+        occurrence.skip(request.notes());
+        return FinancialRecurrenceOccurrenceResponse.from(occurrence);
+    }
+
+    @Transactional
+    public FinancialRecurrenceOccurrenceResponse postponeOccurrence(
+            UUID currentUserId,
+            UUID occurrenceId,
+            PostponeFinancialRecurrenceOccurrenceRequest request
+    ) {
+        FamilyMembership membership =
+                familyAccessService.requireActiveMembership(currentUserId);
+        FinancialRecurrenceOccurrence occurrence = requireOccurrence(
+                occurrenceId,
+                membership.getFamily().getId()
+        );
+        occurrence.postpone(request.reminderDate());
+        return FinancialRecurrenceOccurrenceResponse.from(occurrence);
+    }
+
     private GenerateFinancialRecurrencesResponse generateRecurrences(
             List<FinancialRecurrence> recurrences,
             LocalDate limitDate
@@ -376,22 +540,6 @@ public class FinancialRecurrenceService {
 
             processedRecurrences++;
 
-            boolean creditCardRecurrence =
-                    isCreditCardRecurrence(recurrence);
-
-            int sequence = creditCardRecurrence
-                    ? purchaseRepository
-                            .findMaximumRecurrenceSequence(
-                                    recurrence.getId()
-                            ) + 1
-                    : transactionRepository
-                            .findMaximumRecurrenceSequence(
-                                    recurrence.getId()
-                            ) + 1;
-
-            List<FinancialTransaction> generated =
-                    new ArrayList<>();
-
             while (
                     recurrence.canGenerateOnOrBefore(limitDate)
                             && createdItems
@@ -399,35 +547,26 @@ public class FinancialRecurrenceService {
             ) {
                 LocalDate generationDate =
                         recurrence.getNextGenerationDate();
+                LocalDate referenceMonth =
+                        YearMonth.from(generationDate).atDay(1);
 
-                if (creditCardRecurrence) {
-                    purchaseService.createFromRecurrence(
-                            recurrence,
-                            sequence,
-                            generationDate
-                    );
-
-                    createdCreditCardPurchases++;
-                } else {
-                    FinancialTransaction transaction =
-                            FinancialTransaction
-                                    .createFromRecurrence(
+                if (!occurrenceRepository.existsByRecurrence_IdAndReferenceMonth(
+                        recurrence.getId(),
+                        referenceMonth
+                )) {
+                    FinancialRecurrenceOccurrence occurrence =
+                            occurrenceRepository.save(
+                                    FinancialRecurrenceOccurrence.create(
                                             recurrence,
-                                            sequence,
                                             generationDate
-                                    );
+                                    )
+                            );
 
-                    generated.add(transaction);
-                    createdTransactions++;
+                    notifyOccurrencePending(occurrence);
+                    createdItems++;
                 }
 
-                sequence++;
-                createdItems++;
                 recurrence.advanceAfterGeneration();
-            }
-
-            if (!generated.isEmpty()) {
-                transactionRepository.saveAll(generated);
             }
         }
 
@@ -484,6 +623,37 @@ public class FinancialRecurrenceService {
                                 "Recorrência financeira não encontrada"
                         )
                 );
+    }
+
+    private FinancialRecurrenceOccurrence requireOccurrence(
+            UUID occurrenceId,
+            UUID familyId
+    ) {
+        return occurrenceRepository
+                .findByIdAndFamily_Id(occurrenceId, familyId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Pendencia de recorrencia nao encontrada"
+                        )
+                );
+    }
+
+    private void notifyOccurrencePending(
+            FinancialRecurrenceOccurrence occurrence
+    ) {
+        notificationService.notifyActiveFamilyMembers(
+                occurrence.getFamily(),
+                null,
+                NotificationType.FINANCIAL_RECURRENCE_CONFIRMATION,
+                "Confirmar valor da recorrencia",
+                "Informe o valor real de "
+                        + occurrence.getRecurrence().getDescription()
+                        + " deste mes.",
+                "/financas?secao=recurrences",
+                occurrence.getId(),
+                "finance-recurrence-confirmation:"
+                        + occurrence.getId()
+        );
     }
 
     private FinancialAccount requireActiveAccount(

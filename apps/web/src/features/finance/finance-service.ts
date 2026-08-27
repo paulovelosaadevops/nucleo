@@ -7,6 +7,7 @@ import type {
   CreateFinancialCardPurchaseRequest,
   CreateFinancialCategoryRequest,
   CreateFinancialCreditCardRequest,
+  ConfirmFinancialRecurrenceOccurrenceRequest,
   CreateFinancialInvestmentRequest,
   CreateFinancialRecurrenceRequest,
   CreateFinancialTransactionRequest,
@@ -19,15 +20,19 @@ import type {
   FinancialCreditCardInvoice,
   FinancialCreditCardPurchase,
   FinancialDashboard,
+  FinancialInvoiceCategorySummary,
   FinancialInvestment,
   FinancialInvestmentDashboard,
   FinancialRecurrence,
+  FinancialRecurrenceOccurrence,
   FinancialRecurrenceGenerationResult,
   FinancialTransaction,
   FinancialTransactionFilters,
   InvestmentTransferRequest,
   PayFinancialInvoiceRequest,
+  PostponeFinancialRecurrenceOccurrenceRequest,
   ReconcileInvestmentRequest,
+  SkipFinancialRecurrenceOccurrenceRequest,
   UpdateFinancialAccountRequest,
   UpdateFinancialBudgetRequest,
   UpdateFinancialCardPurchaseRequest,
@@ -462,6 +467,55 @@ export const financeService = {
       );
     },
 
+    occurrences(
+      pendingOnly = false,
+    ): Promise<FinancialRecurrenceOccurrence[]> {
+      const query = createQuery({ pendingOnly });
+
+      return apiRequest<FinancialRecurrenceOccurrence[]>(
+        `${FINANCE_BASE_PATH}/recurrences/occurrences${query}`,
+      );
+    },
+
+    confirmOccurrence(
+      occurrenceId: string,
+      request: ConfirmFinancialRecurrenceOccurrenceRequest,
+    ): Promise<FinancialRecurrenceOccurrence> {
+      return apiRequest<FinancialRecurrenceOccurrence>(
+        `${FINANCE_BASE_PATH}/recurrences/occurrences/${occurrenceId}/confirm`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    skipOccurrence(
+      occurrenceId: string,
+      request: SkipFinancialRecurrenceOccurrenceRequest,
+    ): Promise<FinancialRecurrenceOccurrence> {
+      return apiRequest<FinancialRecurrenceOccurrence>(
+        `${FINANCE_BASE_PATH}/recurrences/occurrences/${occurrenceId}/skip`,
+        {
+          method: "PATCH",
+          body: request,
+        },
+      );
+    },
+
+    postponeOccurrence(
+      occurrenceId: string,
+      request: PostponeFinancialRecurrenceOccurrenceRequest,
+    ): Promise<FinancialRecurrenceOccurrence> {
+      return apiRequest<FinancialRecurrenceOccurrence>(
+        `${FINANCE_BASE_PATH}/recurrences/occurrences/${occurrenceId}/postpone`,
+        {
+          method: "PATCH",
+          body: request,
+        },
+      );
+    },
+
     update(
       recurrenceId: string,
       request: UpdateFinancialRecurrenceRequest,
@@ -681,6 +735,14 @@ export const financeService = {
     ): Promise<FinancialCreditCardInvoice> {
       return apiRequest<FinancialCreditCardInvoice>(
         `${FINANCE_BASE_PATH}/credit-card-invoices/${invoiceId}`,
+      );
+    },
+
+    categorySummary(
+      invoiceId: string,
+    ): Promise<FinancialInvoiceCategorySummary[]> {
+      return apiRequest<FinancialInvoiceCategorySummary[]>(
+        `${FINANCE_BASE_PATH}/credit-card-invoices/${invoiceId}/category-summary`,
       );
     },
 

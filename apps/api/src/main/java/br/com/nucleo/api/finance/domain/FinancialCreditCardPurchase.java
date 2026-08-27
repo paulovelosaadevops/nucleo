@@ -175,6 +175,26 @@ public class FinancialCreditCardPurchase {
             int recurrenceSequence,
             LocalDate purchaseDate
     ) {
+        return createFromRecurrence(
+                recurrence,
+                recurrenceSequence,
+                purchaseDate,
+                recurrence.getAmount(),
+                recurrence.getCategory(),
+                recurrence.getCreditCard(),
+                recurrence.getNotes()
+        );
+    }
+
+    public static FinancialCreditCardPurchase createFromRecurrence(
+            FinancialRecurrence recurrence,
+            int recurrenceSequence,
+            LocalDate purchaseDate,
+            BigDecimal amount,
+            FinancialCategory category,
+            FinancialCreditCard creditCard,
+            String notes
+    ) {
         FinancialRecurrence source = Objects.requireNonNull(
                 recurrence,
                 "Recurrence cannot be null"
@@ -197,16 +217,16 @@ public class FinancialCreditCardPurchase {
 
         return new FinancialCreditCardPurchase(
                 source.getFamily(),
-                source.getCreditCard(),
-                source.getCategory(),
+                creditCard,
+                category,
                 source,
                 recurrenceSequence,
                 source.getDescription(),
-                source.getAmount(),
+                amount,
                 FinancialCreditCardPurchaseType.DEBIT,
                 purchaseDate,
                 1,
-                source.getNotes(),
+                notes,
                 source.getCreatedBy()
         );
     }
