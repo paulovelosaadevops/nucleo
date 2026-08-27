@@ -1,12 +1,19 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { AgendaActionMenu } from "@/features/agenda/agenda-action-menu";
-
-import type { AgendaOccurrenceDetails } from "@/types/agenda";
-
 import {
-  Bell,
+  formatAgendaDate,
+  formatAgendaDateTime,
+  occurrenceTimeLabel,
+  openAgendaWhatsAppShare,
+  recurrenceLabel,
+} from "@/features/agenda/agenda-whatsapp";
+import { WhatsAppIcon } from "@/features/agenda/whatsapp-icon";
+import { useAuth } from "@/hooks/use-auth";
+import type { AgendaOccurrenceDetails } from "@/types/agenda";
+import {
   CalendarDays,
   Clock3,
   MapPin,
@@ -26,17 +33,6 @@ interface AgendaOccurrenceDetailsProps {
   onDeleteSeries: () => Promise<void>;
 }
 
-const dateFormatter =
-  new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "long",
-  });
-
-const timeFormatter =
-  new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
 const categoryLabels: Record<string, string> = {
   APPOINTMENT: "Compromisso",
   HEALTH: "Saúde",
@@ -47,42 +43,6 @@ const categoryLabels: Record<string, string> = {
   TASK: "Tarefa",
   OTHER: "Outro",
 };
-
-const recurrenceLabels: Record<string, string> = {
-  NONE: "Não se repete",
-  DAILY: "Diária",
-  WEEKLY: "Semanal",
-  MONTHLY: "Mensal",
-  YEARLY: "Anual",
-};
-
-function reminderLabel(minutes: number): string {
-  if (minutes === 0) {
-    return "No horário";
-  }
-
-  if (minutes < 60) {
-    return `${minutes} minutos antes`;
-  }
-
-  if (minutes === 60) {
-    return "1 hora antes";
-  }
-
-  if (minutes === 1440) {
-    return "1 dia antes";
-  }
-
-  if (minutes % 1440 === 0) {
-    return `${minutes / 1440} dias antes`;
-  }
-
-  if (minutes % 60 === 0) {
-    return `${minutes / 60} horas antes`;
-  }
-
-  return `${minutes} minutos antes`;
-}
 
 export function AgendaOccurrenceDetailsPanel({
   occurrence,
@@ -95,20 +55,18 @@ export function AgendaOccurrenceDetailsPanel({
   onDeleteOccurrence,
   onDeleteSeries,
 }: AgendaOccurrenceDetailsProps) {
+  const { session } = useAuth();
+  const timeZone = session?.family.timeZone ?? "America/Sao_Paulo";
+
   if (!loading && !occurrence) {
     return null;
   }
 
   const category = occurrence
-    ? (
-        categoryLabels[occurrence.category]
-        ?? occurrence.category
-      )
+    ? categoryLabels[occurrence.category] ?? occurrence.category
     : "Agenda";
 
-  const title =
-    occurrence?.title
-    ?? "Detalhes do compromisso";
+  const title = occurrence?.title ?? "Detalhes do compromisso";
 
   return (
     <ModalShell
@@ -118,142 +76,107 @@ export function AgendaOccurrenceDetailsPanel({
       busy={performingAction}
       onClose={onClose}
     >
-      <div
-        className={[
-          "min-h-0 flex-1",
-          "overflow-y-auto",
-          "overscroll-contain",
-          "[scrollbar-color:rgba(255,255,255,0.16)_transparent]",
-        ].join(" ")}
-      >
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-color:rgba(255,255,255,0.16)_transparent]">
         {loading || !occurrence ? (
           <AgendaOccurrenceLoading />
         ) : (
-          <div className="animate-fade-up px-5 py-6 sm:px-7">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge
-                status={occurrence.status}
-              />
+          <div className="animate-fade-up px-5 py-5 sm:px-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={occurrence.status} />
 
-              {occurrence.allDay && (
-                <span className="inline-flex min-h-7 items-center rounded-lg border border-white/[0.08] bg-white/[0.035] px-2.5 text-[0.7rem] font-medium text-zinc-400">
-                  Dia inteiro
-                </span>
-              )}
+                  {occurrence.allDay && (
+                    <span className="inline-flex min-h-7 items-center rounded-lg border border-white/[0.08] bg-white/[0.035] px-2.5 text-[0.7rem] font-medium text-zinc-400">
+                      Dia inteiro
+                    </span>
+                  )}
+                </div>
 
-              {occurrence.recurrence
-                && occurrence.recurrence.frequency
-                  !== "NONE" && (
-                  <span className="inline-flex min-h-7 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.035] px-2.5 text-[0.7rem] font-medium text-zinc-400">
-                    <Repeat2 className="size-3.5" />
+                <h3 className="mt-3 break-words text-xl font-semibold leading-tight text-white">
+                  {occurrence.title}
+                </h3>
+              </div>
 
-                    {
-                      recurrenceLabels[
-                        occurrence.recurrence
-                          .frequency
-                      ]
-                      ?? occurrence.recurrence
-                        .frequency
-                    }
-                  </span>
-                )}
+              <Button
+                variant="secondary"
+                className="shrink-0"
+                aria-label="Enviar compromisso pelo WhatsApp"
+                onClick={() => openAgendaWhatsAppShare(occurrence, timeZone)}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                Enviar pelo WhatsApp
+              </Button>
             </div>
 
-            {occurrence.description && (
-              <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3.5">
-                <p className="whitespace-pre-line text-sm leading-6 text-zinc-400">
-                  {occurrence.description}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <DetailCard
+            <div className="mt-5 divide-y divide-white/[0.06] rounded-2xl border border-white/[0.07] bg-white/[0.025]">
+              <DetailRow
                 icon={CalendarDays}
                 label="Data"
-                value={dateFormatter.format(
-                  new Date(occurrence.startsAt),
-                )}
+                value={formatAgendaDate(occurrence.startsAt, timeZone)}
               />
 
-              <DetailCard
+              <DetailRow
                 icon={Clock3}
                 label="Horário"
-                value={
-                  occurrence.allDay
-                    ? "Dia inteiro"
-                    : formatOccurrenceTime(
-                        occurrence.startsAt,
-                        occurrence.endsAt,
-                      )
-                }
+                value={occurrenceTimeLabel(occurrence, timeZone)}
               />
 
+              {occurrence.assignedTo && (
+                <DetailRow
+                  icon={UserRound}
+                  label="Responsável"
+                  value={occurrence.assignedTo.name}
+                />
+              )}
+
               {occurrence.location && (
-                <DetailCard
+                <DetailRow
                   icon={MapPin}
                   label="Local"
                   value={occurrence.location}
                 />
               )}
 
-              {occurrence.assignedTo && (
-                <DetailCard
-                  icon={UserRound}
-                  label="Responsável"
-                  value={
-                    occurrence.assignedTo.name
-                  }
+              <DetailRow
+                icon={Repeat2}
+                label="Recorrência"
+                value={recurrenceLabel(occurrence.recurrence)}
+              />
+
+              {occurrence.completedAt && (
+                <DetailRow
+                  icon={CalendarDays}
+                  label="Conclusão"
+                  value={formatAgendaDateTime(
+                    occurrence.completedAt,
+                    timeZone,
+                  )}
                 />
               )}
 
-              <DetailCard
-                icon={Repeat2}
-                label="Recorrência"
-                value={
-                  occurrence.recurrence
-                    ? (
-                        recurrenceLabels[
-                          occurrence.recurrence
-                            .frequency
-                        ]
-                        ?? occurrence.recurrence
-                          .frequency
-                      )
-                    : "Não se repete"
-                }
-              />
-
-              {occurrence.remindersInMinutes
-                .length > 0 && (
-                <DetailCard
-                  icon={Bell}
-                  label="Lembretes"
-                  value={
-                    occurrence
-                      .remindersInMinutes
-                      .map(reminderLabel)
-                      .join(", ")
-                  }
+              {occurrence.cancelledAt && (
+                <DetailRow
+                  icon={CalendarDays}
+                  label="Cancelamento"
+                  value={formatAgendaDateTime(
+                    occurrence.cancelledAt,
+                    timeZone,
+                  )}
                 />
               )}
             </div>
 
-            {occurrence.notes && (
-              <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
-                <p className="text-[0.7rem] font-medium uppercase tracking-[0.14em] text-zinc-600">
-                  Observações
-                </p>
+            {occurrence.description && (
+              <TextBlock label="Descrição" value={occurrence.description} />
+            )}
 
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-zinc-400">
-                  {occurrence.notes}
-                </p>
-              </div>
+            {occurrence.notes && (
+              <TextBlock label="Observações" value={occurrence.notes} />
             )}
 
             <div className="mt-5 flex items-center gap-2 text-xs text-zinc-600">
               <UserRound className="size-3.5" />
-
               <span>
                 Criado por{" "}
                 <strong className="font-medium text-zinc-400">
@@ -269,11 +192,10 @@ export function AgendaOccurrenceDetailsPanel({
                 onComplete={onComplete}
                 onCancel={onCancel}
                 onDuplicate={onDuplicate}
-                onDeleteOccurrence={
-                  onDeleteOccurrence
-                }
-                onDeleteSeries={
-                  onDeleteSeries
+                onDeleteOccurrence={onDeleteOccurrence}
+                onDeleteSeries={onDeleteSeries}
+                onShareWhatsApp={() =>
+                  openAgendaWhatsAppShare(occurrence, timeZone)
                 }
               />
             </div>
@@ -292,48 +214,56 @@ function AgendaOccurrenceLoading() {
         <div className="h-7 w-20 rounded-lg bg-white/[0.04]" />
       </div>
 
-      <div className="mt-5 h-20 rounded-2xl bg-white/[0.04]" />
+      <div className="mt-5 h-12 rounded-2xl bg-white/[0.04]" />
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map(
-          (_, index) => (
-            <div
-              key={index}
-              className="h-24 rounded-2xl bg-white/[0.04]"
-            />
-          ),
-        )}
+      <div className="mt-5 rounded-2xl border border-white/[0.06]">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-14 border-b border-white/[0.04] last:border-b-0"
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-interface DetailCardProps {
+interface DetailRowProps {
   icon: typeof CalendarDays;
   label: string;
   value: string;
 }
 
-function DetailCard({
-  icon: Icon,
-  label,
-  value,
-}: DetailCardProps) {
+function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
   return (
-    <div className="flex min-w-0 gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.035]">
+    <div className="flex min-w-0 items-start gap-3 px-4 py-3">
+      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-black/25">
         <Icon className="size-4 text-zinc-500" />
       </div>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[8rem_1fr] sm:gap-4">
         <p className="text-[0.68rem] font-medium uppercase tracking-[0.12em] text-zinc-600">
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm leading-5 text-zinc-300">
+        <p className="mt-1 break-words text-sm leading-5 text-zinc-300 sm:mt-0">
           {value}
         </p>
       </div>
+    </div>
+  );
+}
+
+function TextBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mt-4 border-t border-white/[0.07] pt-4">
+      <p className="text-[0.68rem] font-medium uppercase tracking-[0.12em] text-zinc-600">
+        {label}
+      </p>
+
+      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-zinc-400">
+        {value}
+      </p>
     </div>
   );
 }
@@ -352,53 +282,19 @@ function StatusBadge({
 
   const styles =
     status === "COMPLETED"
-      ? [
-          "border-emerald-400/20",
-          "bg-emerald-400/[0.07]",
-          "text-emerald-200",
-        ]
+      ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-200"
       : status === "CANCELLED"
-        ? [
-            "border-red-400/20",
-            "bg-red-400/[0.07]",
-            "text-red-200",
-          ]
-        : [
-            "border-white/[0.08]",
-            "bg-white/[0.04]",
-            "text-zinc-300",
-          ];
+        ? "border-red-400/20 bg-red-400/[0.07] text-red-200"
+        : "border-white/[0.08] bg-white/[0.04] text-zinc-300";
 
   return (
     <span
       className={[
-        "inline-flex min-h-7",
-        "items-center rounded-lg border",
-        "px-2.5 text-[0.7rem]",
-        "font-medium",
-        ...styles,
+        "inline-flex min-h-7 items-center rounded-lg border px-2.5 text-[0.7rem] font-medium",
+        styles,
       ].join(" ")}
     >
       {label}
     </span>
   );
-}
-
-function formatOccurrenceTime(
-  startsAt: string,
-  endsAt: string | null,
-): string {
-  const start = timeFormatter.format(
-    new Date(startsAt),
-  );
-
-  if (!endsAt) {
-    return start;
-  }
-
-  const end = timeFormatter.format(
-    new Date(endsAt),
-  );
-
-  return `${start} até ${end}`;
 }

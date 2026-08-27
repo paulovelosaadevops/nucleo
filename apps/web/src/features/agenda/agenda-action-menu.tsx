@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { WhatsAppIcon } from "@/features/agenda/whatsapp-icon";
 import type { AgendaOccurrenceDetails } from "@/types/agenda";
 import {
   Ban,
@@ -18,6 +19,7 @@ interface AgendaActionMenuProps {
   onDuplicate: () => Promise<void>;
   onDeleteOccurrence: () => Promise<void>;
   onDeleteSeries: () => Promise<void>;
+  onShareWhatsApp: () => void;
 }
 
 export function AgendaActionMenu({
@@ -28,6 +30,7 @@ export function AgendaActionMenu({
   onDuplicate,
   onDeleteOccurrence,
   onDeleteSeries,
+  onShareWhatsApp,
 }: AgendaActionMenuProps) {
   const [notes, setNotes] = useState("");
   const [actionError, setActionError] =
@@ -143,6 +146,16 @@ export function AgendaActionMenu({
         <Button
           variant="ghost"
           disabled={loading}
+          aria-label="Enviar compromisso pelo WhatsApp"
+          onClick={onShareWhatsApp}
+        >
+          <WhatsAppIcon className="h-4 w-4" />
+          WhatsApp
+        </Button>
+
+        <Button
+          variant="ghost"
+          disabled={loading}
           onClick={() =>
             void execute(onDuplicate)
           }
@@ -150,7 +163,9 @@ export function AgendaActionMenu({
           <Copy className="h-4 w-4" />
           Duplicar
         </Button>
+      </div>
 
+      <div className="mt-2 grid grid-cols-1 gap-2">
         <Button
           variant="danger"
           disabled={loading}
