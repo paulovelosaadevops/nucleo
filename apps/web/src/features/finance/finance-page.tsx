@@ -94,7 +94,10 @@ export function FinancePage() {
       />
 
       {activeSection === "overview" ? (
-        <FinanceOverview onOpenInvestments={() => handleSectionChange("investments")} />
+        <FinanceOverview
+          onOpenInvestments={() => handleSectionChange("investments")}
+          onSectionChange={handleSectionChange}
+        />
       ) : activeSection === "transactions" ? (
         <FinanceTransactions />
       ) : activeSection === "accounts" ? (
