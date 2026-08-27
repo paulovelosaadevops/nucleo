@@ -390,10 +390,13 @@ public class FinancialInvestmentService {
     }
 
     private FinancialInvestmentResponse toResponse(FinancialInvestment investment) {
-        BigDecimal base = investment.getTotalContributed().subtract(investment.getTotalRedeemed(), MC);
+        BigDecimal totalContributed = zero(investment.getTotalContributed());
+        BigDecimal totalRedeemed = zero(investment.getTotalRedeemed());
+        BigDecimal calculatedBalance = zero(investment.getCalculatedBalance());
+        BigDecimal base = totalContributed.subtract(totalRedeemed, MC);
         BigDecimal returnPercentage = base.signum() == 0
                 ? BigDecimal.ZERO
-                : investment.getCalculatedBalance().subtract(base, MC)
+                : calculatedBalance.subtract(base, MC)
                         .divide(base, 8, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100), MC);
         List<FinancialInvestmentMovementResponse> movements = movementRepository
