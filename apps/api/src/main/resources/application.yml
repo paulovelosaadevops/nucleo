@@ -70,4 +70,4 @@ app:
     ttl: 7d
 
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,https://nucleo-five-eta.vercel.app}

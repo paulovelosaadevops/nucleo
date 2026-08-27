@@ -47,6 +47,8 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/register",
@@ -118,14 +120,21 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(
             @Value(
-                    "${app.cors.allowed-origins:http://localhost:3000}"
+                    "${app.cors.allowed-origins:http://localhost:3000,https://nucleo-five-eta.vercel.app}"
             )
             List<String> allowedOrigins
     ) {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedOrigins(allowedOrigins.stream()
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .map(origin -> origin.endsWith("/")
+                        ? origin.substring(0, origin.length() - 1)
+                        : origin)
+                .distinct()
+                .toList());
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
