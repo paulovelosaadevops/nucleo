@@ -6,6 +6,8 @@ import java.time.LocalDate;
 
 public record FinancialInvestmentDashboardResponse(
         BigDecimal investedBalance,
+        BigDecimal accumulatedYield,
+        long activeProductCount,
         BigDecimal contributedThisMonth,
         BigDecimal gainOrLossThisMonth,
         BigDecimal monthlyReturnPercentage,

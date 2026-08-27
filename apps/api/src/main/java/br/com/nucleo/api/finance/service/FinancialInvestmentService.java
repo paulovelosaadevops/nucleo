@@ -90,9 +90,16 @@ public class FinancialInvestmentService {
         BigDecimal invested = zero(investmentRepository.calculateInvestedBalance(familyId));
         List<FinancialInvestment> investments =
                 investmentRepository.findAllByFamily_IdOrderByActiveDescNameAsc(familyId);
+        List<FinancialInvestment> activeInvestments = investments.stream()
+                .filter(FinancialInvestment::isActive)
+                .toList();
+        BigDecimal accumulatedYield = activeInvestments.stream()
+                .map(FinancialInvestment::getAccumulatedYield)
+                .map(this::zero)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         LocalDate from = month.atDay(1);
         LocalDate to = month.atEndOfMonth();
-        List<FinancialInvestmentMovement> movements = investments.stream()
+        List<FinancialInvestmentMovement> movements = activeInvestments.stream()
                 .flatMap(item -> movementRepository
                         .findAllByInvestment_IdOrderByMovementDateDescCreatedAtDesc(item.getId())
                         .stream())
@@ -116,11 +123,11 @@ public class FinancialInvestmentService {
                 contributions,
                 contributions.divide(BigDecimal.valueOf(2), MC)
         );
-        FinancialInvestmentValuationStatus status = investments.stream()
+        FinancialInvestmentValuationStatus status = activeInvestments.stream()
                 .anyMatch(item -> item.getRealBalance() == null)
                 ? FinancialInvestmentValuationStatus.ESTIMATED
                 : FinancialInvestmentValuationStatus.RECONCILED;
-        LocalDate updatedAt = investments.stream()
+        LocalDate updatedAt = activeInvestments.stream()
                 .map(item -> item.getLastReconciledAt() == null
                         ? item.getLastCalculatedAt()
                         : item.getLastReconciledAt())
@@ -129,6 +136,8 @@ public class FinancialInvestmentService {
                 .orElse(null);
         return new FinancialInvestmentDashboardResponse(
                 invested,
+                accumulatedYield,
+                activeInvestments.size(),
                 contributions,
                 gain,
                 returnPercentage,

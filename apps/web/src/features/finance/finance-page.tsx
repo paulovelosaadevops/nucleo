@@ -22,10 +22,14 @@ export function FinancePage() {
         return "overview";
       }
 
-      return new URLSearchParams(window.location.search)
-        .get("novo") === "true"
-        ? "transactions"
-        : "overview";
+      const searchParams = new URLSearchParams(window.location.search);
+      const section = searchParams.get("secao");
+
+      if (searchParams.get("novo") === "true") {
+        return "transactions";
+      }
+
+      return section === "investments" ? "investments" : "overview";
     });
 
   function handleSectionChange(section: FinanceSection) {
@@ -33,6 +37,7 @@ export function FinancePage() {
 
     const url = new URL(window.location.href);
     url.searchParams.delete("novo");
+    url.searchParams.set("secao", section);
 
     window.history.replaceState(
       null,

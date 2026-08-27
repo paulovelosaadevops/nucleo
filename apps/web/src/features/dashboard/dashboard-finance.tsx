@@ -59,9 +59,9 @@ export function DashboardFinance({
         <>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
-              <p className="text-[0.68rem] uppercase tracking-[0.12em] text-zinc-600">Saldo atual</p>
+              <p className="text-[0.68rem] uppercase tracking-[0.12em] text-zinc-600">Saldo disponÃ­vel</p>
               <p className="mt-2 truncate text-xl font-semibold tracking-[-0.035em] text-white">
-                {currencyFormatter.format(finance.totalAccountBalance)}
+                {currencyFormatter.format(finance.availableAccountBalance)}
               </p>
             </div>
             <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">

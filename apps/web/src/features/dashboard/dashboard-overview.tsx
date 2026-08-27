@@ -13,6 +13,7 @@ import {
   Bell,
   CalendarDays,
   ChartNoAxesCombined,
+  PiggyBank,
   Plus,
   RefreshCw,
   ShoppingBasket,
@@ -134,7 +135,7 @@ export function DashboardOverview() {
         />
       </div>
 
-      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <DashboardSummaryCard
           title="Próximos eventos"
           value={String(data?.agenda.length ?? 0)}
@@ -157,11 +158,24 @@ export function DashboardOverview() {
           title="Saldo das contas"
           value={currencyFormatter.format(
             data?.finance
-              ?.totalAccountBalance ?? 0,
+              ?.availableAccountBalance ?? 0,
           )}
           detail="Posição financeira atual"
           href="/financas"
           icon={ChartNoAxesCombined}
+          unavailable={unavailable("finance")}
+        />
+
+        <DashboardSummaryCard
+          title="Investimentos"
+          value={currencyFormatter.format(
+            data?.finance
+              ?.investmentSummary
+              ?.investedBalance ?? 0,
+          )}
+          detail={`${currencyFormatter.format(data?.finance?.investmentSummary?.accumulatedYield ?? 0)} acumulado · ${data?.finance?.investmentSummary?.activeProductCount ?? 0} produto(s)`}
+          href="/financas?secao=investments"
+          icon={PiggyBank}
           unavailable={unavailable("finance")}
         />
 
@@ -234,8 +248,8 @@ function DashboardSkeleton() {
         <div className="mt-3 h-4 w-72 rounded bg-white/[0.045]" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map(
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map(
           (_, index) => (
             <div
               key={index}

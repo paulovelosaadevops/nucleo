@@ -32,7 +32,7 @@ export interface FinancialDashboardRecurrence { id: string; description: string;
 export interface FinancialInstallmentCommitment { purchaseId: string; description: string; creditCardName: string; currentInstallment: number; totalInstallments: number; remainingInstallments: number; installmentAmount: number; remainingAmount: number; nextDueDate: string; }
 export interface FinancialBudgetProgress { budgetId: string; categoryId: string; categoryName: string; limitAmount: number; committedAmount: number; remainingAmount: number; consumptionPercentage: number; status: FinancialBudgetStatus; }
 export interface FinancialUpcomingItem { kind: "TRANSACTION" | "INVOICE_INSTALLMENT"; id: string; description: string; sourceName: string; dueDate: string; amount: number; overdue: boolean; }
-export interface FinancialInvestmentDashboard { investedBalance: number; contributedThisMonth: number; gainOrLossThisMonth: number; monthlyReturnPercentage: number; valuationStatus: FinancialInvestmentValuationStatus; lastUpdatedAt: string | null; }
+export interface FinancialInvestmentDashboard { investedBalance: number; accumulatedYield: number; activeProductCount: number; contributedThisMonth: number; gainOrLossThisMonth: number; monthlyReturnPercentage: number; valuationStatus: FinancialInvestmentValuationStatus; lastUpdatedAt: string | null; }
 
 export interface FinancialDashboard {
   from: string; to: string; totalAccountBalance: number; availableAccountBalance: number; investmentBalance: number; projectedBalance: number;
