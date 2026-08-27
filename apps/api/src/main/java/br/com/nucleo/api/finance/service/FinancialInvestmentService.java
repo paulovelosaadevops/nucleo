@@ -4,7 +4,6 @@ import br.com.nucleo.api.common.error.ResourceNotFoundException;
 import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.service.FamilyAccessService;
 import br.com.nucleo.api.finance.domain.FinancialAccount;
-import br.com.nucleo.api.finance.domain.FinancialAccountType;
 import br.com.nucleo.api.finance.domain.FinancialInvestment;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentAccrualStartRule;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentLot;
@@ -166,19 +165,8 @@ public class FinancialInvestmentService {
     public FinancialInvestmentResponse create(UUID currentUserId, CreateFinancialInvestmentRequest request) {
         FamilyMembership membership = familyAccessService.requireAdministrator(currentUserId);
         BigDecimal initialAmount = money(request.initialAmount());
-        FinancialAccount account = FinancialAccount.create(
-                membership.getFamily(),
-                request.name(),
-                FinancialAccountType.INVESTMENT,
-                initialAmount,
-                "#10b981",
-                true,
-                membership.getUser()
-        );
-        accountRepository.save(account);
         FinancialInvestment investment = FinancialInvestment.create(
                 membership.getFamily(),
-                account,
                 request.name(),
                 request.institution(),
                 request.modality(),
@@ -224,19 +212,23 @@ public class FinancialInvestmentService {
     public FinancialInvestmentResponse contribute(UUID currentUserId, UUID investmentId, InvestmentTransferRequest request) {
         FamilyMembership membership = familyAccessService.requireAdministrator(currentUserId);
         FinancialInvestment investment = requireInvestment(investmentId, membership.getFamily().getId());
-        FinancialAccount source = requireAccount(request.accountId(), membership.getFamily().getId());
-        ensureNonInvestment(source, "A origem do aporte deve ser uma conta de saldo disponivel");
+        FinancialAccount source = optionalAccount(request.accountId(), membership.getFamily().getId());
+        if (source != null) {
+            ensureAvailableAccount(source, "A origem do aporte deve ser uma conta de saldo disponivel");
+        }
         BigDecimal before = investment.getCalculatedBalance();
-        FinancialTransfer transfer = transferRepository.save(FinancialTransfer.create(
-                membership.getFamily(),
-                source,
-                investment.getAccount(),
-                request.amount(),
-                request.date(),
-                FinancialTransferType.INVESTMENT_CONTRIBUTION,
-                request.notes(),
-                membership.getUser()
-        ));
+        FinancialTransfer transfer = source == null
+                ? null
+                : transferRepository.save(FinancialTransfer.create(
+                        membership.getFamily(),
+                        source,
+                        null,
+                        request.amount(),
+                        request.date(),
+                        FinancialTransferType.INVESTMENT_CONTRIBUTION,
+                        request.notes(),
+                        membership.getUser()
+                ));
         investment.contribute(request.amount(), request.date());
         lotRepository.save(FinancialInvestmentLot.create(
                 investment,
@@ -254,7 +246,7 @@ public class FinancialInvestmentService {
                 before,
                 investment.getCalculatedBalance(),
                 request.notes(),
-                "investment-contribution:" + transfer.getId()
+                transfer == null ? null : "investment-contribution:" + transfer.getId()
         ));
         return toResponse(investment);
     }
@@ -263,8 +255,10 @@ public class FinancialInvestmentService {
     public FinancialInvestmentResponse redeem(UUID currentUserId, UUID investmentId, InvestmentTransferRequest request) {
         FamilyMembership membership = familyAccessService.requireAdministrator(currentUserId);
         FinancialInvestment investment = requireInvestment(investmentId, membership.getFamily().getId());
-        FinancialAccount destination = requireAccount(request.accountId(), membership.getFamily().getId());
-        ensureNonInvestment(destination, "O destino do resgate deve ser uma conta de saldo disponivel");
+        FinancialAccount destination = optionalAccount(request.accountId(), membership.getFamily().getId());
+        if (destination != null) {
+            ensureAvailableAccount(destination, "O destino do resgate deve ser uma conta de saldo disponivel");
+        }
         BigDecimal amount = request.amount();
         BigDecimal before = investment.getCalculatedBalance();
         BigDecimal remaining = amount;
@@ -280,16 +274,18 @@ public class FinancialInvestmentService {
         if (remaining.signum() > 0) {
             throw new IllegalArgumentException("Saldo insuficiente para resgate");
         }
-        FinancialTransfer transfer = transferRepository.save(FinancialTransfer.create(
-                membership.getFamily(),
-                investment.getAccount(),
-                destination,
-                amount,
-                request.date(),
-                FinancialTransferType.INVESTMENT_REDEMPTION,
-                request.notes(),
-                membership.getUser()
-        ));
+        FinancialTransfer transfer = destination == null
+                ? null
+                : transferRepository.save(FinancialTransfer.create(
+                        membership.getFamily(),
+                        null,
+                        destination,
+                        amount,
+                        request.date(),
+                        FinancialTransferType.INVESTMENT_REDEMPTION,
+                        request.notes(),
+                        membership.getUser()
+                ));
         investment.redeem(amount, request.date());
         movementRepository.save(FinancialInvestmentMovement.create(
                 investment,
@@ -300,7 +296,7 @@ public class FinancialInvestmentService {
                 before,
                 investment.getCalculatedBalance(),
                 request.notes(),
-                "investment-redemption:" + transfer.getId()
+                transfer == null ? null : "investment-redemption:" + transfer.getId()
         ));
         return toResponse(investment);
     }
@@ -426,8 +422,14 @@ public class FinancialInvestmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Conta financeira nao encontrada"));
     }
 
-    private void ensureNonInvestment(FinancialAccount account, String message) {
-        if (account.getType() == FinancialAccountType.INVESTMENT) {
+    private FinancialAccount optionalAccount(UUID accountId, UUID familyId) {
+        return accountId == null ? null : requireAccount(accountId, familyId);
+    }
+
+    private void ensureAvailableAccount(FinancialAccount account, String message) {
+        if (!account.isActive()
+                || !account.isIncludeInTotal()
+                || account.getType() == br.com.nucleo.api.finance.domain.FinancialAccountType.INVESTMENT) {
             throw new IllegalArgumentException(message);
         }
     }

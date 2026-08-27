@@ -55,13 +55,16 @@ export function FinanceAccounts() {
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const totalBalance = useMemo(
     () =>
       accounts
         .filter(
           (account) =>
-            account.active && account.includeInTotal,
+            account.active &&
+            account.includeInTotal &&
+            account.type !== "INVESTMENT",
         )
         .reduce(
           (total, account) => total + account.currentBalance,
@@ -88,7 +91,11 @@ export function FinanceAccounts() {
   }, []);
 
   useEffect(() => {
-    void loadAccounts();
+    const timeout = window.setTimeout(() => {
+      void loadAccounts();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [loadAccounts]);
 
   async function handleSubmit(
@@ -120,13 +127,17 @@ export function FinanceAccounts() {
 
   async function executeAction(
     accountId: string,
-    action: () => Promise<FinancialAccount | void>,
+    action: () => Promise<FinancialAccount | { message: string } | void>,
   ) {
     setActionId(accountId);
     setError(null);
+    setNotice(null);
 
     try {
-      await action();
+      const result = await action();
+      if (result && "message" in result) {
+        setNotice(result.message);
+      }
       await loadAccounts();
     } catch (requestError) {
       setError(
@@ -230,6 +241,12 @@ export function FinanceAccounts() {
         <div className="flex gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.05] p-4 text-sm text-rose-200">
           <AlertCircle className="size-4 shrink-0" />
           {error}
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-zinc-300">
+          {notice}
         </div>
       ) : null}
 

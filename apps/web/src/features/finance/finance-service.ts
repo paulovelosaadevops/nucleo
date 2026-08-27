@@ -132,8 +132,8 @@ export const financeService = {
       );
     },
 
-    remove(accountId: string): Promise<void> {
-      return apiRequest<void>(
+    remove(accountId: string): Promise<{ archived: boolean; message: string }> {
+      return apiRequest<{ archived: boolean; message: string }>(
         `${FINANCE_BASE_PATH}/accounts/${accountId}`,
         {
           method: "DELETE",

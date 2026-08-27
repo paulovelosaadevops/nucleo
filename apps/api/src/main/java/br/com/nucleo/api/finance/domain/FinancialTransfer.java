@@ -20,12 +20,12 @@ public class FinancialTransfer {
     @JoinColumn(name = "family_id", nullable = false)
     private Family family;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_account_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_account_id")
     private FinancialAccount sourceAccount;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "destination_account_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_account_id")
     private FinancialAccount destinationAccount;
 
     @Column(nullable = false, precision = 18, scale = 2)
@@ -74,8 +74,14 @@ public class FinancialTransfer {
     ) {
         FinancialTransfer transfer = new FinancialTransfer();
         transfer.family = Objects.requireNonNull(family);
-        transfer.sourceAccount = Objects.requireNonNull(sourceAccount);
-        transfer.destinationAccount = Objects.requireNonNull(destinationAccount);
+        if (sourceAccount == null && destinationAccount == null) {
+            throw new IllegalArgumentException("Informe uma conta de origem ou destino");
+        }
+        if (sourceAccount != null && sourceAccount.equals(destinationAccount)) {
+            throw new IllegalArgumentException("A origem e o destino devem ser diferentes");
+        }
+        transfer.sourceAccount = sourceAccount;
+        transfer.destinationAccount = destinationAccount;
         transfer.amount = validatePositiveMoney(amount);
         transfer.transferDate = Objects.requireNonNull(transferDate);
         transfer.type = Objects.requireNonNull(type);

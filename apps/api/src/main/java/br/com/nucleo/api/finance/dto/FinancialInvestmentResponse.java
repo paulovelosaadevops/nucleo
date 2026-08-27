@@ -10,7 +10,6 @@ import java.util.UUID;
 
 public record FinancialInvestmentResponse(
         UUID id,
-        UUID accountId,
         String name,
         String institution,
         FinancialInvestmentModality modality,
@@ -35,7 +34,6 @@ public record FinancialInvestmentResponse(
     ) {
         return new FinancialInvestmentResponse(
                 investment.getId(),
-                investment.getAccount().getId(),
                 investment.getName(),
                 investment.getInstitution(),
                 investment.getModality(),

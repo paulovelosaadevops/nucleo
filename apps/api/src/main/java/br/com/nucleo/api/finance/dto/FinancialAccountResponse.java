@@ -31,9 +31,9 @@ public record FinancialAccountResponse(
                 ? BigDecimal.ZERO
                 : paidMovementBalance;
 
-        BigDecimal currentBalance = account
-                .getInitialBalance()
-                .add(movements);
+        BigDecimal currentBalance = account.getType() == FinancialAccountType.INVESTMENT
+                ? BigDecimal.ZERO
+                : account.getInitialBalance().add(movements);
 
         return new FinancialAccountResponse(
                 account.getId(),

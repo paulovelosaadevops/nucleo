@@ -5,13 +5,10 @@ import static org.mockito.Mockito.when;
 
 import br.com.nucleo.api.family.domain.Family;
 import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.finance.domain.FinancialAccount;
-import br.com.nucleo.api.finance.domain.FinancialAccountType;
 import br.com.nucleo.api.finance.domain.FinancialInvestment;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentAccrualStartRule;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentModality;
 import br.com.nucleo.api.finance.dto.FinancialInvestmentDashboardResponse;
-import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
 import br.com.nucleo.api.finance.repository.FinancialInvestmentLotRepository;
 import br.com.nucleo.api.finance.repository.FinancialInvestmentMovementRepository;
 import br.com.nucleo.api.finance.repository.FinancialInvestmentRepository;
@@ -38,8 +35,6 @@ class FinancialInvestmentServiceDashboardTest {
     @Mock
     private FamilyAccessService familyAccessService;
     @Mock
-    private FinancialAccountRepository accountRepository;
-    @Mock
     private FinancialInvestmentRepository investmentRepository;
     @Mock
     private FinancialInvestmentLotRepository lotRepository;
@@ -60,7 +55,7 @@ class FinancialInvestmentServiceDashboardTest {
     void setUp() {
         service = new FinancialInvestmentService(
                 familyAccessService,
-                accountRepository,
+                null,
                 investmentRepository,
                 lotRepository,
                 movementRepository,
@@ -104,19 +99,8 @@ class FinancialInvestmentServiceDashboardTest {
             String accumulatedYield,
             boolean active
     ) {
-        FinancialAccount account = FinancialAccount.create(
-                family,
-                name,
-                FinancialAccountType.INVESTMENT,
-                new BigDecimal(balance),
-                null,
-                true,
-                user
-        );
-        ReflectionTestUtils.setField(account, "id", UUID.randomUUID());
         FinancialInvestment investment = FinancialInvestment.create(
                 family,
-                account,
                 name,
                 "Nubank",
                 FinancialInvestmentModality.PERCENT_CDI,

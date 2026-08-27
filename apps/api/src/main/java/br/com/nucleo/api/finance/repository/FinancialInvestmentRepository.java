@@ -11,13 +11,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface FinancialInvestmentRepository extends JpaRepository<FinancialInvestment, UUID> {
-    @EntityGraph(attributePaths = {"family", "account", "createdBy"})
+    @EntityGraph(attributePaths = {"family", "createdBy"})
     List<FinancialInvestment> findAllByFamily_IdOrderByActiveDescNameAsc(UUID familyId);
 
-    @EntityGraph(attributePaths = {"family", "account", "createdBy"})
+    @EntityGraph(attributePaths = {"family", "createdBy"})
     Optional<FinancialInvestment> findByIdAndFamily_Id(UUID investmentId, UUID familyId);
-
-    boolean existsByAccount_Id(UUID accountId);
 
     @Query("""
             select coalesce(sum(investment.calculatedBalance), 0)

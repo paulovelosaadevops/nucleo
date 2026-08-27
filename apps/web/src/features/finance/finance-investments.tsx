@@ -152,8 +152,9 @@ export function FinanceInvestments() {
     setSaving(true);
     setError(null);
     const form = new FormData(event.currentTarget);
+    const accountId = String(form.get("accountId") ?? "");
     const request: InvestmentTransferRequest = {
-      accountId: String(form.get("accountId") ?? ""),
+      accountId: accountId || null,
       amount: Number(form.get("amount") ?? 0),
       date: String(form.get("date") ?? today()),
       notes: String(form.get("notes") ?? "") || null,
@@ -333,8 +334,8 @@ function TransferModal({ busy, state, accounts, onClose, onSubmit }: { busy: boo
     <ModalShell eyebrow="Investimentos" title={contribution ? "Registrar aporte" : "Registrar resgate"} titleId="investment-transfer-title" busy={busy} size="small" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4 p-5 sm:p-7">
         <p className="text-sm text-zinc-400">{state.investment.name}</p>
-        <select name="accountId" required className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white">
-          <option value="">{contribution ? "Conta de origem" : "Conta de destino"}</option>
+        <select name="accountId" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white">
+          <option value="">{contribution ? "Sem conta de origem" : "Sem conta de destino"}</option>
           {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
         </select>
         <input name="amount" type="number" min="0.01" step="0.01" required placeholder="Valor" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white" />

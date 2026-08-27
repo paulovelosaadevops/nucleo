@@ -21,7 +21,7 @@ interface FinancialAccountFormProps {
   onCancel: () => void;
 }
 
-const accountTypes: Array<{
+const availableAccountTypes: Array<{
   value: FinancialAccountType;
   label: string;
 }> = [
@@ -29,7 +29,6 @@ const accountTypes: Array<{
   { value: "SAVINGS", label: "Poupança" },
   { value: "CASH", label: "Dinheiro" },
   { value: "DIGITAL_WALLET", label: "Carteira digital" },
-  { value: "INVESTMENT", label: "Investimento" },
   { value: "OTHER", label: "Outra" },
 ];
 
@@ -65,6 +64,13 @@ export function FinancialAccountForm({
   );
 
   const [error, setError] = useState<string | null>(null);
+  const accountTypes =
+    account?.type === "INVESTMENT"
+      ? [
+          ...availableAccountTypes,
+          { value: "INVESTMENT" as const, label: "Investimento legado" },
+        ]
+      : availableAccountTypes;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -166,9 +172,13 @@ export function FinancialAccountForm({
               id="account-type"
               value={type}
               disabled={submitting}
-              onChange={(event) =>
-                setType(event.target.value as FinancialAccountType)
-              }
+              onChange={(event) => {
+                const nextType = event.target.value as FinancialAccountType;
+                setType(nextType);
+                if (nextType === "INVESTMENT") {
+                  setIncludeInTotal(false);
+                }
+              }}
               className={inputClassName}
             >
               {accountTypes.map((accountType) => (
@@ -242,7 +252,7 @@ export function FinancialAccountForm({
             <input
               type="checkbox"
               checked={includeInTotal}
-              disabled={submitting}
+              disabled={submitting || type === "INVESTMENT"}
               onChange={(event) =>
                 setIncludeInTotal(event.target.checked)
               }

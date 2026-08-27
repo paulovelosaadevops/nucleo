@@ -98,7 +98,7 @@ public class FinancialAccount {
                         : initialBalance
         );
         this.color = normalizeOptionalText(color, 20);
-        this.includeInTotal = includeInTotal;
+        this.includeInTotal = type == FinancialAccountType.INVESTMENT ? false : includeInTotal;
         this.active = true;
         this.createdBy = Objects.requireNonNull(
                 createdBy,
@@ -138,7 +138,7 @@ public class FinancialAccount {
                 "Financial account type cannot be null"
         );
         this.color = normalizeOptionalText(color, 20);
-        this.includeInTotal = includeInTotal;
+        this.includeInTotal = type == FinancialAccountType.INVESTMENT ? false : includeInTotal;
     }
 
     public void changeInitialBalance(
@@ -158,6 +158,11 @@ public class FinancialAccount {
 
     public void deactivate() {
         active = false;
+    }
+
+    public void archive() {
+        active = false;
+        includeInTotal = false;
     }
 
     @PrePersist

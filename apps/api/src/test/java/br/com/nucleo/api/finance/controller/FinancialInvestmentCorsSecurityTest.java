@@ -153,7 +153,6 @@ class FinancialInvestmentCorsSecurityTest {
     private FinancialInvestmentResponse response() {
         return new FinancialInvestmentResponse(
                 UUID.randomUUID(),
-                UUID.randomUUID(),
                 "Caixinha",
                 "Nubank",
                 FinancialInvestmentModality.PERCENT_CDI,

@@ -18,9 +18,6 @@ public class FinancialInvestment {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "family_id", nullable = false)
     private Family family;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private FinancialAccount account;
     @Column(nullable = false, length = 120)
     private String name;
     @Column(nullable = false, length = 120)
@@ -79,14 +76,13 @@ public class FinancialInvestment {
     protected FinancialInvestment() {
     }
 
-    public static FinancialInvestment create(Family family, FinancialAccount account, String name, String institution,
+    public static FinancialInvestment create(Family family, String name, String institution,
             FinancialInvestmentModality modality, LocalDate startDate, LocalDate maturityDate, String liquidity,
             BigDecimal benchmarkPercentage, BigDecimal annualFixedRate, BigDecimal annualSpreadRate,
             boolean taxExempt, boolean autoCalculate, FinancialInvestmentAccrualStartRule accrualStartRule,
             BigDecimal initialAmount, String notes, User createdBy) {
         FinancialInvestment investment = new FinancialInvestment();
         investment.family = Objects.requireNonNull(family);
-        investment.account = Objects.requireNonNull(account);
         investment.name = normalize(name, 120);
         investment.institution = normalize(institution, 120);
         investment.modality = Objects.requireNonNull(modality);
@@ -178,7 +174,6 @@ public class FinancialInvestment {
 
     public UUID getId() { return id; }
     public Family getFamily() { return family; }
-    public FinancialAccount getAccount() { return account; }
     public String getName() { return name; }
     public String getInstitution() { return institution; }
     public FinancialInvestmentModality getModality() { return modality; }

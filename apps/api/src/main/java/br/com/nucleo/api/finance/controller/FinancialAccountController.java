@@ -2,6 +2,7 @@ package br.com.nucleo.api.finance.controller;
 
 import br.com.nucleo.api.finance.dto.ChangeInitialBalanceRequest;
 import br.com.nucleo.api.finance.dto.CreateFinancialAccountRequest;
+import br.com.nucleo.api.finance.dto.DeleteFinancialAccountResponse;
 import br.com.nucleo.api.finance.dto.FinancialAccountResponse;
 import br.com.nucleo.api.finance.dto.UpdateFinancialAccountRequest;
 import br.com.nucleo.api.finance.service.FinancialAccountService;
@@ -126,16 +127,14 @@ public class FinancialAccountController {
     }
 
     @DeleteMapping("/{accountId}")
-    public ResponseEntity<Void> delete(
+    public DeleteFinancialAccountResponse delete(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID accountId
     ) {
-        accountService.delete(
+        return accountService.delete(
                 userId(jwt),
                 accountId
         );
-
-        return ResponseEntity.noContent().build();
     }
 
     private UUID userId(Jwt jwt) {

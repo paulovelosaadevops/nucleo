@@ -3,6 +3,8 @@ package br.com.nucleo.api.finance.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,7 +17,6 @@ import br.com.nucleo.api.config.SecurityConfig;
 import br.com.nucleo.api.family.domain.Family;
 import br.com.nucleo.api.family.domain.FamilyMembership;
 import br.com.nucleo.api.family.service.FamilyAccessService;
-import br.com.nucleo.api.finance.domain.FinancialAccount;
 import br.com.nucleo.api.finance.domain.FinancialInvestment;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentLot;
 import br.com.nucleo.api.finance.domain.FinancialInvestmentMovement;
@@ -33,6 +34,7 @@ import br.com.nucleo.api.identity.user.domain.User;
 import br.com.nucleo.api.security.handler.SecurityErrorWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,10 +107,11 @@ class FinancialInvestmentCreateIntegrationTest {
         when(familyAccessService.requireAdministrator(USER_ID)).thenReturn(membership);
         when(familyAccessService.requireActiveMembership(USER_ID)).thenReturn(membership);
 
-        when(accountRepository.save(any(FinancialAccount.class))).thenAnswer(this::assignId);
         when(investmentRepository.save(any(FinancialInvestment.class))).thenAnswer(invocation -> {
             FinancialInvestment investment = assignId(invocation);
             investments.add(investment);
+            when(investmentRepository.findByIdAndFamily_Id(investment.getId(), FAMILY_ID))
+                    .thenReturn(Optional.of(investment));
             return investment;
         });
         when(lotRepository.save(any(FinancialInvestmentLot.class))).thenAnswer(this::assignId);
@@ -133,6 +136,7 @@ class FinancialInvestmentCreateIntegrationTest {
                         .content(exactPayload()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Caixinha CDI"))
+                .andExpect(jsonPath("$.accountId").doesNotExist())
                 .andExpect(jsonPath("$.institution").value("Nubank"))
                 .andExpect(jsonPath("$.modality").value("PERCENT_CDI"))
                 .andExpect(jsonPath("$.benchmarkPercentage").value(120))
@@ -152,7 +156,40 @@ class FinancialInvestmentCreateIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Caixinha CDI"))
+                .andExpect(jsonPath("$[0].accountId").doesNotExist())
                 .andExpect(jsonPath("$[0].movements", hasSize(1)));
+
+        verify(investmentRepository).save(any(FinancialInvestment.class));
+    }
+
+    @Test
+    void contributionWithoutAccountUpdatesInvestmentWithoutFinancialTransfer()
+            throws Exception {
+        mockMvc.perform(post("/api/finance/investments")
+                        .with(jwt().jwt(token -> token.subject(USER_ID.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(exactPayload()))
+                .andExpect(status().isCreated());
+
+        UUID investmentId = investments.get(0).getId();
+
+        mockMvc.perform(post("/api/finance/investments/{investmentId}/contributions", investmentId)
+                        .with(jwt().jwt(token -> token.subject(USER_ID.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "accountId": null,
+                                  "amount": 100.00,
+                                  "date": "2026-08-28",
+                                  "notes": "Aporte sem conta"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentBalance").value(10554.79))
+                .andExpect(jsonPath("$.totalContributed").value(10554.79))
+                .andExpect(jsonPath("$.movements", hasSize(2)));
+
+        verify(transferRepository, never()).save(any());
     }
 
     private String exactPayload() {

@@ -1,8 +1,10 @@
 package br.com.nucleo.api.finance.service;
 
 import br.com.nucleo.api.finance.domain.FinancialAccount;
+import br.com.nucleo.api.finance.domain.FinancialAccountType;
 import br.com.nucleo.api.finance.dto.ChangeInitialBalanceRequest;
 import br.com.nucleo.api.finance.dto.CreateFinancialAccountRequest;
+import br.com.nucleo.api.finance.dto.DeleteFinancialAccountResponse;
 import br.com.nucleo.api.finance.dto.FinancialAccountResponse;
 import br.com.nucleo.api.finance.dto.UpdateFinancialAccountRequest;
 import br.com.nucleo.api.finance.repository.FinancialAccountRepository;
@@ -57,8 +59,9 @@ public class FinancialAccountService {
         );
 
         boolean includeInTotal =
-                request.includeInTotal() == null
-                        || request.includeInTotal();
+                request.type() != FinancialAccountType.INVESTMENT
+                        && (request.includeInTotal() == null
+                        || request.includeInTotal());
 
         FinancialAccount account = FinancialAccount.create(
                 membership.getFamily(),
@@ -89,6 +92,8 @@ public class FinancialAccountService {
                         membership.getFamily().getId()
                 )
                 .stream()
+                .filter(account -> account.isActive()
+                        || account.getType() != FinancialAccountType.INVESTMENT)
                 .map(this::toResponse)
                 .toList();
     }
@@ -139,7 +144,9 @@ public class FinancialAccountService {
                 normalizedName,
                 request.type(),
                 request.color(),
-                request.includeInTotal()
+                request.type() == FinancialAccountType.INVESTMENT
+                        ? false
+                        : request.includeInTotal()
         );
 
         return toResponse(account);
@@ -209,7 +216,7 @@ public class FinancialAccountService {
     }
 
     @Transactional
-    public void delete(
+    public DeleteFinancialAccountResponse delete(
             UUID currentUserId,
             UUID accountId
     ) {
@@ -223,17 +230,31 @@ public class FinancialAccountService {
                 membership.getFamily().getId()
         );
 
-        if (transactionRepository.existsByAccount_Id(accountId)
+        boolean hasHistory = transactionRepository.existsByAccount_Id(accountId)
                 || transferRepository.existsBySourceAccount_IdOrDestinationAccount_Id(
                         accountId,
                         accountId
-                )) {
+                );
+
+        if (hasHistory && account.getType() == FinancialAccountType.INVESTMENT) {
+            account.archive();
+            return new DeleteFinancialAccountResponse(
+                    true,
+                    "A conta de investimento possui historico, foi arquivada e saiu dos indicadores."
+            );
+        }
+
+        if (hasHistory) {
             throw new IllegalArgumentException(
                     "A conta possui lançamentos e não pode ser excluída. Desative-a."
             );
         }
 
         accountRepository.delete(account);
+        return new DeleteFinancialAccountResponse(
+                false,
+                "Conta excluida definitivamente."
+        );
     }
 
     private FinancialAccount requireAccount(
@@ -256,6 +277,11 @@ public class FinancialAccountService {
                 .calculatePaidMovementBalance(account.getId()));
         BigDecimal transfers = zeroIfNull(transferRepository
                 .calculateCompletedTransferBalance(account.getId()));
+
+        if (account.getType() == FinancialAccountType.INVESTMENT) {
+            movements = BigDecimal.ZERO;
+            transfers = BigDecimal.ZERO;
+        }
 
         return FinancialAccountResponse.from(
                 account,
