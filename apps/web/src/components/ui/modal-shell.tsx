@@ -13,7 +13,8 @@ import {
 type ModalSize =
   | "small"
   | "medium"
-  | "large";
+  | "large"
+  | "invoice";
 
 type ModalLayer =
   | "default"
@@ -37,6 +38,7 @@ const sizeClassNames: Record<
   small: "sm:max-w-lg",
   medium: "sm:max-w-2xl",
   large: "sm:max-w-4xl",
+  invoice: "sm:max-w-[960px]",
 };
 
 const layerClassNames: Record<
@@ -61,7 +63,11 @@ export function ModalShell({
     useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timeout = window.setTimeout(() => {
+      setMounted(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -145,17 +151,17 @@ export function ModalShell({
         className={cn(
           `
             flex
-            max-h-[94dvh]
+            max-h-[100dvh]
             w-full
             flex-col
             overflow-hidden
-            rounded-t-[2rem]
+            rounded-none
             border
             border-white/10
             bg-[#090909]
             shadow-[0_32px_100px_rgba(0,0,0,0.8)]
-            sm:max-h-[92dvh]
-            sm:rounded-[2rem]
+            sm:max-h-[90dvh]
+            sm:rounded-[1.5rem]
           `,
           sizeClassNames[size],
         )}
@@ -172,10 +178,11 @@ export function ModalShell({
             border-b
             border-white/10
             bg-[#090909]/95
-            px-5
-            py-5
+            px-4
+            py-3
             backdrop-blur-xl
             sm:px-7
+            sm:py-4
           "
         >
           <div className="min-w-0">

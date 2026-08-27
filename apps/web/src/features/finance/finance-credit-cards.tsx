@@ -12,19 +12,13 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { financeService } from "./finance-service";
-import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
-import { FinancialCreditCardForm } from "./financial-credit-card-form";
-import { FinancialInvoicePanel } from "./financial-invoice-panel";
 import { confirmDialog } from "@/lib/feedback";
-
 import type {
   CreateFinancialCardPurchaseRequest,
   CreateFinancialCreditCardRequest,
   FinancialAccount,
   FinancialCategory,
   FinancialCreditCard,
-  FinancialCreditCardInstallment,
   FinancialCreditCardInvoice,
   FinancialCreditCardPurchase,
   FinancialInvoiceCategorySummary,
@@ -32,18 +26,33 @@ import type {
   UpdateFinancialCreditCardRequest,
 } from "@/types/finance";
 
+import { financeService } from "./finance-service";
+import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
+import { FinancialCreditCardForm } from "./financial-credit-card-form";
+import { FinancialInvoicePanel } from "./financial-invoice-panel";
+
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
-const shortMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
-  month: "short",
-});
+const shortMonthFormatter = new Intl.DateTimeFormat("pt-BR", { month: "short" });
 const longMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
   year: "numeric",
 });
 const dateFormatter = new Intl.DateTimeFormat("pt-BR");
+const categoryPalette = [
+  "#8b5cf6",
+  "#06b6d4",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#60a5fa",
+  "#14b8a6",
+  "#f97316",
+  "#a3e635",
+  "#c084fc",
+];
 
 function date(value: string) {
   return new Date(`${value}T00:00:00`);
@@ -71,6 +80,15 @@ function currentMonthKey() {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function hashText(value: string) {
+  return [...value].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
+}
+
+function categoryColor(categoryId: string | null, categoryName: string, index = 0) {
+  if (categoryId === "other") return "#8f8f99";
+  return categoryPalette[(hashText(categoryId ?? categoryName) + index) % categoryPalette.length];
+}
+
 function orderInvoices(invoices: FinancialCreditCardInvoice[]) {
   const current = currentMonthKey();
   return [...invoices].sort((left, right) => {
@@ -85,7 +103,7 @@ function orderInvoices(invoices: FinancialCreditCardInvoice[]) {
   });
 }
 
-function statusLabel(status: FinancialCreditCardInvoice["status"]) {
+function invoiceStatusLabel(status: FinancialCreditCardInvoice["status"]) {
   return {
     OPEN: "Aberta",
     CLOSED: "Fechada",
@@ -94,25 +112,11 @@ function statusLabel(status: FinancialCreditCardInvoice["status"]) {
   }[status];
 }
 
-function installmentAmount(installment: FinancialCreditCardInstallment) {
-  return installment.purchaseType === "CREDIT"
-    ? -installment.amount
-    : installment.amount;
-}
-
 function bestPurchaseDay(card: FinancialCreditCard) {
   return card.closingDay === 28 ? 1 : card.closingDay + 1;
 }
 
-function CompactMetric({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
+function CompactMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="min-h-24 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
       <p className="truncate text-xs text-zinc-500">{label}</p>
@@ -122,13 +126,7 @@ function CompactMetric({
   );
 }
 
-function ChartCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
       <h2 className="mb-4 text-base font-semibold text-white">{title}</h2>
@@ -146,27 +144,25 @@ function InvoiceCategoryChart({
   loading: boolean;
   totalAmount: number;
 }) {
-  const [showAll, setShowAll] = useState(false);
   const total = summary.reduce((sum, item) => sum + item.amount, 0);
   const top = summary.slice(0, 5);
   const other = summary.slice(5);
   const otherAmount = other.reduce((sum, item) => sum + item.amount, 0);
   const entries =
-    showAll || other.length === 0
-      ? summary
+    other.length === 0
+      ? top
       : [
           ...top,
           {
             categoryId: "other",
             categoryName: "Outras",
-            color: "#71717a",
+            color: "#8f8f99",
             amount: otherAmount,
             percentage: total > 0 ? (otherAmount / total) * 100 : 0,
             itemCount: other.reduce((sum, item) => sum + item.itemCount, 0),
             uncategorized: false,
           },
         ].filter((item) => item.amount !== 0);
-  const palette = ["#f8fafc", "#d4d4d8", "#a1a1aa", "#71717a", "#52525b"];
   const segments = entries
     .filter((item) => item.amount > 0)
     .reduce<{ cursor: number; values: string[] }>(
@@ -176,10 +172,7 @@ function InvoiceCategoryChart({
         const end = start + share;
         return {
           cursor: end,
-          values: [
-            ...state.values,
-            `${item.color ?? palette[index % palette.length]} ${start}% ${end}%`,
-          ],
+          values: [...state.values, `${categoryColor(item.categoryId, item.categoryName, index)} ${start}% ${end}%`],
         };
       },
       { cursor: 0, values: [] },
@@ -187,51 +180,38 @@ function InvoiceCategoryChart({
     .values.join(", ");
 
   if (loading) {
-    return <div className="h-44 animate-pulse rounded-2xl bg-white/[0.04]" />;
+    return <div className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />;
   }
 
   if (summary.length === 0) {
     return (
-      <div className="flex min-h-36 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 px-5 text-center text-sm text-zinc-500">
-        Esta fatura não possui compras categorizadas.
+      <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 px-5 text-center text-sm text-zinc-500">
+        Esta fatura não possui compras.
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center">
+    <div className="grid gap-4 md:grid-cols-[9.5rem_minmax(0,1fr)] md:items-center">
       <div
-        className="relative mx-auto grid size-40 place-items-center rounded-full"
-        style={{
-          background: segments
-            ? `conic-gradient(${segments})`
-            : "conic-gradient(rgba(255,255,255,0.12) 0 100%)",
-        }}
+        className="relative mx-auto grid size-36 place-items-center rounded-full"
+        style={{ background: segments ? `conic-gradient(${segments})` : "conic-gradient(rgba(255,255,255,0.12) 0 100%)" }}
         title={`Total da fatura: ${formatCurrency(totalAmount)}`}
       >
-        <div className="grid size-28 place-items-center rounded-full bg-[#090909] text-center">
+        <div className="grid size-24 place-items-center rounded-full bg-[#090909] text-center">
           <span className="text-[0.65rem] text-zinc-500">Fatura</span>
-          <span className="text-sm font-semibold text-white">
-            {formatCurrency(totalAmount)}
-          </span>
+          <span className="text-xs font-semibold text-white">{formatCurrency(totalAmount)}</span>
         </div>
       </div>
       <div className="space-y-2">
         {entries.map((item, index) => {
-          const color = item.color ?? palette[index % palette.length];
+          const color = categoryColor(item.categoryId, item.categoryName, index);
           return (
-            <div
-              key={item.categoryId ?? item.categoryName}
-              title={`${item.categoryName}: ${formatCurrency(item.amount)}`}
-              className="rounded-xl px-2 py-1.5 transition hover:bg-white/[0.05]"
-            >
+            <div key={item.categoryId ?? item.categoryName} title={`${item.categoryName}: ${formatCurrency(item.amount)}`} className="rounded-xl px-2 py-1 transition hover:bg-white/[0.05]">
               <div className="flex items-center gap-2 text-sm">
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                 <span className="min-w-0 flex-1 truncate text-zinc-300">{item.categoryName}</span>
-                <span className="shrink-0 text-xs text-zinc-500">{item.itemCount} compra(s)</span>
-                <span className="shrink-0 text-xs text-zinc-500">
-                  {item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
-                </span>
+                <span className="shrink-0 text-xs text-zinc-500">{item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
                 <span className={item.amount < 0 ? "w-24 shrink-0 text-right font-medium text-emerald-300" : "w-24 shrink-0 text-right font-medium text-white"}>
                   {formatCurrency(item.amount)}
                 </span>
@@ -239,15 +219,9 @@ function InvoiceCategoryChart({
             </div>
           );
         })}
-        {other.length > 0 ? (
-          <button type="button" onClick={() => setShowAll((value) => !value)} className="mt-1 text-xs font-medium text-zinc-300 hover:text-white">
-            {showAll ? "Ver menos" : "Ver todas"}
-          </button>
-        ) : null}
+        {other.length > 0 ? <p className="text-xs text-zinc-500">Demais categorias agrupadas em Outras.</p> : null}
         {Math.abs(total - totalAmount) > 0.009 ? (
-          <p className="text-xs leading-5 text-zinc-500">
-            Total líquido por categoria: {formatCurrency(total)}.
-          </p>
+          <p className="text-xs leading-5 text-zinc-500">Total líquido por categoria: {formatCurrency(total)}.</p>
         ) : null}
       </div>
     </div>
@@ -268,16 +242,17 @@ function InvoiceEvolution({
   onSelectInvoice: (invoiceId: string) => void;
 }) {
   const ordered = [...invoices].sort((left, right) => left.referenceMonth.localeCompare(right.referenceMonth));
-  const visible = ordered.slice(-months);
+  const selectedIndex = Math.max(ordered.findIndex((invoice) => invoice.id === selectedInvoiceId), ordered.length - 1);
+  const visible = ordered.slice(Math.max(selectedIndex - months + 1, 0), selectedIndex + 1);
   const max = Math.max(...visible.map((invoice) => Math.abs(invoice.totalAmount)), 1);
   const average =
-    visible.length >= 3
+    visible.length >= 3 && visible.some((invoice) => invoice.totalAmount > 0)
       ? visible.reduce((sum, invoice) => sum + Math.max(invoice.totalAmount, 0), 0) / visible.length
       : null;
 
   if (visible.length === 0) {
     return (
-      <div className="flex min-h-36 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 text-sm text-zinc-500">
+      <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 text-sm text-zinc-500">
         Nenhuma fatura para exibir.
       </div>
     );
@@ -299,82 +274,71 @@ function InvoiceEvolution({
           ))}
         </div>
       </div>
-      <div className="relative flex h-44 items-end gap-2 border-b border-white/10 pb-6">
-        {average ? (
-          <span
-            className="pointer-events-none absolute left-0 right-0 border-t border-dashed border-white/20"
-            style={{ bottom: `calc(1.5rem + ${(average / max) * 100}% * 0.8)` }}
-          />
+      <div className="relative flex h-36 items-end gap-2 border-b border-white/10 pb-5">
+        {average && average < max ? (
+          <span className="pointer-events-none absolute left-0 right-0 border-t border-dashed border-white/20" style={{ bottom: `calc(1.25rem + ${(average / max) * 100}% * 0.75)` }} />
         ) : null}
         {visible.map((invoice) => {
           const selected = invoice.id === selectedInvoiceId;
           const height = `${Math.max((Math.abs(invoice.totalAmount) / max) * 100, invoice.totalAmount ? 7 : 2)}%`;
           const label = shortMonthFormatter.format(date(invoice.referenceMonth)).replace(".", "");
           const future = monthKey(invoice.referenceMonth) > currentMonthKey();
+          const statusClass =
+            selected
+              ? "border-white bg-white"
+              : invoice.status === "PAID"
+                ? "border-emerald-300/20 bg-emerald-300/60"
+                : invoice.status === "CLOSED"
+                  ? "border-sky-300/20 bg-sky-300/55"
+                  : future
+                    ? "border-white/10 bg-white/[0.16]"
+                    : "border-white/10 bg-zinc-300";
           return (
             <button
               key={invoice.id}
               type="button"
-              title={`${formatMonth(invoice.referenceMonth)}: ${formatCurrency(invoice.totalAmount)} · ${statusLabel(invoice.status)}`}
+              title={`${formatMonth(invoice.referenceMonth)} · ${invoiceStatusLabel(invoice.status)} · ${formatCurrency(invoice.totalAmount)}`}
               onClick={() => onSelectInvoice(invoice.id)}
               className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white/45"
             >
-              <span
-                className={[
-                  "w-full rounded-t-md border transition group-hover:border-white/30",
-                  selected ? "border-white bg-white" : future ? "border-white/10 bg-white/[0.16]" : invoice.status === "PAID" ? "border-emerald-300/20 bg-emerald-300/60" : "border-white/10 bg-zinc-300",
-                ].join(" ")}
-                style={{ height }}
-              />
-              <span className={selected ? "truncate text-[0.62rem] uppercase text-white" : "truncate text-[0.62rem] uppercase text-zinc-500"}>
-                {label}
-              </span>
+              <span className={`w-full rounded-t-md border transition group-hover:border-white/30 ${statusClass}`} style={{ height }} />
+              <span className={selected ? "truncate text-[0.62rem] uppercase text-white" : "truncate text-[0.62rem] uppercase text-zinc-500"}>{label}</span>
             </button>
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-zinc-500">
-        A linha tracejada indica a média quando há ao menos três faturas.
-      </p>
     </div>
   );
 }
 
-function PurchaseList({
-  installments,
+function InvoiceHistory({
+  invoices,
+  selectedInvoiceId,
+  onSelectInvoice,
 }: {
-  installments: FinancialCreditCardInstallment[];
+  invoices: FinancialCreditCardInvoice[];
+  selectedInvoiceId: string | null;
+  onSelectInvoice: (invoiceId: string) => void;
 }) {
-  if (installments.length === 0) {
-    return (
-      <div className="flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 text-sm text-zinc-500">
-        Fatura sem compras.
-      </div>
-    );
-  }
-
   return (
-    <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.03]">
-      <div className="border-b border-white/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-white">Compras da fatura</h2>
-      </div>
-      <div className="divide-y divide-white/[0.07]">
-        {installments.map((installment) => {
-          const amount = installmentAmount(installment);
+    <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+      <h2 className="mb-3 text-base font-semibold text-white">Histórico de faturas</h2>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {invoices.slice(0, 8).map((invoice) => {
+          const selected = invoice.id === selectedInvoiceId;
           return (
-            <div key={installment.id} className="grid gap-1 px-4 py-3 sm:grid-cols-[6rem_minmax(0,1fr)_8rem] sm:items-center">
-              <span className="text-xs text-zinc-500">{formatDate(installment.purchaseDate)}</span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-200">{installment.purchaseDescription}</p>
-                <p className="truncate text-xs text-zinc-500">
-                  {installment.categoryName ?? "Sem categoria"}
-                  {installment.totalInstallments > 1 ? ` · Parcela ${installment.installmentNumber}/${installment.totalInstallments}` : ""}
-                </p>
-              </div>
-              <span className={amount < 0 ? "text-sm font-semibold text-emerald-300 sm:text-right" : "text-sm font-semibold text-white sm:text-right"}>
-                {formatCurrency(amount)}
-              </span>
-            </div>
+            <button
+              key={invoice.id}
+              type="button"
+              onClick={() => onSelectInvoice(invoice.id)}
+              className={selected ? "rounded-xl border border-white bg-white p-3 text-left text-black transition" : "rounded-xl border border-white/10 bg-black/10 p-3 text-left text-zinc-300 transition hover:bg-white/[0.06]"}
+            >
+              <p className="truncate text-sm font-semibold">{formatMonth(invoice.referenceMonth)}</p>
+              <p className={selected ? "mt-1 text-xs text-zinc-700" : "mt-1 text-xs text-zinc-500"}>
+                {invoiceStatusLabel(invoice.status)} · vence {formatDate(invoice.dueDate)}
+              </p>
+              <p className="mt-2 text-sm font-semibold">{formatCurrency(invoice.totalAmount)}</p>
+            </button>
           );
         })}
       </div>
@@ -427,9 +391,7 @@ export function FinanceCreditCards() {
         financeService.accounts.list(),
         financeService.categories.list("EXPENSE"),
       ]);
-      const invoiceResults = await Promise.all(
-        cardsResult.map((card) => financeService.invoices.list(card.id)),
-      );
+      const invoiceResults = await Promise.all(cardsResult.map((card) => financeService.invoices.list(card.id)));
 
       setCards(cardsResult);
       setInvoices(invoiceResults.flat());
@@ -448,7 +410,6 @@ export function FinanceCreditCards() {
     const timeout = window.setTimeout(() => {
       void loadData();
     }, 0);
-
     return () => window.clearTimeout(timeout);
   }, [loadData]);
 
@@ -460,16 +421,12 @@ export function FinanceCreditCards() {
           : selectedCardInvoices[0]?.id ?? null,
       );
     }, 0);
-
     return () => window.clearTimeout(timeout);
   }, [selectedCardInvoices]);
 
   useEffect(() => {
     if (!selectedInvoice) {
-      const emptyTimeout = window.setTimeout(() => {
-        setCategorySummary([]);
-      }, 0);
-
+      const emptyTimeout = window.setTimeout(() => setCategorySummary([]), 0);
       return () => window.clearTimeout(emptyTimeout);
     }
 
@@ -546,8 +503,8 @@ export function FinanceCreditCards() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-semibold text-white">Cartões de crédito</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Fatura atual é a fatura selecionada. Em aberto é o total de faturas abertas/fechadas do cartão. Parcelas futuras ficam nas próximas faturas.
+          <p className="mt-1 max-w-3xl text-sm text-zinc-500">
+            Fatura atual é a fatura selecionada. Em aberto é o total de faturas abertas/fechadas do cartão.
           </p>
         </div>
         <div className="flex gap-2">
@@ -587,7 +544,7 @@ export function FinanceCreditCards() {
       {!loading && selectedCard ? (
         <>
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-            <CompactMetric label="Fatura atual" value={formatCurrency(selectedInvoice?.totalAmount ?? 0)} detail={selectedInvoice ? `${formatMonth(selectedInvoice.referenceMonth)} · ${statusLabel(selectedInvoice.status)}` : "Sem fatura selecionada"} />
+            <CompactMetric label="Fatura atual" value={formatCurrency(selectedInvoice?.totalAmount ?? 0)} detail={selectedInvoice ? `${formatMonth(selectedInvoice.referenceMonth)} · ${invoiceStatusLabel(selectedInvoice.status)}` : "Sem fatura selecionada"} />
             <CompactMetric label="Limite disponível" value={formatCurrency(selectedCard.availableLimit)} detail="Crédito livre no cartão selecionado" />
             <CompactMetric label="Limite utilizado" value={`${limitUsedPercentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`} detail={formatCurrency(selectedCard.outstandingAmount)} />
             <CompactMetric label="Vencimento" value={selectedInvoice ? formatDate(selectedInvoice.dueDate) : "-"} detail="Da fatura selecionada" />
@@ -602,17 +559,13 @@ export function FinanceCreditCards() {
                   <label className="text-xs text-zinc-500">
                     Cartão
                     <select value={selectedCard.id} onChange={(event) => setSelectedCardId(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#111] px-3 text-sm text-white outline-none focus:border-white/30">
-                      {cards.map((card) => (
-                        <option key={card.id} value={card.id}>{card.name}</option>
-                      ))}
+                      {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
                     </select>
                   </label>
                   <label className="text-xs text-zinc-500">
                     Fatura
                     <select value={selectedInvoice?.id ?? ""} onChange={(event) => setSelectedInvoiceId(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#111] px-3 text-sm text-white outline-none focus:border-white/30">
-                      {selectedCardInvoices.map((invoice) => (
-                        <option key={invoice.id} value={invoice.id}>{formatMonth(invoice.referenceMonth)}</option>
-                      ))}
+                      {selectedCardInvoices.map((invoice) => <option key={invoice.id} value={invoice.id}>{formatMonth(invoice.referenceMonth)}</option>)}
                     </select>
                   </label>
                 </div>
@@ -624,7 +577,7 @@ export function FinanceCreditCards() {
                   <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(Math.max(limitUsedPercentage, 0), 100)}%` }} />
                 </div>
                 <div className="flex gap-1">
-                  <button type="button" title="Abrir faturas" onClick={() => setInvoiceCard(selectedCard)} className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"><FileText className="size-4" /></button>
+                  <button type="button" title="Abrir fatura" onClick={() => setInvoiceCard(selectedCard)} className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"><FileText className="size-4" /></button>
                   <button type="button" title="Editar" onClick={() => { setEditingCard(selectedCard); setCardFormOpen(true); }} className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"><Pencil className="size-4" /></button>
                   <button type="button" title={selectedCard.active ? "Desativar" : "Ativar"} disabled={actionId === selectedCard.id} onClick={() => void executeAction(selectedCard.id, () => selectedCard.active ? financeService.creditCards.deactivate(selectedCard.id) : financeService.creditCards.activate(selectedCard.id))} className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"><Power className="size-4" /></button>
                   <button type="button" title="Excluir" onClick={() => { void confirmDialog({ title: "Excluir cartão", description: `Deseja excluir o cartão "${selectedCard.name}"?`, confirmLabel: "Excluir", variant: "danger" }).then((confirmed) => { if (confirmed) void executeAction(selectedCard.id, () => financeService.creditCards.remove(selectedCard.id)); }); }} className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-rose-400/10 hover:text-rose-300"><Trash2 className="size-4" /></button>
@@ -635,8 +588,8 @@ export function FinanceCreditCards() {
             <ChartCard title="Resumo da fatura">
               {selectedInvoice ? (
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <CompactMetric label="Período" value={`${formatDate(selectedInvoice.closingDate)}`} detail={`Fecha em ${formatDate(selectedInvoice.closingDate)} e vence em ${formatDate(selectedInvoice.dueDate)}`} />
-                  <CompactMetric label="Compras" value={`${selectedInvoice.installments.length}`} detail="Parcelas desta fatura" />
+                  <CompactMetric label="Fechamento" value={formatDate(selectedInvoice.closingDate)} detail={`Vence em ${formatDate(selectedInvoice.dueDate)}`} />
+                  <CompactMetric label="Itens" value={`${selectedInvoice.installments.length}`} detail="Parcelas desta fatura" />
                   <CompactMetric label="Total" value={formatCurrency(selectedInvoice.totalAmount)} detail="Débitos menos créditos/estornos" />
                 </div>
               ) : (
@@ -654,7 +607,7 @@ export function FinanceCreditCards() {
             </ChartCard>
           </div>
 
-          <PurchaseList installments={selectedInvoice?.installments ?? []} />
+          <InvoiceHistory invoices={selectedCardInvoices} selectedInvoiceId={selectedInvoice?.id ?? null} onSelectInvoice={setSelectedInvoiceId} />
         </>
       ) : null}
 
