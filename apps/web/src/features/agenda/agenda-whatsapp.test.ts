@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { AgendaOccurrenceDetails } from "@/types/agenda";
 import {
   buildAgendaWhatsAppMessage,
+  buildAgendaWhatsAppShareUrl,
   buildAgendaWhatsAppUrl,
+  buildAgendaWhatsAppWebUrl,
   formatAgendaDate,
   occurrenceTimeLabel,
   recurrenceLabel,
@@ -133,6 +135,37 @@ describe("agenda WhatsApp sharing", () => {
     expect(decoded).toContain("Santo Andr\u00e9 \u2013 SP");
     expect(decoded).not.toContain(replacementCharacter);
     expect(decoded).not.toContain("%F0%9F%93%85");
+  });
+
+  it("builds a direct WhatsApp Web URL with intact decoded emojis", () => {
+    const url = buildAgendaWhatsAppWebUrl(baseOccurrence, "America/Sao_Paulo");
+    const decoded = decodeURIComponent(
+      url.replace("https://web.whatsapp.com/send?text=", ""),
+    );
+
+    expect(url).toMatch(/^https:\/\/web\.whatsapp\.com\/send\?text=/);
+    expect(decoded).toContain("\u{1F4C5}");
+    expect(decoded).toContain("\u{1F4DD}");
+    expect(decoded).not.toContain(replacementCharacter);
+    expect(decoded).not.toContain("%F0%9F%93%85");
+  });
+
+  it("selects WhatsApp Web on desktop and wa.me on mobile", () => {
+    expect(
+      buildAgendaWhatsAppShareUrl(
+        baseOccurrence,
+        "America/Sao_Paulo",
+        "Mozilla/5.0 Windows NT 10.0",
+      ),
+    ).toMatch(/^https:\/\/web\.whatsapp\.com\/send\?text=/);
+
+    expect(
+      buildAgendaWhatsAppShareUrl(
+        baseOccurrence,
+        "America/Sao_Paulo",
+        "Mozilla/5.0 iPhone",
+      ),
+    ).toMatch(/^https:\/\/wa\.me\/\?text=/);
   });
 
   it("formats recurrence details", () => {

@@ -148,7 +148,7 @@ function ensureTerminalPunctuation(value: string): string {
     return trimmed;
   }
 
-  return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  return /[.!?\u2026]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
 export function buildAgendaWhatsAppMessage(
@@ -220,12 +220,40 @@ export function buildAgendaWhatsAppUrl(
   return whatsappUrl;
 }
 
+export function buildAgendaWhatsAppWebUrl(
+  occurrence: AgendaOccurrenceDetails,
+  timeZone?: string,
+): string {
+  const message = buildAgendaWhatsAppMessage(occurrence, timeZone);
+  const whatsappUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+
+  return whatsappUrl;
+}
+
+function shouldUseMobileWhatsApp(userAgent: string): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(userAgent);
+}
+
+export function buildAgendaWhatsAppShareUrl(
+  occurrence: AgendaOccurrenceDetails,
+  timeZone: string | undefined,
+  userAgent: string,
+): string {
+  return shouldUseMobileWhatsApp(userAgent)
+    ? buildAgendaWhatsAppUrl(occurrence, timeZone)
+    : buildAgendaWhatsAppWebUrl(occurrence, timeZone);
+}
+
 export function openAgendaWhatsAppShare(
   occurrence: AgendaOccurrenceDetails,
   timeZone?: string,
 ) {
   window.open(
-    buildAgendaWhatsAppUrl(occurrence, timeZone),
+    buildAgendaWhatsAppShareUrl(
+      occurrence,
+      timeZone,
+      window.navigator.userAgent,
+    ),
     "_blank",
     "noopener,noreferrer",
   );
