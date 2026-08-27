@@ -49,7 +49,7 @@ export function MobileNavigation() {
         safe-area-bottom
         fixed
         inset-x-3
-        bottom-3
+        bottom-0
         z-50
         overflow-hidden
         rounded-[1.4rem]
@@ -57,6 +57,7 @@ export function MobileNavigation() {
         border-white/[0.10]
         bg-[#09090a]/82
         p-1.5
+        pb-[calc(0.375rem+env(safe-area-inset-bottom))]
         shadow-[0_20px_60px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.055)]
         backdrop-blur-3xl
         lg:hidden

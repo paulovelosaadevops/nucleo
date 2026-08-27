@@ -3,6 +3,7 @@
 import { LoadingScreen } from "@/components/feedback/loading-screen";
 import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
+import { PwaExperience } from "@/components/pwa/pwa-experience";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -61,7 +62,7 @@ export function AppShell({
 
   return (
     <div
-      className="relative isolate min-h-screen overflow-x-hidden bg-[#050505]"
+      className="pwa-viewport relative isolate overflow-x-hidden bg-[#050505]"
       style={{
         backgroundImage: `
           radial-gradient(
@@ -136,6 +137,7 @@ export function AppShell({
             sticky
             top-0
             z-30
+            safe-area-top
             border-b
             border-white/[0.075]
             bg-[#080809]/75
@@ -259,7 +261,7 @@ export function AppShell({
           className="
             relative
             mx-auto
-            min-h-[calc(100vh-4rem)]
+            min-h-[calc(100dvh-4rem)]
             max-w-[100rem]
             px-4
             pb-28
@@ -275,6 +277,7 @@ export function AppShell({
       </div>
 
       <MobileNavigation />
+      <PwaExperience />
     </div>
   );
 }

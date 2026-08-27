@@ -37,6 +37,7 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     radial-gradient(
@@ -61,11 +62,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 button,
 input,
 textarea,
 select {
   font: inherit;
+  font-size: max(1rem, 16px);
 }
 
 select {
@@ -174,7 +183,23 @@ a {
 }
 
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.pwa-viewport {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 @keyframes nucleo-fade-up {
