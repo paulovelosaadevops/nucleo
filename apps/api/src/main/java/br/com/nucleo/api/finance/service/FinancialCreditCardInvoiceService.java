@@ -19,6 +19,7 @@ import br.com.nucleo.api.finance.repository.FinancialCreditCardInvoiceRepository
 import br.com.nucleo.api.finance.repository.FinancialCreditCardRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -159,10 +160,13 @@ public class FinancialCreditCardInvoiceService {
         List<FinancialInvoiceCategorySummaryResponse> categorized =
                 buckets.values().stream()
                         .filter(CategoryBucket::hasItems)
+                        .filter(CategoryBucket::hasNonZeroAmount)
+                        .sorted(CategoryBucket.byAbsoluteAmountDesc())
                         .map(bucket -> bucket.toResponse(total))
                         .toList();
 
-        if (!uncategorized.hasItems()) {
+        if (!uncategorized.hasItems()
+                || !uncategorized.hasNonZeroAmount()) {
             return categorized;
         }
 
@@ -172,6 +176,10 @@ public class FinancialCreditCardInvoiceService {
                                 uncategorized.toResponse(total)
                         )
                 )
+                .sorted(Comparator.comparing(
+                        (FinancialInvoiceCategorySummaryResponse item) ->
+                                item.amount().abs()
+                ).reversed())
                 .toList();
     }
 
@@ -510,8 +518,18 @@ public class FinancialCreditCardInvoiceService {
             return itemCount > 0;
         }
 
+        private boolean hasNonZeroAmount() {
+            return amount.compareTo(BigDecimal.ZERO) != 0;
+        }
+
         private BigDecimal amount() {
             return amount;
+        }
+
+        private static Comparator<CategoryBucket> byAbsoluteAmountDesc() {
+            return Comparator.comparing(
+                    (CategoryBucket bucket) -> bucket.amount().abs()
+            ).reversed();
         }
 
         private FinancialInvoiceCategorySummaryResponse toResponse(

@@ -1,5 +1,4 @@
 "use client";
-
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { FinanceSummaryCard } from "./finance-summary-card";
+import { FinanceExpenseCategoryChart } from "./finance-expense-category-chart";
 import {
   FinanceCell,
   FinanceCompactList,
@@ -93,6 +93,7 @@ function Empty({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CategoryDistribution({
   title,
   categories,
@@ -435,7 +436,7 @@ export function FinanceOverview({
           <Projection months={dashboard.nextThreeMonths} />
           <div className="grid gap-5 xl:grid-cols-2"><Recurrences items={dashboard.recurrences} /><Installments items={dashboard.installmentCommitments} /></div>
           <div className="grid gap-5 xl:grid-cols-2"><Upcoming items={dashboard.upcomingItems} /><Budgets items={dashboard.budgets} /></div>
-          <div className="grid gap-5 xl:grid-cols-2"><CategoryDistribution title="Receitas realizadas por categoria" categories={dashboard.incomeByCategory} /><CategoryDistribution title="Despesas realizadas por categoria" categories={dashboard.expenseByCategory} /></div>
+          <FinanceExpenseCategoryChart categories={dashboard.expenseByCategory} />
         </>
       ) : null}
     </div>

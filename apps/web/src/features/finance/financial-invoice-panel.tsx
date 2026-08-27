@@ -889,7 +889,7 @@ function InvoiceCategoryChart({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold text-white">
-                Gastos por categoria
+                Gastos por categoria da fatura
               </h3>
               <p className="text-xs text-zinc-500">
                 {loading
