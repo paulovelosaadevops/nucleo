@@ -7,17 +7,31 @@ const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
 const statusLabels: Record<AgendaOccurrenceDetails["status"], string> = {
   SCHEDULED: "Agendado",
-  COMPLETED: "Concluído",
+  COMPLETED: "Conclu\u00eddo",
   CANCELLED: "Cancelado",
 };
 
 const recurrenceLabels: Record<RecurrenceFrequency, string> = {
-  NONE: "Não se repete",
-  DAILY: "Diária",
+  NONE: "N\u00e3o se repete",
+  DAILY: "Di\u00e1ria",
   WEEKLY: "Semanal",
   MONTHLY: "Mensal",
   YEARLY: "Anual",
 };
+
+const whatsappEmoji = {
+  calendar: "\u{1F4C5}",
+  note: "\u{1F4DD}",
+  date: "\u{1F5D3}\u{FE0F}",
+  time: "\u{1F550}",
+  location: "\u{1F4CD}",
+  responsible: "\u{1F464}",
+  recurrence: "\u{1F501}",
+  status: "\u{1F4CC}",
+  observations: "\u{1F4AC}",
+  completed: "\u{2705}",
+  cancelled: "\u{274C}",
+} as const;
 
 function formatter(
   options: Intl.DateTimeFormatOptions,
@@ -109,37 +123,61 @@ export function occurrenceTimeLabel(
     return start;
   }
 
-  return `${start} às ${formatAgendaTime(occurrence.endsAt, timeZone)}`;
+  return `${start} \u00e0s ${formatAgendaTime(occurrence.endsAt, timeZone)}`;
 }
 
-function addLine(lines: string[], label: string, value?: string | null) {
+function addLine(
+  lines: string[],
+  emoji: string,
+  label: string,
+  value?: string | null,
+) {
   const normalized = value?.trim();
 
   if (!normalized) {
     return;
   }
 
-  lines.push(`*${label}:* ${normalized}`);
+  lines.push(`${emoji} *${label}:* ${normalized}`);
+}
+
+function ensureTerminalPunctuation(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
 export function buildAgendaWhatsAppMessage(
   occurrence: AgendaOccurrenceDetails,
   timeZone?: string,
 ): string {
-  const lines = ["📅 *Compromisso — Núcleo*", ""];
+  const lines = [
+    `${whatsappEmoji.calendar} *COMPROMISSO \u2014 N\u00daCLEO*`,
+    "",
+  ];
 
-  addLine(lines, "Título", occurrence.title);
-  addLine(lines, "Status", statusLabels[occurrence.status]);
-  addLine(lines, "Data", formatAgendaDate(occurrence.startsAt, timeZone));
-  addLine(lines, "Horário", occurrenceTimeLabel(occurrence, timeZone));
-  addLine(lines, "Local", occurrence.location);
-  addLine(lines, "Responsável", occurrence.assignedTo?.name);
-  addLine(lines, "Recorrência", recurrenceLabel(occurrence.recurrence));
+  const title = occurrence.title.trim();
+
+  if (title) {
+    lines.push(`${whatsappEmoji.note} *${title}*`, "");
+  }
+
+  addLine(lines, whatsappEmoji.date, "Data", formatAgendaDate(occurrence.startsAt, timeZone));
+  addLine(lines, whatsappEmoji.time, "Hor\u00e1rio", occurrenceTimeLabel(occurrence, timeZone));
+  addLine(lines, whatsappEmoji.location, "Local", occurrence.location);
+  addLine(lines, whatsappEmoji.responsible, "Respons\u00e1vel", occurrence.assignedTo?.name);
+  addLine(lines, whatsappEmoji.recurrence, "Recorr\u00eancia", recurrenceLabel(occurrence.recurrence));
+  addLine(lines, whatsappEmoji.status, "Status", statusLabels[occurrence.status]);
 
   if (occurrence.completedAt) {
     addLine(
       lines,
-      "Concluído em",
+      whatsappEmoji.completed,
+      "Conclu\u00eddo em",
       formatAgendaDateTime(occurrence.completedAt, timeZone),
     );
   }
@@ -147,6 +185,7 @@ export function buildAgendaWhatsAppMessage(
   if (occurrence.cancelledAt) {
     addLine(
       lines,
+      whatsappEmoji.cancelled,
       "Cancelado em",
       formatAgendaDateTime(occurrence.cancelledAt, timeZone),
     );
@@ -159,8 +198,14 @@ export function buildAgendaWhatsAppMessage(
     .join("\n\n");
 
   if (observation) {
-    lines.push("", "*Observações:*", observation);
+    lines.push(
+      "",
+      `${whatsappEmoji.observations} *Observa\u00e7\u00f5es:*`,
+      ensureTerminalPunctuation(observation),
+    );
   }
+
+  lines.push("", "_Enviado pelo N\u00facleo | Central Familiar_");
 
   return lines.join("\n");
 }
@@ -169,9 +214,10 @@ export function buildAgendaWhatsAppUrl(
   occurrence: AgendaOccurrenceDetails,
   timeZone?: string,
 ): string {
-  return `https://wa.me/?text=${encodeURIComponent(
-    buildAgendaWhatsAppMessage(occurrence, timeZone),
-  )}`;
+  const message = buildAgendaWhatsAppMessage(occurrence, timeZone);
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  return whatsappUrl;
 }
 
 export function openAgendaWhatsAppShare(
