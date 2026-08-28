@@ -16,11 +16,13 @@ import { ModalShell } from "@/components/ui/modal-shell";
 
 import { financeService } from "./finance-service";
 import { FinanceSummaryCard } from "./finance-summary-card";
+import { confirmDialog } from "@/lib/feedback";
 
 import type {
   CreateFinancialInvestmentRequest,
   FinancialAccount,
   FinancialInvestment,
+  FinancialInvestmentMovementType,
   FinancialInvestmentModality,
   InvestmentTransferRequest,
   ReconcileInvestmentRequest,
@@ -44,6 +46,16 @@ const modalityLabels: Record<FinancialInvestmentModality, string> = {
   SAVINGS: "Poupanca",
   MANUAL: "Manual",
   NO_YIELD: "Sem rendimento",
+};
+
+const movementTypeLabels: Record<FinancialInvestmentMovementType, string> = {
+  INITIAL_BALANCE: "Saldo inicial",
+  CONTRIBUTION: "Aporte",
+  REDEMPTION: "Resgate",
+  YIELD: "Rendimento",
+  VALUATION_ADJUSTMENT: "Ajuste de valor",
+  RECONCILIATION: "Rendimento/Ajuste de saldo",
+  CONFIGURATION_CHANGE: "Alteracao de configuracao",
 };
 
 function today() {
@@ -73,6 +85,7 @@ export function FinanceInvestments() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [modal, setModal] = useState<"create" | "details" | "reconcile" | null>(null);
   const [selected, setSelected] = useState<FinancialInvestment | null>(null);
   const [transfer, setTransfer] = useState<TransferModalState | null>(null);
@@ -94,6 +107,7 @@ export function FinanceInvestments() {
       ]);
       setInvestments(investmentItems);
       setAccounts(accountItems);
+      setMessage(null);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Não foi possível carregar os investimentos.");
     } finally {
@@ -184,7 +198,31 @@ export function FinanceInvestments() {
       notes: String(form.get("notes") ?? "") || null,
     };
     try {
+      const currentBalance = selected.currentBalance;
+      const previousReconciliation = selected.movements.find(
+        (movement) => movement.movementType === "RECONCILIATION"
+          && movement.movementDate === request.referenceDate,
+      );
+      const additionalAdjustment = request.realBalance - currentBalance;
+      const consolidatedAdjustment =
+        (previousReconciliation?.amount ?? 0) + additionalAdjustment;
+      const alreadyReconciledMessage = previousReconciliation
+        ? `\n\nJa existe um ajuste registrado nesta data. Ajuste anterior: ${money(previousReconciliation.amount)}. Ajuste adicional: ${money(additionalAdjustment)}. Ajuste consolidado: ${money(consolidatedAdjustment)}.`
+        : "";
+      const confirmed = await confirmDialog({
+        title: previousReconciliation ? "Consolidar conciliacao" : "Confirmar conciliacao",
+        description: `Saldo calculado atual: ${money(currentBalance)}\nSaldo real informado: ${money(request.realBalance)}\nDiferenca aplicada: ${money(additionalAdjustment)}${alreadyReconciledMessage}\n\nSaldo final: ${money(request.realBalance)}`,
+        confirmLabel: "Conciliar",
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
       replaceInvestment(await financeService.investments.reconcile(selected.id, request));
+      setMessage(
+        `Saldo conciliado com sucesso. Ajuste de hoje: ${money(consolidatedAdjustment)}. Novo saldo: ${money(request.realBalance)}`,
+      );
       setModal("details");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Não foi possível conciliar o investimento.");
@@ -217,6 +255,12 @@ export function FinanceInvestments() {
         <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.04] p-4 text-sm text-rose-200">
           <AlertCircle className="size-4 shrink-0" />
           {error}
+        </div>
+      ) : null}
+
+      {message ? (
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 text-sm text-emerald-200">
+          {message}
         </div>
       ) : null}
 
@@ -368,8 +412,8 @@ function DetailsModal({ investment, onClose, onReconcile }: { investment: Financ
           ) : investment.movements.map((movement) => (
             <div key={movement.id} className="flex items-center justify-between gap-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-zinc-200">{movement.movementType.replaceAll("_", " ")}</p>
-                <p className="mt-1 text-xs text-zinc-500">{movement.movementDate}{movement.notes ? ` - ${movement.notes}` : ""}</p>
+                <p className="text-sm font-medium text-zinc-200">{movementTypeLabels[movement.movementType]}</p>
+                <p className="mt-1 text-xs text-zinc-500">{new Intl.DateTimeFormat("pt-BR").format(new Date(`${movement.movementDate}T00:00:00`))}{movement.notes ? ` - ${movement.notes}` : ""}</p>
               </div>
               <p className={movement.amount >= 0 ? "shrink-0 text-sm font-semibold text-emerald-300" : "shrink-0 text-sm font-semibold text-rose-300"}>{money(movement.amount)}</p>
             </div>

@@ -271,7 +271,9 @@ public class FinancialInvestmentService {
     @Transactional
     public FinancialInvestmentResponse redeem(UUID currentUserId, UUID investmentId, InvestmentTransferRequest request) {
         FamilyMembership membership = familyAccessService.requireAdministrator(currentUserId);
-        FinancialInvestment investment = requireInvestment(investmentId, membership.getFamily().getId());
+        FinancialInvestment investment = investmentRepository
+                .findWithLockByIdAndFamily_Id(investmentId, membership.getFamily().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Investimento nao encontrado"));
         FinancialAccount destination = optionalAccount(request.accountId(), membership.getFamily().getId());
         if (destination != null) {
             ensureAvailableAccount(destination, "O destino do resgate deve ser uma conta de saldo disponivel");
@@ -333,19 +335,38 @@ public class FinancialInvestmentService {
     public FinancialInvestmentResponse reconcile(UUID currentUserId, UUID investmentId, ReconcileInvestmentRequest request) {
         FamilyMembership membership = familyAccessService.requireAdministrator(currentUserId);
         FinancialInvestment investment = requireInvestment(investmentId, membership.getFamily().getId());
-        BigDecimal before = investment.getCalculatedBalance();
-        BigDecimal adjustment = investment.reconcile(request.realBalance(), request.referenceDate());
-        movementRepository.save(FinancialInvestmentMovement.create(
-                investment,
-                null,
-                FinancialInvestmentMovementType.RECONCILIATION,
-                request.referenceDate(),
-                adjustment,
-                before,
-                investment.getCalculatedBalance(),
-                request.notes(),
-                "investment-reconcile:" + investmentId + ":" + request.referenceDate()
-        ));
+        if (request.referenceDate().isBefore(investment.getStartDate())) {
+            throw new IllegalArgumentException("A data da conciliacao nao pode ser anterior ao inicio do investimento");
+        }
+
+        BigDecimal before = moneyScale(investment.getCalculatedBalance());
+        BigDecimal realBalance = moneyScale(request.realBalance());
+        BigDecimal additionalAdjustment = realBalance.subtract(before);
+        FinancialInvestmentMovement movement = movementRepository
+                .findFirstByInvestment_IdAndMovementTypeAndMovementDate(
+                        investmentId,
+                        FinancialInvestmentMovementType.RECONCILIATION,
+                        request.referenceDate()
+                )
+                .orElse(null);
+
+        investment.reconcile(realBalance, request.referenceDate());
+
+        if (movement == null) {
+            movementRepository.save(FinancialInvestmentMovement.create(
+                    investment,
+                    null,
+                    FinancialInvestmentMovementType.RECONCILIATION,
+                    request.referenceDate(),
+                    additionalAdjustment,
+                    before,
+                    realBalance,
+                    request.notes(),
+                    "investment-reconcile:" + investmentId + ":" + request.referenceDate()
+            ));
+        } else {
+            movement.consolidate(additionalAdjustment, realBalance, request.notes());
+        }
         return toResponse(investment);
     }
 
@@ -502,5 +523,9 @@ public class FinancialInvestmentService {
 
     private BigDecimal zero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private BigDecimal moneyScale(BigDecimal value) {
+        return zero(value).setScale(2, RoundingMode.HALF_UP);
     }
 }

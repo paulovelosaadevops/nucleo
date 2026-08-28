@@ -35,8 +35,22 @@ public class FinancialInvestmentMovement {
         movement.calculatedBalanceAfter = after; movement.notes = notes; movement.idempotencyKey = idempotencyKey;
         return movement;
     }
+    public void consolidate(BigDecimal additionalAmount, BigDecimal after, String additionalNotes) {
+        amount = amount.add(additionalAmount);
+        calculatedBalanceAfter = after;
+        notes = mergeNotes(notes, additionalNotes);
+    }
     @PrePersist private void onCreate() { createdAt = Instant.now(); }
     public UUID getId() { return id; } public FinancialInvestmentMovementType getMovementType() { return movementType; }
     public LocalDate getMovementDate() { return movementDate; } public BigDecimal getAmount() { return amount; }
     public BigDecimal getCalculatedBalanceAfter() { return calculatedBalanceAfter; } public String getNotes() { return notes; }
+    public BigDecimal getCalculatedBalanceBefore() { return calculatedBalanceBefore; }
+    public Instant getCreatedAt() { return createdAt; }
+
+    private static String mergeNotes(String current, String additional) {
+        if (additional == null || additional.isBlank()) return current;
+        if (current == null || current.isBlank()) return additional.trim();
+        String merged = current + " | " + additional.trim();
+        return merged.length() > 1000 ? merged.substring(0, 1000) : merged;
+    }
 }
