@@ -463,17 +463,6 @@ public class FinancialRecurrenceService {
                 membership.getUser()
         );
 
-        recurrence.update(
-                recurrence.getAccount(),
-                recurrence.getCreditCard(),
-                category,
-                recurrence.getType(),
-                recurrence.getDescription(),
-                request.amount(),
-                recurrence.getPaymentMethod(),
-                recurrence.getNotes()
-        );
-
         return FinancialRecurrenceOccurrenceResponse.from(occurrence);
     }
 

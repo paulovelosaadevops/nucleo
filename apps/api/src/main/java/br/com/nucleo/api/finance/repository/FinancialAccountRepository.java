@@ -1,10 +1,6 @@
 package br.com.nucleo.api.finance.repository;
 
 import br.com.nucleo.api.finance.domain.FinancialAccount;
-import br.com.nucleo.api.finance.domain.FinancialTransaction;
-import br.com.nucleo.api.finance.domain.FinancialTransactionStatus;
-import br.com.nucleo.api.finance.domain.FinancialTransactionType;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -50,9 +46,10 @@ public interface FinancialAccountRepository
             select coalesce(
                 sum(
                     case
-                        when transaction.type =
-                            br.com.nucleo.api.finance.domain.FinancialTransactionType.INCOME
-                            then transaction.amount
+                        when transaction.type in (
+                            br.com.nucleo.api.finance.domain.FinancialTransactionType.INCOME,
+                            br.com.nucleo.api.finance.domain.FinancialTransactionType.TRANSFER_IN
+                        ) then transaction.amount
                         else -transaction.amount
                     end
                 ),
@@ -73,9 +70,10 @@ public interface FinancialAccountRepository
             select coalesce(
                 sum(
                     case
-                        when transaction.type =
-                            br.com.nucleo.api.finance.domain.FinancialTransactionType.INCOME
-                            then transaction.amount
+                        when transaction.type in (
+                            br.com.nucleo.api.finance.domain.FinancialTransactionType.INCOME,
+                            br.com.nucleo.api.finance.domain.FinancialTransactionType.TRANSFER_IN
+                        ) then transaction.amount
                         else -transaction.amount
                     end
                 ),

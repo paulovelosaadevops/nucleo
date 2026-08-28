@@ -9,6 +9,7 @@ import {
   Plus,
   Power,
   RefreshCw,
+  Send,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import { FinancialAccountForm } from "./financial-account-form";
 import type {
   CreateFinancialAccountRequest,
   FinancialAccount,
+  FinancialTransfer,
   UpdateFinancialAccountRequest,
 } from "@/types/finance";
 
@@ -131,7 +133,7 @@ export function FinanceAccounts() {
 
   async function executeAction(
     accountId: string,
-    action: () => Promise<FinancialAccount | { message: string } | void>,
+    action: () => Promise<FinancialAccount | FinancialTransfer | { message: string } | void>,
   ) {
     setActionId(accountId);
     setError(null);
@@ -199,6 +201,95 @@ export function FinanceAccounts() {
     void executeAction(account.id, () =>
       financeService.accounts.remove(account.id),
     );
+  }
+
+  async function transferFrom(account: FinancialAccount) {
+    const destinations = accounts.filter(
+      (item) => item.active && item.id !== account.id,
+    );
+
+    if (destinations.length === 0) {
+      setError("Cadastre outra conta ativa para transferir.");
+      return;
+    }
+
+    const destinationName = await promptDialog({
+      title: "Transferir",
+      description: "Digite o nome exato da conta de destino.",
+      label: "Conta de destino",
+      defaultValue: destinations[0]?.name ?? "",
+      confirmLabel: "Continuar",
+    });
+
+    if (destinationName === null) return;
+
+    const destination = destinations.find(
+      (item) => item.name.toLowerCase() === destinationName.trim().toLowerCase(),
+    );
+
+    if (!destination) {
+      setError("Conta de destino nao encontrada entre as contas ativas.");
+      return;
+    }
+
+    const value = await promptDialog({
+      title: "Valor da transferencia",
+      description: `${account.name} -> ${destination.name}`,
+      label: "Valor",
+      inputMode: "decimal",
+      confirmLabel: "Continuar",
+    });
+
+    if (value === null) return;
+
+    const amount = Number(value.replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Informe um valor maior que zero.");
+      return;
+    }
+
+    const occurredAt = await promptDialog({
+      title: "Data",
+      description: `${account.name} -> ${destination.name} ${currencyFormatter.format(amount)}`,
+      label: "Data",
+      type: "date",
+      defaultValue: new Date().toISOString().slice(0, 10),
+      confirmLabel: "Continuar",
+    });
+
+    if (!occurredAt) return;
+
+    const description = await promptDialog({
+      title: "Descricao",
+      description: "Opcional",
+      label: "Descricao",
+      defaultValue: "",
+      confirmLabel: "Revisar",
+    });
+
+    if (description === null) return;
+
+    const confirmed = await confirmDialog({
+      title: "Confirmar transferencia",
+      description: `${account.name} -> ${destination.name}\n${currencyFormatter.format(amount)} em ${new Intl.DateTimeFormat("pt-BR").format(new Date(`${occurredAt}T00:00:00`))}`,
+      confirmLabel: "Transferir",
+    });
+
+    if (!confirmed) return;
+
+    void executeAction(account.id, async () => {
+      const result = await financeService.transfers.create({
+        sourceAccountId: account.id,
+        destinationAccountId: destination.id,
+        amount,
+        occurredAt,
+        description: description || null,
+      });
+      setNotice(
+        `Transferencia registrada\n${result.sourceAccountName} -> ${result.destinationAccountName}\n${currencyFormatter.format(result.amount)} em ${new Intl.DateTimeFormat("pt-BR").format(new Date(`${result.occurredAt}T00:00:00`))}`,
+      );
+      return result;
+    });
   }
 
   return (
@@ -358,6 +449,16 @@ export function FinanceAccounts() {
                     </div>
                   ) : (
                     <div className="flex flex-wrap justify-end gap-1">
+                      <button
+                        type="button"
+                        title="Transferir"
+                        aria-label="Transferir"
+                        onClick={() => void transferFrom(account)}
+                        className="flex size-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white"
+                      >
+                        <Send className="size-4" />
+                      </button>
+
                       <button
                         type="button"
                         title="Ajustar saldo inicial"

@@ -23,6 +23,11 @@ public interface FinancialTransferRepository extends JpaRepository<FinancialTran
                   transfer.sourceAccount.id = :accountId
                   or transfer.destinationAccount.id = :accountId
               )
+              and not exists (
+                  select transaction.id
+                  from FinancialTransaction transaction
+                  where transaction.transfer.id = transfer.id
+              )
             """)
     BigDecimal calculateCompletedTransferBalance(@Param("accountId") UUID accountId);
 

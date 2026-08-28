@@ -2,5 +2,7 @@ package br.com.nucleo.api.finance.domain;
 
 public enum FinancialTransactionType {
     INCOME,
-    EXPENSE
+    EXPENSE,
+    TRANSFER_IN,
+    TRANSFER_OUT
 }

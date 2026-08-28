@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/api-client";
 
 import type {
   ChangeInitialBalanceRequest,
+  CreateFinancialTransferRequest,
   CreateFinancialAccountRequest,
   CreateFinancialBudgetRequest,
   CreateFinancialCardPurchaseRequest,
@@ -32,6 +33,7 @@ import type {
   FinancialRecurrenceOccurrence,
   FinancialRecurrenceGenerationResult,
   FinancialTransaction,
+  FinancialTransfer,
   FinancialTransactionFilters,
   InvestmentTransferRequest,
   PayFinancialInvoiceRequest,
@@ -402,6 +404,20 @@ export const financeService = {
         `${FINANCE_BASE_PATH}/transactions/${transactionId}`,
         {
           method: "DELETE",
+        },
+      );
+    },
+  },
+
+  transfers: {
+    create(
+      request: CreateFinancialTransferRequest,
+    ): Promise<FinancialTransfer> {
+      return apiRequest<FinancialTransfer>(
+        `${FINANCE_BASE_PATH}/transfers`,
+        {
+          method: "POST",
+          body: request,
         },
       );
     },

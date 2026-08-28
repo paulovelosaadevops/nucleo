@@ -277,7 +277,6 @@ public class FinancialAccountService {
                 .calculatePaidMovementBalance(account.getId()));
         BigDecimal transfers = zeroIfNull(transferRepository
                 .calculateCompletedTransferBalance(account.getId()));
-
         if (account.getType() == FinancialAccountType.INVESTMENT) {
             movements = BigDecimal.ZERO;
             transfers = BigDecimal.ZERO;

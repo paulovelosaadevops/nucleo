@@ -30,7 +30,9 @@ public record FinancialTransactionResponse(
         UUID recurrenceId,
         Integer recurrenceSequence,
         UUID creditCardInvoiceId,
+        UUID transferId,
         boolean invoicePayment,
+        boolean transfer,
         boolean excludedFromReports,
         UUID createdByUserId,
         String createdByName,
@@ -93,7 +95,11 @@ public record FinancialTransactionResponse(
                 recurrenceId,
                 transaction.getRecurrenceSequence(),
                 creditCardInvoiceId,
+                transaction.getTransfer() == null
+                        ? null
+                        : transaction.getTransfer().getId(),
                 transaction.isInvoicePayment(),
+                transaction.isTransferTransaction(),
                 transaction.isExcludedFromReports(),
                 transaction.getCreatedBy().getId(),
                 transaction.getCreatedBy().getName(),

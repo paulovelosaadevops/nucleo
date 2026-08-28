@@ -213,7 +213,9 @@ public class FinancialRecurrenceOccurrence {
     public LocalDate getReminderDate() { return reminderDate; }
     public FinancialRecurrenceOccurrenceStatus getStatus() { return status; }
     public BigDecimal getEstimatedAmount() { return estimatedAmount; }
+    public BigDecimal getExpectedAmount() { return estimatedAmount; }
     public BigDecimal getConfirmedAmount() { return confirmedAmount; }
+    public BigDecimal getActualAmount() { return confirmedAmount == null ? estimatedAmount : confirmedAmount; }
     public LocalDate getConfirmedDate() { return confirmedDate; }
     public FinancialCategory getCategory() { return category; }
     public FinancialAccount getAccount() { return account; }

@@ -15,6 +15,7 @@ import br.com.nucleo.api.finance.repository.FinancialInvestmentRepository;
 import br.com.nucleo.api.finance.repository.FinancialInvestmentYieldEntryRepository;
 import br.com.nucleo.api.finance.repository.FinancialMarketIndexValueRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransferRepository;
+import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
 import br.com.nucleo.api.identity.user.domain.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -46,6 +47,8 @@ class FinancialInvestmentServiceDashboardTest {
     private FinancialMarketIndexValueRepository indexValueRepository;
     @Mock
     private FinancialTransferRepository transferRepository;
+    @Mock
+    private FinancialTransactionRepository transactionRepository;
 
     private FinancialInvestmentService service;
     private User user;
@@ -62,6 +65,7 @@ class FinancialInvestmentServiceDashboardTest {
                 yieldEntryRepository,
                 indexValueRepository,
                 transferRepository,
+                transactionRepository,
                 new FinancialBusinessCalendar(),
                 new InvestmentYieldEngine()
         );

@@ -65,6 +65,8 @@ public class FinancialTransactionService {
                 membership.getFamily().getId()
         );
 
+        ensureRegularType(request.type());
+
         FinancialCategory category = findCategory(
                 request.categoryId(),
                 request.type(),
@@ -177,6 +179,7 @@ public class FinancialTransactionService {
                 );
 
         ensureNotInvoicePayment(transaction);
+        ensureRegularType(request.type());
 
         FinancialAccount account = requireActiveAccount(
                 request.accountId(),
@@ -412,6 +415,15 @@ public class FinancialTransactionService {
         if (transaction.isInvoicePayment()) {
             throw new IllegalArgumentException(
                     "O pagamento da fatura deve ser gerenciado pela própria fatura"
+            );
+        }
+    }
+
+    private void ensureRegularType(FinancialTransactionType type) {
+        if (type == FinancialTransactionType.TRANSFER_IN
+                || type == FinancialTransactionType.TRANSFER_OUT) {
+            throw new IllegalArgumentException(
+                    "Transferencias devem ser registradas pelo fluxo de transferencia"
             );
         }
     }

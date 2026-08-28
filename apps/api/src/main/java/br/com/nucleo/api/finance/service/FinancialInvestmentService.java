@@ -16,6 +16,8 @@ import br.com.nucleo.api.finance.domain.FinancialInvestmentYieldStatus;
 import br.com.nucleo.api.finance.domain.FinancialMarketIndexValue;
 import br.com.nucleo.api.finance.domain.FinancialTransfer;
 import br.com.nucleo.api.finance.domain.FinancialTransferType;
+import br.com.nucleo.api.finance.domain.FinancialTransaction;
+import br.com.nucleo.api.finance.domain.FinancialTransactionType;
 import br.com.nucleo.api.finance.dto.CreateFinancialInvestmentRequest;
 import br.com.nucleo.api.finance.dto.FinancialInvestmentDashboardResponse;
 import br.com.nucleo.api.finance.dto.FinancialInvestmentMovementResponse;
@@ -29,6 +31,7 @@ import br.com.nucleo.api.finance.repository.FinancialInvestmentRepository;
 import br.com.nucleo.api.finance.repository.FinancialInvestmentYieldEntryRepository;
 import br.com.nucleo.api.finance.repository.FinancialMarketIndexValueRepository;
 import br.com.nucleo.api.finance.repository.FinancialTransferRepository;
+import br.com.nucleo.api.finance.repository.FinancialTransactionRepository;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -51,6 +54,7 @@ public class FinancialInvestmentService {
     private final FinancialInvestmentYieldEntryRepository yieldEntryRepository;
     private final FinancialMarketIndexValueRepository indexValueRepository;
     private final FinancialTransferRepository transferRepository;
+    private final FinancialTransactionRepository transactionRepository;
     private final FinancialBusinessCalendar businessCalendar;
     private final InvestmentYieldEngine yieldEngine;
 
@@ -63,6 +67,7 @@ public class FinancialInvestmentService {
             FinancialInvestmentYieldEntryRepository yieldEntryRepository,
             FinancialMarketIndexValueRepository indexValueRepository,
             FinancialTransferRepository transferRepository,
+            FinancialTransactionRepository transactionRepository,
             FinancialBusinessCalendar businessCalendar,
             InvestmentYieldEngine yieldEngine
     ) {
@@ -74,6 +79,7 @@ public class FinancialInvestmentService {
         this.yieldEntryRepository = yieldEntryRepository;
         this.indexValueRepository = indexValueRepository;
         this.transferRepository = transferRepository;
+        this.transactionRepository = transactionRepository;
         this.businessCalendar = businessCalendar;
         this.yieldEngine = yieldEngine;
     }
@@ -229,6 +235,17 @@ public class FinancialInvestmentService {
                         request.notes(),
                         membership.getUser()
                 ));
+        if (transfer != null) {
+            transactionRepository.save(FinancialTransaction.createTransferLeg(
+                    transfer,
+                    source,
+                    FinancialTransactionType.TRANSFER_OUT,
+                    "Aporte para " + investment.getName(),
+                    request.amount(),
+                    request.date(),
+                    membership.getUser()
+            ));
+        }
         investment.contribute(request.amount(), request.date());
         lotRepository.save(FinancialInvestmentLot.create(
                 investment,
@@ -286,6 +303,17 @@ public class FinancialInvestmentService {
                         request.notes(),
                         membership.getUser()
                 ));
+        if (transfer != null) {
+            transactionRepository.save(FinancialTransaction.createTransferLeg(
+                    transfer,
+                    destination,
+                    FinancialTransactionType.TRANSFER_IN,
+                    "Resgate de " + investment.getName(),
+                    amount,
+                    request.date(),
+                    membership.getUser()
+            ));
+        }
         investment.redeem(amount, request.date());
         movementRepository.save(FinancialInvestmentMovement.create(
                 investment,

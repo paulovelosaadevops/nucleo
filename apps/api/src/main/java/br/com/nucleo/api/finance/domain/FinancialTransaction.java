@@ -54,6 +54,10 @@ public class FinancialTransaction {
     @JoinColumn(name = "credit_card_invoice_id")
     private FinancialCreditCardInvoice creditCardInvoice;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transfer_id")
+    private FinancialTransfer transfer;
+
     @Column(name = "exclude_from_reports", nullable = false)
     private boolean excludedFromReports;
 
@@ -111,6 +115,7 @@ public class FinancialTransaction {
             FinancialRecurrence recurrence,
             Integer recurrenceSequence,
             FinancialCreditCardInvoice creditCardInvoice,
+            FinancialTransfer transfer,
             boolean excludedFromReports,
             FinancialTransactionType type,
             String description,
@@ -128,6 +133,7 @@ public class FinancialTransaction {
         this.recurrence = recurrence;
         this.recurrenceSequence = recurrenceSequence;
         this.creditCardInvoice = creditCardInvoice;
+        this.transfer = transfer;
         this.excludedFromReports = excludedFromReports;
         this.type = Objects.requireNonNull(type);
         this.description = normalizeDescription(description);
@@ -163,6 +169,7 @@ public class FinancialTransaction {
                 family,
                 account,
                 category,
+                null,
                 null,
                 null,
                 null,
@@ -222,6 +229,7 @@ public class FinancialTransaction {
                 source,
                 sequence,
                 null,
+                null,
                 false,
                 source.getType(),
                 source.getDescription(),
@@ -257,6 +265,7 @@ public class FinancialTransaction {
                 null,
                 null,
                 source,
+                null,
                 true,
                 FinancialTransactionType.EXPENSE,
                 "Pagamento da fatura "
@@ -270,6 +279,45 @@ public class FinancialTransaction {
                 paymentMethod,
                 createdBy,
                 "Pagamento de fatura de cartão de crédito"
+        );
+    }
+
+    public static FinancialTransaction createTransferLeg(
+            FinancialTransfer transfer,
+            FinancialAccount account,
+            FinancialTransactionType type,
+            String description,
+            BigDecimal amount,
+            LocalDate transferDate,
+            User createdBy
+    ) {
+        if (type != FinancialTransactionType.TRANSFER_IN
+                && type != FinancialTransactionType.TRANSFER_OUT) {
+            throw new IllegalArgumentException(
+                    "Tipo invalido para movimento de transferencia"
+            );
+        }
+
+        FinancialTransfer source = Objects.requireNonNull(transfer);
+
+        return new FinancialTransaction(
+                source.getFamily(),
+                account,
+                null,
+                null,
+                null,
+                null,
+                source,
+                true,
+                type,
+                description,
+                amount,
+                transferDate,
+                transferDate,
+                FinancialTransactionStatus.PAID,
+                FinancialPaymentMethod.BANK_TRANSFER,
+                userOrThrow(createdBy),
+                source.getNotes()
         );
     }
 
@@ -364,6 +412,11 @@ public class FinancialTransaction {
         return creditCardInvoice != null;
     }
 
+    public boolean isTransferTransaction() {
+        return type == FinancialTransactionType.TRANSFER_IN
+                || type == FinancialTransactionType.TRANSFER_OUT;
+    }
+
     @PrePersist
     private void onCreate() {
         Instant now = Instant.now();
@@ -414,6 +467,26 @@ public class FinancialTransaction {
         }
 
         if (
+                transfer != null
+                        && (
+                        recurrence != null
+                                || creditCardInvoice != null
+                )
+        ) {
+            throw new IllegalStateException(
+                    "Transfer transaction cannot have multiple origins"
+            );
+        }
+
+        if (isTransferTransaction()) {
+            if (transfer == null || !excludedFromReports || category != null) {
+                throw new IllegalStateException(
+                        "Transfer transactions must be linked, uncategorized and excluded from reports"
+                );
+            }
+        }
+
+        if (
                 creditCardInvoice != null
                         && !excludedFromReports
         ) {
@@ -427,6 +500,11 @@ public class FinancialTransaction {
         if (isInvoicePayment()) {
             throw new IllegalStateException(
                     "Invoice payment must be managed through the invoice"
+            );
+        }
+        if (isTransferTransaction()) {
+            throw new IllegalStateException(
+                    "Transfer transaction must be managed through the transfer"
             );
         }
     }
@@ -554,6 +632,10 @@ public class FinancialTransaction {
 
     public FinancialCreditCardInvoice getCreditCardInvoice() {
         return creditCardInvoice;
+    }
+
+    public FinancialTransfer getTransfer() {
+        return transfer;
     }
 
     public boolean isExcludedFromReports() {
