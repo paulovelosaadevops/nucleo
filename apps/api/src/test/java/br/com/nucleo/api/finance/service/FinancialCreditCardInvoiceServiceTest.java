@@ -107,7 +107,7 @@ class FinancialCreditCardInvoiceServiceTest {
 
     @Test
     void summarizesInvoiceByNetCategoryAmountOrderedDescending() {
-        FinancialCategory mercado = category("Mercado", "#ffffff");
+        FinancialCategory mercado = category("Mercado", "#2DD4BF");
         FinancialCategory taxas = category("Taxas e encargos", "#a1a1aa");
 
         when(installmentRepository.findAllByInvoice_IdOrderByInstallmentNumberAsc(
@@ -126,6 +126,7 @@ class FinancialCreditCardInvoiceServiceTest {
 
         assertThat(summary).hasSize(2);
         assertThat(summary.get(0).categoryName()).isEqualTo("Mercado");
+        assertThat(summary.get(0).color()).isEqualTo("#2DD4BF");
         assertThat(summary.get(0).amount()).isEqualByComparingTo("260.00");
         assertThat(summary.get(0).percentage()).isEqualByComparingTo("95.41");
         assertThat(summary.get(0).itemCount()).isEqualTo(2);

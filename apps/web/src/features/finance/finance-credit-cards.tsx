@@ -28,6 +28,7 @@ import type {
 
 import { financeService } from "./finance-service";
 import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
+import { categoryDisplayColor } from "./financial-category-colors";
 import { FinancialCreditCardForm } from "./financial-credit-card-form";
 import { FinancialInvoicePanel } from "./financial-invoice-panel";
 
@@ -41,18 +42,6 @@ const longMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
   year: "numeric",
 });
 const dateFormatter = new Intl.DateTimeFormat("pt-BR");
-const categoryPalette = [
-  "#8b5cf6",
-  "#06b6d4",
-  "#22c55e",
-  "#f59e0b",
-  "#ec4899",
-  "#60a5fa",
-  "#14b8a6",
-  "#f97316",
-  "#a3e635",
-  "#c084fc",
-];
 
 function date(value: string) {
   return new Date(`${value}T00:00:00`);
@@ -78,15 +67,6 @@ function monthKey(value: string) {
 function currentMonthKey() {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function hashText(value: string) {
-  return [...value].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
-}
-
-function categoryColor(categoryId: string | null, categoryName: string, index = 0) {
-  if (categoryId === "other") return "#8f8f99";
-  return categoryPalette[(hashText(categoryId ?? categoryName) + index) % categoryPalette.length];
 }
 
 function orderInvoices(invoices: FinancialCreditCardInvoice[]) {
@@ -144,35 +124,22 @@ function InvoiceCategoryChart({
   loading: boolean;
   totalAmount: number;
 }) {
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const total = summary.reduce((sum, item) => sum + item.amount, 0);
-  const top = summary.slice(0, 5);
-  const other = summary.slice(5);
-  const otherAmount = other.reduce((sum, item) => sum + item.amount, 0);
-  const entries =
-    other.length === 0
-      ? top
-      : [
-          ...top,
-          {
-            categoryId: "other",
-            categoryName: "Outras",
-            color: "#8f8f99",
-            amount: otherAmount,
-            percentage: total > 0 ? (otherAmount / total) * 100 : 0,
-            itemCount: other.reduce((sum, item) => sum + item.itemCount, 0),
-            uncategorized: false,
-          },
-        ].filter((item) => item.amount !== 0);
+  const entries = [...summary]
+    .filter((item) => item.amount !== 0)
+    .sort((left, right) => Math.abs(right.amount) - Math.abs(left.amount));
+  const selectedEntry = entries.find((item) => (item.categoryId ?? item.categoryName) === selectedCategoryKey);
   const segments = entries
     .filter((item) => item.amount > 0)
     .reduce<{ cursor: number; values: string[] }>(
-      (state, item, index) => {
+      (state, item) => {
         const start = state.cursor;
         const share = total > 0 ? (item.amount / total) * 100 : 0;
         const end = start + share;
         return {
           cursor: end,
-          values: [...state.values, `${categoryColor(item.categoryId, item.categoryName, index)} ${start}% ${end}%`],
+          values: [...state.values, `${categoryDisplayColor(item.color)} ${start}% ${end}%`],
         };
       },
       { cursor: 0, values: [] },
@@ -195,7 +162,10 @@ function InvoiceCategoryChart({
     <div className="grid gap-4 md:grid-cols-[9.5rem_minmax(0,1fr)] md:items-center">
       <div
         className="relative mx-auto grid size-36 place-items-center rounded-full"
-        style={{ background: segments ? `conic-gradient(${segments})` : "conic-gradient(rgba(255,255,255,0.12) 0 100%)" }}
+        style={{
+          background: segments ? `conic-gradient(${segments})` : "conic-gradient(rgba(255,255,255,0.12) 0 100%)",
+          boxShadow: selectedEntry ? `0 0 0 2px ${categoryDisplayColor(selectedEntry.color)}` : undefined,
+        }}
         title={`Total da fatura: ${formatCurrency(totalAmount)}`}
       >
         <div className="grid size-24 place-items-center rounded-full bg-[#090909] text-center">
@@ -203,25 +173,32 @@ function InvoiceCategoryChart({
           <span className="text-xs font-semibold text-white">{formatCurrency(totalAmount)}</span>
         </div>
       </div>
-      <div className="space-y-2">
-        {entries.map((item, index) => {
-          const color = categoryColor(item.categoryId, item.categoryName, index);
+      <div className="grid gap-x-4 gap-y-1 md:grid-cols-2">
+        {entries.map((item) => {
+          const color = categoryDisplayColor(item.color);
+          const key = item.categoryId ?? item.categoryName;
+          const selected = selectedCategoryKey === key;
           return (
-            <div key={item.categoryId ?? item.categoryName} title={`${item.categoryName}: ${formatCurrency(item.amount)}`} className="rounded-xl px-2 py-1 transition hover:bg-white/[0.05]">
+            <button
+              key={key}
+              type="button"
+              title={`${item.categoryName}: ${formatCurrency(item.amount)} · ${item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% · ${item.itemCount} lançamento(s)`}
+              onClick={() => setSelectedCategoryKey((current) => (current === key ? null : key))}
+              className={selected ? "w-full px-1 py-1 text-left outline-none ring-1 ring-white/15 transition" : "w-full px-1 py-1 text-left outline-none transition hover:bg-white/[0.035]"}
+            >
               <div className="flex items-center gap-2 text-sm">
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                 <span className="min-w-0 flex-1 truncate text-zinc-300">{item.categoryName}</span>
-                <span className="shrink-0 text-xs text-zinc-500">{item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
+                <span className="w-12 shrink-0 text-right text-xs tabular-nums text-zinc-500">{item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
                 <span className={item.amount < 0 ? "w-24 shrink-0 text-right font-medium text-emerald-300" : "w-24 shrink-0 text-right font-medium text-white"}>
                   {formatCurrency(item.amount)}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
-        {other.length > 0 ? <p className="text-xs text-zinc-500">Demais categorias agrupadas em Outras.</p> : null}
         {Math.abs(total - totalAmount) > 0.009 ? (
-          <p className="text-xs leading-5 text-zinc-500">Total líquido por categoria: {formatCurrency(total)}.</p>
+          <p className="text-xs leading-5 text-zinc-500 md:col-span-2">Total líquido por categoria: {formatCurrency(total)}.</p>
         ) : null}
       </div>
     </div>
@@ -331,13 +308,15 @@ function InvoiceHistory({
               key={invoice.id}
               type="button"
               onClick={() => onSelectInvoice(invoice.id)}
-              className={selected ? "rounded-xl border border-white bg-white p-3 text-left text-black transition" : "rounded-xl border border-white/10 bg-black/10 p-3 text-left text-zinc-300 transition hover:bg-white/[0.06]"}
+              className={selected ? "rounded-xl border border-white/20 bg-white/[0.08] p-2.5 text-left text-white transition" : "rounded-xl border border-white/10 bg-black/10 p-2.5 text-left text-zinc-300 transition hover:bg-white/[0.06]"}
             >
-              <p className="truncate text-sm font-semibold">{formatMonth(invoice.referenceMonth)}</p>
-              <p className={selected ? "mt-1 text-xs text-zinc-700" : "mt-1 text-xs text-zinc-500"}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-sm font-semibold">{formatMonth(invoice.referenceMonth)}</p>
+                <p className="shrink-0 text-sm font-semibold">{formatCurrency(invoice.totalAmount)}</p>
+              </div>
+              <p className={selected ? "mt-1 truncate text-xs text-zinc-300" : "mt-1 truncate text-xs text-zinc-500"}>
                 {invoiceStatusLabel(invoice.status)} · vence {formatDate(invoice.dueDate)}
               </p>
-              <p className="mt-2 text-sm font-semibold">{formatCurrency(invoice.totalAmount)}</p>
             </button>
           );
         })}

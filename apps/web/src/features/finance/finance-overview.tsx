@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { financeService } from "./finance-service";
+import { categoryDisplayColor } from "./financial-category-colors";
 import { useFinanceDashboard } from "./use-finance-dashboard";
 
 import type {
@@ -224,34 +225,18 @@ function CategoryBreakdownChart({
 }: {
   categories: FinancialCategorySummary[];
 }) {
-  const [showAll, setShowAll] = useState(false);
   const total = categories.reduce((sum, item) => sum + item.total, 0);
-  const top = categories.slice(0, 5);
-  const otherItems = categories.slice(5);
-  const otherTotal = otherItems.reduce((sum, item) => sum + item.total, 0);
-  const entries = showAll || otherItems.length === 0
-    ? categories
-    : [
-        ...top,
-        {
-          categoryId: "other",
-          categoryName: "Outras",
-          color: "#71717a",
-          icon: null,
-          type: "EXPENSE" as const,
-          transactionCount: otherItems.reduce((sum, item) => sum + item.transactionCount, 0),
-          total: otherTotal,
-          percentage: total > 0 ? (otherTotal / total) * 100 : 0,
-        },
-      ].filter((item) => item.total > 0);
+  const entries = [...categories]
+    .filter((item) => item.total > 0)
+    .sort((left, right) => right.total - left.total);
   const segments = entries
     .filter((item) => item.total > 0)
     .reduce<{ cursor: number; values: string[] }>(
-      (state, item, index) => {
+      (state, item) => {
         const start = state.cursor;
         const share = total > 0 ? (item.total / total) * 100 : 0;
         const end = start + share;
-        const color = item.color ?? ["#f8fafc", "#d4d4d8", "#a1a1aa", "#71717a", "#52525b"][index % 5];
+        const color = categoryDisplayColor(item.color);
 
         return {
           cursor: end,
@@ -290,8 +275,8 @@ function CategoryBreakdownChart({
             {formatCurrency(total)}
           </span>
         </div>
-        {entries.map((item, index) => {
-          const color = item.color ?? ["#f8fafc", "#d4d4d8", "#a1a1aa", "#71717a", "#52525b"][index % 5];
+        {entries.map((item) => {
+          const color = categoryDisplayColor(item.color);
           return (
             <div key={item.categoryId ?? item.categoryName}>
               <div className="flex items-center gap-2 text-sm">
@@ -310,15 +295,6 @@ function CategoryBreakdownChart({
             </div>
           );
         })}
-        {otherItems.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setShowAll((current) => !current)}
-            className="mt-2 text-xs font-medium text-zinc-300 hover:text-white"
-          >
-            {showAll ? "Ver menos" : "Ver todas"}
-          </button>
-        ) : null}
       </div>
     </div>
   );

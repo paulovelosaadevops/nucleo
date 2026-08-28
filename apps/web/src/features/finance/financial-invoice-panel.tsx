@@ -25,6 +25,7 @@ import type {
   FinancialPaymentMethod,
 } from "@/types/finance";
 
+import { categoryDisplayColor } from "./financial-category-colors";
 import { financeService } from "./finance-service";
 
 interface FinancialInvoicePanelProps {
@@ -43,18 +44,6 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
-const categoryPalette = [
-  "#8b5cf6",
-  "#06b6d4",
-  "#22c55e",
-  "#f59e0b",
-  "#ec4899",
-  "#60a5fa",
-  "#14b8a6",
-  "#f97316",
-  "#a3e635",
-  "#c084fc",
-];
 const paymentMethods: Array<{ value: FinancialPaymentMethod; label: string }> = [
   { value: "PIX", label: "Pix" },
   { value: "BANK_TRANSFER", label: "Transferência" },
@@ -96,15 +85,6 @@ function monthKey(value: string) {
 function currentMonthKey() {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function hashText(value: string) {
-  return [...value].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
-}
-
-function categoryColor(categoryId: string | null, categoryName: string, index = 0) {
-  if (categoryId === "other") return "#8f8f99";
-  return categoryPalette[(hashText(categoryId ?? categoryName) + index) % categoryPalette.length];
 }
 
 function orderInvoices(invoices: FinancialCreditCardInvoice[]) {
@@ -464,7 +444,6 @@ export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChan
                 totalAmount={selectedInvoice.totalAmount}
                 onSelectCategory={(id) => {
                   setCategoryFilter(categoryKey(id));
-                  setActiveTab("items");
                 }}
               />
             ) : null}
@@ -687,17 +666,20 @@ function CategoryTab({
   totalAmount: number;
   onSelectCategory: (categoryId: string | null) => void;
 }) {
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const total = summary.reduce((sum, item) => sum + item.amount, 0);
-  const segments = summary
+  const entries = [...summary].sort((left, right) => Math.abs(right.amount) - Math.abs(left.amount));
+  const selectedEntry = entries.find((item) => (item.categoryId ?? item.categoryName) === selectedCategoryKey);
+  const segments = entries
     .filter((item) => item.amount > 0)
     .reduce<{ cursor: number; values: string[] }>(
-      (state, item, index) => {
+      (state, item) => {
         const start = state.cursor;
         const share = total > 0 ? (item.amount / total) * 100 : 0;
         const end = start + share;
         return {
           cursor: end,
-          values: [...state.values, `${categoryColor(item.categoryId, item.categoryName, index)} ${start}% ${end}%`],
+          values: [...state.values, `${categoryDisplayColor(item.color)} ${start}% ${end}%`],
         };
       },
       { cursor: 0, values: [] },
@@ -715,25 +697,40 @@ function CategoryTab({
 
   return (
     <div className="grid gap-5 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-      <div className="relative mx-auto grid size-44 place-items-center rounded-full" style={{ background: segments ? `conic-gradient(${segments})` : "conic-gradient(rgba(255,255,255,0.12) 0 100%)" }}>
+      <div
+        className="relative mx-auto grid size-44 place-items-center rounded-full transition"
+        style={{
+          background: segments ? `conic-gradient(${segments})` : "conic-gradient(rgba(255,255,255,0.12) 0 100%)",
+          boxShadow: selectedEntry ? `0 0 0 2px ${categoryDisplayColor(selectedEntry.color)}` : undefined,
+        }}
+      >
         <div className="grid size-28 place-items-center rounded-full bg-[#090909] text-center">
           <span className="text-[0.65rem] text-zinc-500">Fatura</span>
           <span className="text-sm font-semibold text-white">{currencyFormatter.format(totalAmount)}</span>
         </div>
       </div>
-      <div className="divide-y divide-white/[0.07] border-y border-white/[0.07]">
-        {summary.map((item, index) => {
-          const color = categoryColor(item.categoryId, item.categoryName, index);
+      <div className="grid gap-x-4 gap-y-1 md:grid-cols-2">
+        {entries.map((item) => {
+          const color = categoryDisplayColor(item.color);
+          const key = item.categoryId ?? item.categoryName;
+          const selected = selectedCategoryKey === key;
           return (
-            <button key={item.categoryId ?? item.categoryName} type="button" onClick={() => onSelectCategory(item.categoryId)} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 text-left transition hover:bg-white/[0.025]">
-              <div className="flex min-w-0 items-center gap-2">
+            <button
+              key={key}
+              type="button"
+              title={`${item.categoryName}: ${currencyFormatter.format(item.amount)} · ${item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% · ${item.itemCount} lançamento(s)`}
+              onClick={() => {
+                setSelectedCategoryKey((current) => (current === key ? null : key));
+                onSelectCategory(item.categoryId);
+              }}
+              className={selected ? "min-w-0 px-1 py-1 text-left outline-none ring-1 ring-white/15 transition" : "min-w-0 px-1 py-1 text-left outline-none transition hover:bg-white/[0.035]"}
+            >
+              <div className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-200">{item.categoryName}</p>
-                  <p className="text-xs text-zinc-500">{item.itemCount} lançamento(s) · {item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</p>
-                </div>
+                <span className="min-w-0 flex-1 truncate text-zinc-200">{item.categoryName}</span>
+                <span className="w-12 shrink-0 text-right text-xs tabular-nums text-zinc-500">{item.percentage.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
+                <span className={item.amount < 0 ? "w-24 shrink-0 text-right font-semibold text-emerald-300" : "w-24 shrink-0 text-right font-semibold text-white"}>{currencyFormatter.format(item.amount)}</span>
               </div>
-              <span className={item.amount < 0 ? "text-sm font-semibold text-emerald-300" : "text-sm font-semibold text-white"}>{currencyFormatter.format(item.amount)}</span>
             </button>
           );
         })}
