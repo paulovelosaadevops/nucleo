@@ -2,13 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { shareAgendaIcs } from "@/features/agenda/agenda-calendar-export";
+import {
+  downloadAgendaIcs,
+  openAgendaIcs,
+  shareAgendaIcsFile,
+  type CalendarExportEvent,
+} from "@/features/agenda/agenda-calendar-export";
 import { apiRequest } from "@/lib/api/api-client";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { cn } from "@/lib/cn";
 import {
   confirmDialog,
-  toast,
 } from "@/lib/feedback";
 
 import type {
@@ -478,9 +482,9 @@ export function AgendaEventForm({
         await confirmDialog({
           title: "Compromisso criado",
           description:
-            "Deseja adicionar este compromisso ao calendário do seu dispositivo?",
+            "O calendário será aberto. Confirme em Adicionar para salvar o compromisso.",
           cancelLabel: "Agora não",
-          confirmLabel: "Adicionar ao calendário",
+          confirmLabel: "Abrir calendário",
         });
 
       if (!shouldAddToCalendar) {
@@ -491,16 +495,21 @@ export function AgendaEventForm({
         (member) =>
           member.membershipId === assignedMembershipId,
       )?.name;
+      const calendarEvent: CalendarExportEvent = {
+        request,
+        response,
+        assignedToName,
+        timeZone:
+          session?.family.timeZone ??
+          "America/Sao_Paulo",
+        url:
+          typeof window !== "undefined"
+            ? window.location.href
+            : undefined,
+      };
 
       try {
-        await shareAgendaIcs({
-          request,
-          response,
-          assignedToName,
-          timeZone:
-            session?.family.timeZone ??
-            "America/Sao_Paulo",
-        });
+        openAgendaIcs(calendarEvent);
       } catch (shareError) {
         if (
           shareError instanceof DOMException &&
@@ -509,11 +518,20 @@ export function AgendaEventForm({
           return;
         }
 
-        toast({
-          variant: "error",
-          message:
-            "Não foi possível gerar ou compartilhar o arquivo do calendário.",
+        const shouldDownload = await confirmDialog({
+          title: "Calendário indisponível",
+          description:
+            "Não foi possível abrir o calendário nativo. Baixe o arquivo de calendário para importar manualmente.",
+          cancelLabel: "Compartilhar arquivo",
+          confirmLabel: "Baixar arquivo de calendário",
         });
+
+        if (shouldDownload) {
+          downloadAgendaIcs(calendarEvent);
+          return;
+        }
+
+        await shareAgendaIcsFile(calendarEvent);
       }
     } catch (error) {
       setFormError(

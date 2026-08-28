@@ -5,6 +5,7 @@ import {
   AlertCircle,
   CreditCard,
   FileText,
+  FileUp,
   Pencil,
   Plus,
   Power,
@@ -30,6 +31,7 @@ import { financeService } from "./finance-service";
 import { FinancialCardPurchaseForm } from "./financial-card-purchase-form";
 import { categoryDisplayColor } from "./financial-category-colors";
 import { FinancialCreditCardForm } from "./financial-credit-card-form";
+import { FinancialInvoiceImportModal } from "./financial-invoice-import-modal";
 import { FinancialInvoicePanel } from "./financial-invoice-panel";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -340,6 +342,7 @@ export function FinanceCreditCards() {
   const [invoiceCard, setInvoiceCard] = useState<FinancialCreditCard | null>(null);
   const [cardFormOpen, setCardFormOpen] = useState(false);
   const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -487,6 +490,10 @@ export function FinanceCreditCards() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button type="button" disabled={cards.length === 0} onClick={() => setImportModalOpen(true)} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 px-3 text-sm font-semibold text-zinc-300 disabled:opacity-40 sm:flex-none">
+            <FileUp className="size-4" />
+            Importar fatura
+          </button>
           <button type="button" disabled={cards.length === 0} onClick={() => { setEditingPurchase(null); setPurchaseFormOpen(true); }} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 px-3 text-sm font-semibold text-zinc-300 disabled:opacity-40 sm:flex-none">
             <ShoppingBag className="size-4" />
             Nova compra
@@ -552,6 +559,14 @@ export function FinanceCreditCards() {
                   <p className="text-lg font-semibold text-white">{selectedCard.name}</p>
                   <p className="mt-1 text-xs text-zinc-500">{selectedCard.brand} •••• {selectedCard.lastFour}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setImportModalOpen(true)}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 text-sm font-semibold text-white transition hover:bg-white/[0.11]"
+                >
+                  <FileUp className="size-4" />
+                  Importar fatura
+                </button>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                   <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(Math.max(limitUsedPercentage, 0), 100)}%` }} />
                 </div>
@@ -599,8 +614,17 @@ export function FinanceCreditCards() {
       ) : null}
 
       {invoiceCard ? (
-        <FinancialInvoicePanel card={invoiceCard} accounts={accounts} initialInvoiceId={selectedInvoice?.id ?? null} onChanged={loadData} onClose={() => setInvoiceCard(null)} />
+        <FinancialInvoicePanel card={invoiceCard} accounts={accounts} categories={categories} initialInvoiceId={selectedInvoice?.id ?? null} onChanged={loadData} onClose={() => setInvoiceCard(null)} />
       ) : null}
+
+      <FinancialInvoiceImportModal
+        open={importModalOpen}
+        cards={cards}
+        categories={categories}
+        initialCardId={selectedCard?.id ?? null}
+        onImported={loadData}
+        onClose={() => setImportModalOpen(false)}
+      />
     </div>
   );
 }

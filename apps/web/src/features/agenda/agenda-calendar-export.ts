@@ -8,6 +8,7 @@ export interface CalendarExportEvent {
   response: CreateAgendaEventResponse;
   timeZone: string;
   assignedToName?: string;
+  url?: string;
 }
 
 function escapeText(value: string) {
@@ -86,13 +87,25 @@ function addDays(date: string, days: number) {
   ].join("");
 }
 
-export function buildAgendaIcs({
-  request,
-  response,
-  timeZone,
-  assignedToName,
-}: CalendarExportEvent) {
-  const uid = `${response.eventId}@nucleo.central-familiar`;
+function buildStableUid(event: CalendarExportEvent) {
+  return [
+    event.response.eventId,
+    event.response.firstOccurrenceStartsAt,
+  ]
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-zA-Z0-9-]/g, "")
+    .toLowerCase();
+}
+
+export function buildAgendaIcs(event: CalendarExportEvent) {
+  const {
+    request,
+    timeZone,
+    assignedToName,
+    url,
+  } = event;
+  const uid = `${buildStableUid(event)}@nucleo.central-familiar`;
   const descriptionParts = [
     request.description,
     assignedToName
@@ -140,12 +153,16 @@ export function buildAgendaIcs({
     );
   }
 
+  if (url) {
+    lines.push(`URL:${escapeText(url)}`);
+  }
+
   lines.push("END:VEVENT", "END:VCALENDAR");
 
   return `${lines.map(foldLine).join("\r\n")}\r\n`;
 }
 
-function safeFileName(value: string) {
+export function safeAgendaIcsFileName(value: string) {
   return (
     value
       .normalize("NFD")
@@ -156,11 +173,60 @@ function safeFileName(value: string) {
   );
 }
 
-export async function shareAgendaIcs(
+function encodeBase64Url(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+export function buildAgendaIcsEndpointUrl(
+  event: CalendarExportEvent,
+) {
+  const payload = encodeBase64Url(JSON.stringify(event));
+  const fileName = `${safeAgendaIcsFileName(event.request.title)}.ics`;
+  const params = new URLSearchParams({
+    data: payload,
+    filename: fileName,
+  });
+
+  return `/api/agenda/calendar?${params.toString()}`;
+}
+
+export function openAgendaIcs(event: CalendarExportEvent) {
+  window.location.assign(buildAgendaIcsEndpointUrl(event));
+}
+
+export function downloadAgendaIcs(event: CalendarExportEvent) {
+  const ics = buildAgendaIcs(event);
+  const fileName = `${safeAgendaIcsFileName(event.request.title)}.ics`;
+  const blob = new Blob([ics], {
+    type: "text/calendar;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.rel = "noopener noreferrer";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function shareAgendaIcsFile(
   event: CalendarExportEvent,
 ) {
   const ics = buildAgendaIcs(event);
-  const fileName = `${safeFileName(event.request.title)}.ics`;
+  const fileName = `${safeAgendaIcsFileName(event.request.title)}.ics`;
   const blob = new Blob([ics], {
     type: "text/calendar;charset=utf-8",
   });
@@ -179,19 +245,11 @@ export async function shareAgendaIcs(
   ) {
     await navigator.share({
       title: event.request.title,
-      text: "Adicionar compromisso ao calendário.",
+      text: "Arquivo de calendario do compromisso.",
       files: [file],
     });
     return;
   }
 
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.rel = "noopener noreferrer";
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadAgendaIcs(event);
 }

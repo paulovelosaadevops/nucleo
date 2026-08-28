@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import br.com.nucleo.api.finance.service.invoiceimport.InvoiceParseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -176,6 +177,23 @@ public class ApiExceptionHandler {
         ProblemDetail problem = createProblem(
                 HttpStatus.BAD_REQUEST,
                 "Dados inválidos",
+                exception.getMessage(),
+                request
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(problem);
+    }
+
+    @ExceptionHandler(InvoiceParseException.class)
+    public ResponseEntity<ProblemDetail> handleInvoiceParse(
+            InvoiceParseException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = createProblem(
+                HttpStatus.BAD_REQUEST,
+                "Fatura não processada",
                 exception.getMessage(),
                 request
         );

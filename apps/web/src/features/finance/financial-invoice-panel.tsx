@@ -6,6 +6,7 @@ import {
   Check,
   LoaderCircle,
   MoreVertical,
+  FileUp,
   ReceiptText,
   Search,
   SlidersHorizontal,
@@ -23,14 +24,17 @@ import type {
   FinancialCreditCardInvoice,
   FinancialInvoiceCategorySummary,
   FinancialPaymentMethod,
+  FinancialCategory,
 } from "@/types/finance";
 
 import { categoryDisplayColor } from "./financial-category-colors";
 import { financeService } from "./finance-service";
+import { FinancialInvoiceImportModal } from "./financial-invoice-import-modal";
 
 interface FinancialInvoicePanelProps {
   card: FinancialCreditCard;
   accounts: FinancialAccount[];
+  categories: FinancialCategory[];
   initialInvoiceId?: string | null;
   onChanged?: () => void;
   onClose: () => void;
@@ -125,7 +129,7 @@ function categoryKey(value: string | null) {
   return value ?? "uncategorized";
 }
 
-export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChanged, onClose }: FinancialInvoicePanelProps) {
+export function FinancialInvoicePanel({ card, accounts, categories, initialInvoiceId, onChanged, onClose }: FinancialInvoicePanelProps) {
   const [invoices, setInvoices] = useState<FinancialCreditCardInvoice[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<InvoiceTab>("items");
@@ -133,6 +137,7 @@ export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChan
   const [purchaseActionId, setPurchaseActionId] = useState<string | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
@@ -339,6 +344,15 @@ export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChan
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  title="Importar fatura"
+                  onClick={() => setImportModalOpen(true)}
+                  className="flex size-9 items-center justify-center rounded-xl border border-white/10 text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                >
+                  <FileUp className="size-4" />
+                </button>
+
                 {invoices.length > 1 ? (
                   <select
                     value={selectedInvoice.id}
@@ -410,6 +424,10 @@ export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChan
                 <ReceiptText className="size-8 text-zinc-600" />
                 <p className="mt-4 font-medium text-zinc-300">Nenhuma fatura encontrada</p>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">As faturas serão criadas automaticamente quando uma compra for registrada.</p>
+                <Button className="mt-5" onClick={() => setImportModalOpen(true)}>
+                  <FileUp className="size-4" />
+                  Importar fatura
+                </Button>
               </div>
             ) : null}
 
@@ -486,6 +504,18 @@ export function FinancialInvoicePanel({ card, accounts, initialInvoiceId, onChan
           </form>
         </ModalShell>
       ) : null}
+
+      <FinancialInvoiceImportModal
+        open={importModalOpen}
+        cards={[card]}
+        categories={categories}
+        initialCardId={card.id}
+        onImported={async () => {
+          await loadInvoices();
+          await onChanged?.();
+        }}
+        onClose={() => setImportModalOpen(false)}
+      />
     </ModalShell>
   );
 }

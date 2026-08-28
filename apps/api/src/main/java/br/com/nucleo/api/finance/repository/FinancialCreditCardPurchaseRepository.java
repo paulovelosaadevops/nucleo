@@ -67,4 +67,13 @@ public interface FinancialCreditCardPurchaseRepository
     boolean existsByCreditCard_Id(UUID cardId);
 
     boolean existsByRecurrence_Id(UUID recurrenceId);
+
+    boolean existsByFamily_IdAndCreditCard_IdAndInvoiceImportFingerprint(
+            UUID familyId,
+            UUID cardId,
+            String fingerprint
+    );
+
+    List<FinancialCreditCardPurchase>
+            findAllByInvoiceImport_Id(UUID importId);
 }

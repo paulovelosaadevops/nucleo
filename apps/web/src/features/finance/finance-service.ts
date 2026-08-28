@@ -20,6 +20,11 @@ import type {
   FinancialCreditCardInvoice,
   FinancialCreditCardPurchase,
   FinancialDashboard,
+  FinancialInvoiceImport,
+  FinancialInvoiceImportConfirmRequest,
+  FinancialInvoiceImportPreview,
+  FinancialInvoiceImportResult,
+  FinancialInvoiceImportRollback,
   FinancialInvoiceCategorySummary,
   FinancialInvestment,
   FinancialInvestmentDashboard,
@@ -797,6 +802,55 @@ export const financeService = {
         `${FINANCE_BASE_PATH}/credit-card-invoices/${invoiceId}`,
         {
           method: "DELETE",
+        },
+      );
+    },
+  },
+
+  invoiceImports: {
+    preview(
+      cardId: string,
+      file: File,
+    ): Promise<FinancialInvoiceImportPreview> {
+      const body = new FormData();
+      body.append("file", file);
+      const query = createQuery({ cardId });
+
+      return apiRequest<FinancialInvoiceImportPreview>(
+        `${FINANCE_BASE_PATH}/invoice-imports/preview${query}`,
+        {
+          method: "POST",
+          body,
+        },
+      );
+    },
+
+    confirm(
+      token: string,
+      request: FinancialInvoiceImportConfirmRequest,
+    ): Promise<FinancialInvoiceImportResult> {
+      return apiRequest<FinancialInvoiceImportResult>(
+        `${FINANCE_BASE_PATH}/invoice-imports/${token}/confirm`,
+        {
+          method: "POST",
+          body: request,
+        },
+      );
+    },
+
+    list(): Promise<FinancialInvoiceImport[]> {
+      return apiRequest<FinancialInvoiceImport[]>(
+        `${FINANCE_BASE_PATH}/invoice-imports`,
+      );
+    },
+
+    rollback(
+      importId: string,
+    ): Promise<FinancialInvoiceImportRollback> {
+      return apiRequest<FinancialInvoiceImportRollback>(
+        `${FINANCE_BASE_PATH}/invoice-imports/${importId}/rollback`,
+        {
+          method: "POST",
         },
       );
     },

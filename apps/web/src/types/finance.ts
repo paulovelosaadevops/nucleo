@@ -11,6 +11,8 @@ export type FinancialCreditCardPurchaseStatus = "ACTIVE" | "CANCELLED";
 export type FinancialCreditCardPurchaseType = "DEBIT" | "CREDIT";
 export type FinancialCreditCardInstallmentStatus = "OPEN" | "CANCELLED";
 export type FinancialCreditCardInvoiceStatus = "OPEN" | "CLOSED" | "PAID" | "CANCELLED";
+export type FinancialInvoiceImportItemType = "PURCHASE" | "INSTALLMENT" | "CREDIT" | "REFUND" | "FEE" | "INTEREST" | "IOF" | "PAYMENT" | "ADJUSTMENT";
+export type FinancialInvoiceImportItemStatus = "NEW" | "POSSIBLE_DUPLICATE" | "EXACT_DUPLICATE" | "INVALID";
 export type FinancialInvestmentModality = "PERCENT_CDI" | "CDI_PLUS" | "PERCENT_SELIC" | "FIXED_RATE" | "IPCA_PLUS" | "SAVINGS" | "MANUAL" | "NO_YIELD";
 export type FinancialInvestmentAccrualStartRule = "SAME_BUSINESS_DAY" | "NEXT_BUSINESS_DAY" | "SETTLEMENT_DATE";
 export type FinancialInvestmentMovementType = "INITIAL_BALANCE" | "CONTRIBUTION" | "REDEMPTION" | "YIELD" | "VALUATION_ADJUSTMENT" | "RECONCILIATION" | "CONFIGURATION_CHANGE";
@@ -78,6 +80,13 @@ export interface FinancialCardPurchaseFilters { from: string; to: string; }
 export interface FinancialCreditCardInvoice { id: string; creditCardId: string; creditCardName: string; referenceMonth: string; closingDate: string; dueDate: string; status: FinancialCreditCardInvoiceStatus; totalAmount: number; paidAt: string | null; installments: FinancialCreditCardInstallment[]; createdAt: string; updatedAt: string; }
 export interface FinancialInvoiceCategorySummary { categoryId: string | null; categoryName: string; color: string | null; amount: number; percentage: number; itemCount: number; uncategorized: boolean; }
 export interface PayFinancialInvoiceRequest { accountId: string; paymentDate: string; paymentMethod: FinancialPaymentMethod; }
+export interface FinancialInvoiceImportPreviewItem { id: string; included: boolean; date: string; description: string; amount: number; installmentNumber: number | null; totalInstallments: number | null; type: FinancialInvoiceImportItemType; suggestedCategoryId: string | null; suggestedCategoryName: string | null; status: FinancialInvoiceImportItemStatus; fingerprint: string; problems: string[]; }
+export interface FinancialInvoiceImportPreview { token: string; cardId: string; cardName: string; invoiceId: string | null; referenceMonth: string; closingDate: string; dueDate: string; statementTotal: number; processedTotal: number; difference: number; fileName: string; fileHash: string; fileType: string; parserName: string; sameFilePreviouslyImported: boolean; warnings: string[]; items: FinancialInvoiceImportPreviewItem[]; }
+export interface FinancialInvoiceImportConfirmItem { id: string; included: boolean; date: string; description: string; amount: number; installmentNumber: number | null; totalInstallments: number | null; type: FinancialInvoiceImportItemType; categoryId: string | null; }
+export interface FinancialInvoiceImportConfirmRequest { acceptDifference: boolean; items: FinancialInvoiceImportConfirmItem[]; }
+export interface FinancialInvoiceImportResult { importId: string; invoiceId: string; importedCount: number; ignoredCount: number; duplicatedCount: number; importedTotal: number; difference: number; }
+export interface FinancialInvoiceImport { id: string; cardId: string; cardName: string; invoiceId: string | null; originalFileName: string; fileHash: string; fileType: string; parserName: string; status: string; foundCount: number; importedCount: number; ignoredCount: number; duplicatedCount: number; statementTotal: number | null; importedTotal: number | null; difference: number | null; warningAccepted: boolean; createdByName: string; createdAt: string; errorMessage: string | null; }
+export interface FinancialInvoiceImportRollback { importId: string; removedCount: number; }
 
 export interface CreateFinancialInvestmentRequest { name: string; institution: string; modality: FinancialInvestmentModality; startDate: string; initialAmount: number; maturityDate: string | null; liquidity: string | null; benchmarkPercentage: number | null; annualFixedRate: number | null; annualSpreadRate: number | null; taxExempt: boolean; autoCalculate: boolean; accrualStartRule: FinancialInvestmentAccrualStartRule; notes: string | null; }
 export interface InvestmentTransferRequest { accountId: string | null; amount: number; date: string; notes: string | null; }

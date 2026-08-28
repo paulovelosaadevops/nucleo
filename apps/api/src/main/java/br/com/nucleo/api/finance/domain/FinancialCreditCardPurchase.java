@@ -50,6 +50,13 @@ public class FinancialCreditCardPurchase {
     @Column(name = "recurrence_sequence")
     private Integer recurrenceSequence;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invoice_import_id")
+    private FinancialInvoiceImport invoiceImport;
+
+    @Column(name = "invoice_import_fingerprint", length = 64)
+    private String invoiceImportFingerprint;
+
     @Column(nullable = false, length = 160)
     private String description;
 
@@ -283,6 +290,14 @@ public class FinancialCreditCardPurchase {
         return recurrence != null;
     }
 
+    public void markImported(
+            FinancialInvoiceImport invoiceImport,
+            String fingerprint
+    ) {
+        this.invoiceImport = Objects.requireNonNull(invoiceImport);
+        this.invoiceImportFingerprint = Objects.requireNonNull(fingerprint);
+    }
+
     private void ensureActive() {
         if (!isActive()) {
             throw new IllegalStateException(
@@ -458,6 +473,14 @@ public class FinancialCreditCardPurchase {
 
     public Integer getRecurrenceSequence() {
         return recurrenceSequence;
+    }
+
+    public FinancialInvoiceImport getInvoiceImport() {
+        return invoiceImport;
+    }
+
+    public String getInvoiceImportFingerprint() {
+        return invoiceImportFingerprint;
     }
 
     public String getDescription() {
